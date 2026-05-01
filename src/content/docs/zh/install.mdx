@@ -1,15 +1,56 @@
 ---
 title: 安装
-description: 安装 Jiang 编译器。
+description: 从源码构建 Jiang 编译器。
 ---
 
-Jiang 发布预构建版本后，这里会补充正式安装方式。
+Jiang 目前还没有发布稳定的预构建版本。现在推荐从源码构建编译器来体验语言。
 
-目前可以先从源码构建编译器：
+## 环境要求
+
+- C/C++ 构建工具链。
+- CMake。
+- LLVM 21.1.x。
+- 宿主系统中可用的 `cc`，用于最终链接可执行文件。
+
+仓库会在 CMake 配置阶段检查 LLVM 版本。如果 `llvm-config --version` 不是 `21.1.*`，配置会直接失败。
+
+## 克隆仓库
 
 ```bash
 git clone https://github.com/jjcfun/jiang.git
 cd jiang
 ```
 
-继续按照主仓库中的构建说明操作。
+## 配置和构建
+
+推荐显式指定 LLVM 安装路径：
+
+```bash
+cmake -S . -B build -DJIANG_LLVM_ROOT=/opt/homebrew/opt/llvm@21
+cmake --build build
+```
+
+也可以指定 `llvm-config`：
+
+```bash
+LLVM_CONFIG=/opt/homebrew/opt/llvm@21/bin/llvm-config cmake -S . -B build
+cmake --build build
+```
+
+构建成功后，编译器位于：
+
+```bash
+./build/jiangc
+```
+
+## 验证
+
+使用同一套 LLVM 工具链运行测试：
+
+```bash
+LLVM_CONFIG=/opt/homebrew/opt/llvm@21/bin/llvm-config bash ./script/test.sh
+```
+
+## 下一步
+
+继续阅读[快速开始](/zh/getting-started/)，编译一个小型 Jiang 程序。

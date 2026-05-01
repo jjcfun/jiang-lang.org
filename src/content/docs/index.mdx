@@ -15,16 +15,29 @@ hero:
 
 import { Card, CardGrid } from '@astrojs/starlight/components';
 
+Jiang is a systems programming language in active development. Its current focus is a clear core language, direct control over memory and layout, and a path toward a self-hosted compiler.
+
+These docs are written as a practical guide first. They describe the language as it exists today, while calling out areas that are still moving during the Stage1 compiler work.
+
 ## Start Here
 
 <CardGrid>
-  <Card title="Install" icon="download">
-    Build or install Jiang and prepare the compiler.
+  <Card title="Install" icon="download" href="/install/">
+    Build the compiler from source and prepare the LLVM toolchain.
   </Card>
-  <Card title="Language Tour" icon="rocket">
-    Learn Jiang syntax, types, functions, and modules.
+  <Card title="First Program" icon="rocket" href="/getting-started/">
+    Compile a small Jiang program and understand the basic workflow.
   </Card>
-  <Card title="Compiler" icon="terminal">
-    Use `jiangc` and understand compiler diagnostics.
+  <Card title="Language Guide" icon="seti:config" href="/language/syntax/">
+    Learn declarations, types, functions, modules, and control flow.
+  </Card>
+  <Card title="Compiler CLI" icon="terminal" href="/compiler/cli/">
+    Use `jiangc` to emit LLVM IR, object files, or executables.
   </Card>
 </CardGrid>
+
+## Project Status
+
+Jiang is currently moving from the Stage0 prototype compiler toward the Stage1 self-hosting compiler. Stage0 is implemented in C and is used to validate language behavior. Stage1 is written in Jiang and is intended to become the long-term compiler.
+
+For now, treat the website as a living language guide rather than a frozen specification. The most stable pieces are naming style, type notation, mutability, arrays, pointers, optionals, imports, and the current compiler command-line workflow.

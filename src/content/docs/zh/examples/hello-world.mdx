@@ -3,8 +3,36 @@ title: Hello World
 description: 一个最小 Jiang 程序。
 ---
 
-```text
-fn main() {
-  print("hello, jiang");
+当前编译器示例通常使用整数返回值，因为 CLI 可以在不额外配置运行时的情况下把它们编译成独立可执行文件。
+
+```c
+Int main() {
+    print(42);
+    print(false);
+    return 42;
 }
 ```
+
+编译并运行：
+
+```bash
+./build/jiangc hello.jiang -o hello
+./hello
+echo $?
+```
+
+`print` 目前是编译器支持的基础能力。现阶段最小运行时边界仍依赖宿主 C 运行时，例如 `printf`、`malloc`、`free` 和 `abort`。
+
+## 一个小函数
+
+```c
+Int add(Int a, Int b) {
+    return a + b;
+}
+
+Int main() {
+    return add(40, 2);
+}
+```
+
+这是检查解析、类型检查、LLVM 生成和最终链接的最小实用示例。

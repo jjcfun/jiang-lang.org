@@ -3,4 +3,94 @@ title: Functions
 description: Jiang function declarations and calls.
 ---
 
-This section will document function declarations, parameters, return values, and calling conventions.
+Functions are declared with the return type first, then the function name, parameters, and body.
+
+```c
+Int add(Int left, Int right) {
+    return left + right;
+}
+```
+
+## Return Types
+
+A function always has a return type. Use `()` for functions that return Unit:
+
+```c
+() log_done() {
+    print("done");
+    return ();
+}
+```
+
+Returning Unit is still explicit. This keeps function signatures and control flow predictable.
+
+## Parameters
+
+Parameters are positional:
+
+```c
+Int scale(Int value, Int factor) {
+    return value * factor;
+}
+
+Int result = scale(21, 2);
+```
+
+The Stage1 language target does not rely on parameter labels or default arguments. Some Stage0-era syntax may still appear in older samples, but new code should prefer simple positional calls.
+
+## Struct Values
+
+Structs are nominal types with named fields:
+
+```c
+struct Pair {
+    Int left;
+    Int right;
+}
+
+Int sum_pair(Pair pair) {
+    return pair.left + pair.right;
+}
+
+Int main() {
+    Pair pair = Pair { left: 20, right: 22 };
+    return sum_pair(pair);
+}
+```
+
+## Multiple Results
+
+Tuples can be used to return multiple values:
+
+```c
+(Int, Int) split(Int value) {
+    return (value, value + 1);
+}
+
+Int main() {
+    (_ left, _ right) = split(41);
+    return left + right;
+}
+```
+
+`(T)` is equivalent to `T`; a one-element tuple does not create a distinct runtime shape.
+
+## Methods and Traits
+
+Jiang supports method-style declarations through `struct`, `trait`, and `extend` in the language design. This area is still being aligned between Stage0 behavior and the Stage1 compiler.
+
+The intended shape is:
+
+```c
+trait Hashable {
+    UInt64 hash();
+}
+
+extend Int: Hashable {
+    UInt64 hash() {
+        return UInt64(self);
+    }
+}
+```
+
+For portable examples today, prefer ordinary top-level functions until the Stage1 method and trait implementation is finalized.

@@ -1,12 +1,111 @@
 ---
 title: 语法
-description: Jiang 语法概览。
+description: Jiang 源文件、声明、语句和表达式。
 ---
 
-本节会介绍 Jiang 源文件、声明、语句和表达式。
+Jiang 的语法目标是让核心语言保持清晰，同时直接暴露系统编程需要的底层能力。
 
-```text
-fn main() {
-  print("hello, jiang");
+## 命名风格
+
+项目采用下面的命名约定：
+
+- 类型名使用 `PascalCase`。
+- 函数名、变量名、字段名、枚举成员和模块别名使用 `snake_case`。
+- `Int`、`Bool`、`UInt8` 等基本类型名由名字解析处理，不在词法阶段作为关键字。
+
+```c
+enum TokenKind {
+    kw,
+    string_lit,
+    left_paren,
+}
+
+struct SourceFile {
+    UInt8[] file_path;
+    Int start_offset;
+}
+
+UInt8[] read_source(UInt8[] file_path) {
+    return file_path;
+}
+```
+
+## 声明
+
+顶层文件可以包含导入、别名、全局变量、函数和类型声明：
+
+```c
+import math = "math.jiang";
+
+alias Byte = UInt8;
+
+struct Pair {
+    Int left;
+    Int right;
+}
+
+Int add(Int left, Int right) {
+    return left + right;
+}
+```
+
+Jiang 的声明倾向显式。函数总是写出返回类型；没有有意义返回值时使用 `()`。
+
+## 语句
+
+常见语句包括局部声明、赋值、`if`、`while`、`for`、`return`、`break`、`continue`、`throw`、`try` 和 `defer`。
+
+```c
+Int main() {
+    Int! total = 0;
+
+    for i in 0..10 {
+        total = total + i;
+    }
+
+    return total;
+}
+```
+
+`defer` 会在当前块退出时执行，多个 `defer` 按后进先出顺序运行：
+
+```c
+defer handle$.free();
+
+defer {
+    print("closing");
+    handle$.free();
+}
+```
+
+## 表达式
+
+Jiang 支持块表达式、`if` 表达式、`switch` 表达式、函数调用、字段访问、下标、切片、算术、比较和模式检查。
+
+```c
+Int value = if flag {
+    1
+} else {
+    2
+};
+```
+
+## 模式检查
+
+`is` 用于模式匹配。Optional 值可以使用 `some` 解包：
+
+```c
+if maybe is some value {
+    return value;
+} else {
+    return 0;
+}
+```
+
+如果解包后的绑定本身需要可变，使用 `some!`：
+
+```c
+if maybe is some! value {
+    value = value + 1;
 }
 ```

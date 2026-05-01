@@ -1,12 +1,111 @@
 ---
 title: Syntax
-description: Jiang syntax overview.
+description: Jiang source files, declarations, statements, and expressions.
 ---
 
-This section will describe Jiang source files, declarations, statements, and expressions.
+Jiang syntax is designed to keep the core language readable while still exposing systems-level operations directly.
 
-```text
-fn main() {
-  print("hello, jiang");
+## Naming Style
+
+The project uses these conventions:
+
+- Type names use `PascalCase`.
+- Function names, variables, fields, enum members, and module aliases use `snake_case`.
+- Built-in type names such as `Int`, `Bool`, and `UInt8` are resolved as names, not lexer keywords.
+
+```c
+enum TokenKind {
+    kw,
+    string_lit,
+    left_paren,
+}
+
+struct SourceFile {
+    UInt8[] file_path;
+    Int start_offset;
+}
+
+UInt8[] read_source(UInt8[] file_path) {
+    return file_path;
+}
+```
+
+## Declarations
+
+Top-level files can contain imports, aliases, globals, functions, and type declarations:
+
+```c
+import math = "math.jiang";
+
+alias Byte = UInt8;
+
+struct Pair {
+    Int left;
+    Int right;
+}
+
+Int add(Int left, Int right) {
+    return left + right;
+}
+```
+
+Declarations are explicit. Function return types are always written; use `()` for a function that returns no meaningful value.
+
+## Statements
+
+Common statements include local declarations, assignments, `if`, `while`, `for`, `return`, `break`, `continue`, `throw`, `try`, and `defer`.
+
+```c
+Int main() {
+    Int! total = 0;
+
+    for i in 0..10 {
+        total = total + i;
+    }
+
+    return total;
+}
+```
+
+`defer` runs when the current block exits, in last-in-first-out order:
+
+```c
+defer handle$.free();
+
+defer {
+    print("closing");
+    handle$.free();
+}
+```
+
+## Expressions
+
+Jiang supports block expressions, `if` expressions, `switch` expressions, calls, field access, indexing, slicing, arithmetic, comparison, and pattern checks.
+
+```c
+Int value = if flag {
+    1
+} else {
+    2
+};
+```
+
+## Pattern Checks
+
+`is` is used for pattern matching. Optional values can be unwrapped with `some`:
+
+```c
+if maybe is some value {
+    return value;
+} else {
+    return 0;
+}
+```
+
+Use `some!` when the unwrapped binding itself should be mutable:
+
+```c
+if maybe is some! value {
+    value = value + 1;
 }
 ```

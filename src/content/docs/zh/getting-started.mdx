@@ -3,24 +3,73 @@ title: 快速开始
 description: 编译并运行第一个 Jiang 程序。
 ---
 
-Jiang 正在积极开发中。文档会随着编译器和语言设计一起更新。
+本指南假设你已经从主仓库构建好了 `jiangc`。如果还没有，请先阅读[安装](/zh/install/)。
 
-## 创建程序
+## 编写程序
 
-```text
-fn main() {
-  print("hello, jiang");
+创建 `hello.jiang`：
+
+```c
+Int add(Int a, Int b) {
+    return a + b;
+}
+
+Int main() {
+    return add(40, 2);
 }
 ```
 
-## 编译
+Jiang 函数一定有返回类型。程序入口是 `main`；这里返回 `42`，也就是宿主进程的退出码。
+
+## 编译为可执行文件
+
+在 Jiang 主仓库中执行：
 
 ```bash
-jiangc hello.jiang
+./build/jiangc hello.jiang -o hello
 ```
 
-## 下一步
+运行程序：
 
-- 阅读[语言概览](/zh/language/syntax/)。
-- 尝试[示例](/zh/examples/hello-world/)。
-- 查看[编译器 CLI](/zh/compiler/cli/)。
+```bash
+./hello
+echo $?
+```
+
+结果应该是 `42`。
+
+## 查看 LLVM IR
+
+语言开发阶段，经常需要查看生成的 LLVM IR：
+
+```bash
+./build/jiangc --emit-llvm hello.jiang
+```
+
+使用 `-o` 可以写入文件：
+
+```bash
+./build/jiangc --emit-llvm hello.jiang -o hello.ll
+```
+
+## Jiang 代码的基本形态
+
+Jiang 源文件以声明为核心。一个小文件通常包含类型声明、函数和 `main` 函数：
+
+```c
+struct Pair {
+    Int left;
+    Int right;
+}
+
+Int sum_pair(Pair pair) {
+    return pair.left + pair.right;
+}
+
+Int main() {
+    Pair pair = Pair { left: 20, right: 22 };
+    return sum_pair(pair);
+}
+```
+
+接下来可以阅读[语法概览](/zh/language/syntax/)和[类型指南](/zh/language/types/)。

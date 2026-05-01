@@ -1,6 +1,61 @@
 ---
 title: Modules
-description: Jiang modules and imports.
+description: Jiang modules, imports, and visibility.
 ---
 
-This section will document source organization, modules, imports, and visibility.
+Jiang modules are source files connected by imports. The current design keeps imported APIs behind a module namespace instead of flattening everything into the current file.
+
+## Import a Module
+
+```c
+import "math.jiang";
+```
+
+The default module name comes from the file name. After importing `math.jiang`, public declarations are accessed through `math.Name`.
+
+```c
+Int value = math.add(1, 2);
+```
+
+## Import With an Alias
+
+Use an explicit alias when the file name is not the module name you want to use:
+
+```c
+import m = "utils/math.jiang";
+
+Int value = m.add(1, 2);
+```
+
+Module aliases use `snake_case` by convention.
+
+## Public API
+
+Mark declarations as `public` when they should be visible to importing modules:
+
+```c
+public struct Point {
+    Int x;
+    Int y;
+}
+
+public Int distance(Point point) {
+    return point.x + point.y;
+}
+```
+
+Declarations without `public` are local to their module.
+
+## Re-export
+
+`public import` imports a module for local use and re-exports that module namespace as part of the current module's public API:
+
+```c
+public import "leaf.jiang";
+```
+
+This does not flatten `leaf` declarations into the current module. External code should access them through the re-exported namespace.
+
+## Current Boundaries
+
+The Stage1 compiler has parser, module graph, and resolver work for default module names, explicit aliases, and module-name re-exports. Package path resolution and ambiguous re-export diagnostics are still being refined.

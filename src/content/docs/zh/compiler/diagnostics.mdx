@@ -1,6 +1,76 @@
 ---
 title: 诊断
-description: Jiang 编译器错误和警告。
+description: Jiang 编译器错误和常见修复方式。
 ---
 
-本节会记录编译器诊断信息和常见修复方式。
+随着 Stage1 编译器推进，Jiang 的诊断信息会继续改进。当前有几类规则在编译失败时值得优先检查。
+
+## 缺少分号
+
+语句通常以分号结束：
+
+```c
+Int x = 1;
+return x;
+```
+
+块表达式是主要例外之一，块的最后一个表达式可以作为块的值。
+
+## 类型层级顺序
+
+类型后缀是分层的。optional 和 mutable 标记建议使用规范顺序：
+
+```c
+Int?! value;
+```
+
+同一层级不要重复标记：
+
+```c
+Int?? value; // 非法
+Int!! value; // 非法
+```
+
+## 数值转换
+
+Jiang 不会对已经定型的数值自动做隐式提升：
+
+```c
+Int two = 2;
+Float f = 0.5;
+Float result = two + f; // 非法
+```
+
+应该显式写出目标类型：
+
+```c
+Float result = Float(two) + f;
+```
+
+## 可变性
+
+可变性是类型的一部分。绑定需要可变，才能重新赋值：
+
+```c
+Int! count = 0;
+count = count + 1;
+```
+
+对于数组，元素层级和外层数组层级是分开的：
+
+```c
+Int![3] values = [1, 2, 3];
+values[0] = 10;
+```
+
+## 导入
+
+导入模块的 public 声明通过模块命名空间访问：
+
+```c
+import "math.jiang";
+
+Int value = math.add(1, 2);
+```
+
+如果名字找不到，先检查是否需要模块前缀，或者被导入文件中的声明是否缺少 `public`。

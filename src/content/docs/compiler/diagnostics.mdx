@@ -1,6 +1,76 @@
 ---
 title: Diagnostics
-description: Jiang compiler errors and warnings.
+description: Jiang compiler errors and common fixes.
 ---
 
-This section will document compiler diagnostics and common fixes.
+Jiang diagnostics are being improved as the Stage1 compiler grows. The language already has a few rules that are worth checking first when a program fails to compile.
+
+## Missing Semicolons
+
+Statements generally end with semicolons:
+
+```c
+Int x = 1;
+return x;
+```
+
+Blocks used as expressions are the main place where the final expression may carry the value of the block.
+
+## Type Layer Order
+
+Type suffixes are layered. Write optional and mutable markers in their canonical order:
+
+```c
+Int?! value;
+```
+
+Avoid duplicate flags in the same layer:
+
+```c
+Int?? value; // invalid
+Int!! value; // invalid
+```
+
+## Numeric Conversions
+
+Jiang does not implicitly promote already-typed numeric values:
+
+```c
+Int two = 2;
+Float f = 0.5;
+Float result = two + f; // invalid
+```
+
+Use an explicit target type:
+
+```c
+Float result = Float(two) + f;
+```
+
+## Mutability
+
+Mutability is part of the type. A binding must be mutable before it can be reassigned:
+
+```c
+Int! count = 0;
+count = count + 1;
+```
+
+For arrays, the element layer and outer array layer are separate:
+
+```c
+Int![3] values = [1, 2, 3];
+values[0] = 10;
+```
+
+## Imports
+
+Imported public declarations are accessed through the module namespace:
+
+```c
+import "math.jiang";
+
+Int value = math.add(1, 2);
+```
+
+If a name cannot be found, check whether it needs the module prefix or an explicit `public` declaration in the imported file.

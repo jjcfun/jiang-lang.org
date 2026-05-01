@@ -1,10 +1,52 @@
 ---
-title: CLI
+title: 编译器 CLI
 description: Jiang 编译器命令行接口。
 ---
 
-本节会记录 `jiangc` 命令、选项和输出模式。
+`jiangc` 用于编译 Jiang 源文件。当前编译器可以生成 LLVM IR、目标文件，也可以通过宿主 C 编译器链接出可执行文件。
+
+## 生成 LLVM IR
 
 ```bash
-jiangc --help
+./build/jiangc --emit-llvm tests/samples/minimal.jiang
 ```
+
+默认情况下，LLVM IR 会输出到标准输出。使用 `-o` 可以写入文件：
+
+```bash
+./build/jiangc --emit-llvm tests/samples/minimal.jiang -o minimal.ll
+```
+
+## 生成目标文件
+
+```bash
+./build/jiangc --emit-obj tests/samples/minimal.jiang -o minimal.o
+```
+
+这个模式会停在目标文件生成阶段，不会继续链接可执行文件。
+
+## 链接可执行文件
+
+不指定 `--emit-*` 时，`jiangc` 会生成临时目标文件，并调用宿主 `cc` 链接可执行文件：
+
+```bash
+./build/jiangc tests/samples/minimal.jiang -o minimal
+```
+
+然后运行：
+
+```bash
+./minimal
+echo $?
+```
+
+## 运行时边界
+
+当前最小运行时边界仍依赖宿主 C 运行时，主要包括：
+
+- `malloc`
+- `free`
+- `printf`
+- `abort`
+
+这属于当前编译器开发阶段的正常状态。

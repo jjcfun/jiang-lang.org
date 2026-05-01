@@ -3,8 +3,36 @@ title: Hello World
 description: A minimal Jiang program.
 ---
 
-```text
-fn main() {
-  print("hello, jiang");
+The current compiler samples usually use integer return values because the CLI can compile them into standalone executables without extra setup.
+
+```c
+Int main() {
+    print(42);
+    print(false);
+    return 42;
 }
 ```
+
+Compile and run:
+
+```bash
+./build/jiangc hello.jiang -o hello
+./hello
+echo $?
+```
+
+`print` is currently provided as a compiler-supported primitive. The runtime boundary still uses the host C runtime for low-level services such as `printf`, `malloc`, `free`, and `abort`.
+
+## A Small Function
+
+```c
+Int add(Int a, Int b) {
+    return a + b;
+}
+
+Int main() {
+    return add(40, 2);
+}
+```
+
+This is the smallest useful example for checking parsing, type checking, LLVM emission, and final linking.

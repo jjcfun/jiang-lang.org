@@ -3,4 +3,138 @@ title: Types
 description: Jiang type system overview.
 ---
 
-This section will document primitive types, user-defined types, pointers, optionals, and type inference.
+Jiang types are read from left to right, from the inner value outward. Each suffix wraps the type before it.
+
+## Primitive Types
+
+Common primitive types include:
+
+```c
+Bool flag = true;
+Int count = -123;
+UInt size = 123;
+UInt8 byte = 255;
+Int16 small = -45;
+Float value = 12.3;
+Double precise = 132.54;
+Char ch = 'a';
+```
+
+`Int` and `UInt` are pointer-sized integers. Use fixed-width integer types such as `Int32` and `UInt64` when ABI, file format, or protocol layout matters.
+
+`()` is the Unit type. It is a zero-sized value and is used as the return type for functions that do not return useful data.
+
+## Type Inference
+
+Use `_` when the initializer should determine the type:
+
+```c
+_ answer = 42;
+_ name = "Jiang";
+_ values = [1, 2, 3];
+```
+
+Inference does not make inner layers mutable. If inner array elements, tuple fields, or struct fields need mutability, write the type explicitly.
+
+## Layered Mutability
+
+`!` means the current type layer is mutable:
+
+```c
+Bool! flag = true;
+flag = false;
+
+Int[3]! values = [1, 2, 3];
+values = [4, 5, 6];
+
+Int![3]! mutable_items = [1, 2, 3];
+mutable_items[0] = 10;
+mutable_items = [4, 5, 6];
+```
+
+For aggregate values, mutability belongs to the member type itself. A mutable outer binding does not automatically make every field or element mutable.
+
+## Arrays and Slices
+
+Array length is part of the type:
+
+```c
+Int[3] values = [1, 2, 3];
+Int[_] inferred = [1, 2, 3];
+```
+
+Nested arrays are written by adding more suffixes:
+
+```c
+Int[2][3] matrix = [[1, 2], [3, 4], [5, 6]];
+```
+
+`T[]` is a slice: a runtime-sized view over elements. Arrays can be sliced:
+
+```c
+Int[_] values = [1, 2, 3];
+Int[] view = values[..];
+```
+
+## Pointers and References
+
+Jiang currently uses simple pointer rules:
+
+- `T*` is an automatically dereferenced single-object pointer.
+- `T&` is a temporary reference.
+- `T[*]` is a many pointer that supports indexing.
+
+```c
+Int* value = new Int(42);
+Int result = value;
+value$.free();
+```
+
+To operate on the pointer itself, enter the implicit operation layer with `$`.
+
+## Optional
+
+`T?` means the value may be `null`:
+
+```c
+Int? maybe = 42;
+Int? none = null;
+```
+
+Use optional chaining for fields:
+
+```c
+_ field = user?.name;
+```
+
+Use `??` to provide a fallback:
+
+```c
+Int value = maybe ?? 0;
+```
+
+Use `is some` to unwrap:
+
+```c
+if maybe is some value {
+    return value;
+}
+```
+
+## Errorable
+
+`T@E` means a computation returns either a `T` or an error of type `E`:
+
+```c
+enum Err {
+    bad = 1,
+}
+
+Int@Err ok() {
+    return 42;
+}
+
+Int main() {
+    return try ok() catch 0;
+}
+```

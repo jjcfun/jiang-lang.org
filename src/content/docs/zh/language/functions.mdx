@@ -3,4 +3,94 @@ title: 函数
 description: Jiang 函数声明和调用。
 ---
 
-本节会记录函数声明、参数、返回值和调用约定。
+函数声明先写返回类型，然后是函数名、参数和函数体。
+
+```c
+Int add(Int left, Int right) {
+    return left + right;
+}
+```
+
+## 返回类型
+
+函数总是有返回类型。没有有意义的返回值时使用 `()`：
+
+```c
+() log_done() {
+    print("done");
+    return ();
+}
+```
+
+Unit 返回值也需要显式返回。这样可以让函数签名和控制流保持清晰。
+
+## 参数
+
+参数按位置匹配：
+
+```c
+Int scale(Int value, Int factor) {
+    return value * factor;
+}
+
+Int result = scale(21, 2);
+```
+
+Stage1 目标语言不依赖参数标签和默认参数。旧的 Stage0 示例中可能还能看到相关语法，但新代码建议使用简单的位置参数调用。
+
+## 结构体值
+
+`struct` 是带命名字段的名义类型：
+
+```c
+struct Pair {
+    Int left;
+    Int right;
+}
+
+Int sum_pair(Pair pair) {
+    return pair.left + pair.right;
+}
+
+Int main() {
+    Pair pair = Pair { left: 20, right: 22 };
+    return sum_pair(pair);
+}
+```
+
+## 多返回值
+
+可以使用 tuple 返回多个值：
+
+```c
+(Int, Int) split(Int value) {
+    return (value, value + 1);
+}
+
+Int main() {
+    (_ left, _ right) = split(41);
+    return left + right;
+}
+```
+
+`(T)` 与 `T` 等价；一元 tuple 不会形成独立的运行时形态。
+
+## 方法和 Trait
+
+Jiang 的语言设计中包含 `struct`、`trait` 和 `extend` 形式的方法与约束能力。这部分仍在对齐 Stage0 行为和 Stage1 编译器实现。
+
+目标形态类似：
+
+```c
+trait Hashable {
+    UInt64 hash();
+}
+
+extend Int: Hashable {
+    UInt64 hash() {
+        return UInt64(self);
+    }
+}
+```
+
+为了让示例在当前阶段更稳定，建议先优先使用普通顶层函数，等 Stage1 的方法和 trait 语义稳定后再大量依赖。

@@ -1,6 +1,61 @@
 ---
 title: 模块
-description: Jiang 模块和导入。
+description: Jiang 模块、导入和可见性。
 ---
 
-本节会记录源码组织、模块、导入和可见性。
+Jiang 模块由源文件和导入关系组成。当前设计不会把导入模块的 API 默认摊平到当前文件，而是保留模块命名空间。
+
+## 导入模块
+
+```c
+import "math.jiang";
+```
+
+默认模块名来自文件名。导入 `math.jiang` 后，通过 `math.Name` 访问它的 public 声明。
+
+```c
+Int value = math.add(1, 2);
+```
+
+## 使用别名导入
+
+如果文件名不是你想使用的模块名，可以显式指定别名：
+
+```c
+import m = "utils/math.jiang";
+
+Int value = m.add(1, 2);
+```
+
+模块别名按约定使用 `snake_case`。
+
+## Public API
+
+需要被其他模块访问的声明使用 `public` 标记：
+
+```c
+public struct Point {
+    Int x;
+    Int y;
+}
+
+public Int distance(Point point) {
+    return point.x + point.y;
+}
+```
+
+没有 `public` 的声明只在当前模块内部可见。
+
+## 重新导出
+
+`public import` 会把模块导入当前文件使用，同时把这个模块命名空间作为当前模块 public API 的一部分重新导出：
+
+```c
+public import "leaf.jiang";
+```
+
+这不会把 `leaf` 中的声明摊平成当前模块的顶层声明。外部代码仍然应该通过重新导出的模块命名空间访问。
+
+## 当前边界
+
+Stage1 编译器已经围绕默认模块名、显式别名和模块名重新导出实现了解析、模块图和 resolver 相关工作。package 路径解析和 ambiguous re-export 诊断仍在继续细化。

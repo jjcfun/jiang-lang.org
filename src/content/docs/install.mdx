@@ -1,15 +1,56 @@
 ---
 title: Installation
-description: Install the Jiang compiler.
+description: Build the Jiang compiler from source.
 ---
 
-Installation instructions will be added once Jiang publishes prebuilt releases.
+Jiang does not yet publish stable prebuilt releases. The recommended way to try it today is to build the compiler from source.
 
-For now, build the compiler from source:
+## Requirements
+
+- A C/C++ build toolchain.
+- CMake.
+- LLVM 21.1.x.
+- A host C compiler available as `cc` for final executable linking.
+
+The repository checks the LLVM version during configuration. If `llvm-config --version` is not `21.1.*`, configuration fails early.
+
+## Clone
 
 ```bash
 git clone https://github.com/jjcfun/jiang.git
 cd jiang
 ```
 
-Follow the build instructions in the main repository.
+## Configure and Build
+
+Prefer passing the LLVM installation explicitly:
+
+```bash
+cmake -S . -B build -DJIANG_LLVM_ROOT=/opt/homebrew/opt/llvm@21
+cmake --build build
+```
+
+Or point CMake at `llvm-config`:
+
+```bash
+LLVM_CONFIG=/opt/homebrew/opt/llvm@21/bin/llvm-config cmake -S . -B build
+cmake --build build
+```
+
+After a successful build, the compiler is available at:
+
+```bash
+./build/jiangc
+```
+
+## Verify
+
+Run the sample test suite with the same LLVM toolchain:
+
+```bash
+LLVM_CONFIG=/opt/homebrew/opt/llvm@21/bin/llvm-config bash ./script/test.sh
+```
+
+## Next Step
+
+Continue with [Getting Started](/getting-started/) to compile a small program.

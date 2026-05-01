@@ -1,10 +1,52 @@
 ---
-title: CLI
+title: Compiler CLI
 description: Jiang compiler command-line interface.
 ---
 
-This section will document `jiangc` commands, options, and output modes.
+`jiangc` compiles Jiang source files. The current compiler can emit LLVM IR, object files, or link an executable through the host C compiler.
+
+## Emit LLVM IR
 
 ```bash
-jiangc --help
+./build/jiangc --emit-llvm tests/samples/minimal.jiang
 ```
+
+By default, LLVM IR is written to standard output. Use `-o` to write it to a file:
+
+```bash
+./build/jiangc --emit-llvm tests/samples/minimal.jiang -o minimal.ll
+```
+
+## Emit an Object File
+
+```bash
+./build/jiangc --emit-obj tests/samples/minimal.jiang -o minimal.o
+```
+
+This stops after object generation and does not link an executable.
+
+## Link an Executable
+
+Without an explicit `--emit-*` mode, `jiangc` creates a temporary object file and asks the host `cc` to link an executable:
+
+```bash
+./build/jiangc tests/samples/minimal.jiang -o minimal
+```
+
+Then run:
+
+```bash
+./minimal
+echo $?
+```
+
+## Runtime Boundary
+
+The current minimum runtime boundary still uses the host C runtime for low-level services, mainly:
+
+- `malloc`
+- `free`
+- `printf`
+- `abort`
+
+This is expected during the current compiler development stage.

@@ -15,16 +15,29 @@ hero:
 
 import { Card, CardGrid } from '@astrojs/starlight/components';
 
+Jiang 是一门正在开发中的系统编程语言。当前重点是稳定清晰的核心语言、直接的内存与布局控制能力，以及逐步走向自举编译器。
+
+这份文档优先作为教程和使用指南来写。它会说明当前已经形成的语言规则，也会在仍处于 Stage1 迁移中的部分保持谨慎。
+
 ## 从这里开始
 
 <CardGrid>
-  <Card title="安装" icon="download">
-    构建或安装 Jiang，并准备编译器。
+  <Card title="安装" icon="download" href="/zh/install/">
+    从源码构建编译器，并准备 LLVM 工具链。
   </Card>
-  <Card title="语言导览" icon="rocket">
-    学习 Jiang 的语法、类型、函数和模块。
+  <Card title="第一个程序" icon="rocket" href="/zh/getting-started/">
+    编译一个小型 Jiang 程序，了解基本工作流。
   </Card>
-  <Card title="编译器" icon="terminal">
-    使用 `jiangc`，并理解编译器诊断信息。
+  <Card title="语言指南" icon="seti:config" href="/zh/language/syntax/">
+    学习声明、类型、函数、模块和控制流。
+  </Card>
+  <Card title="编译器 CLI" icon="terminal" href="/zh/compiler/cli/">
+    使用 `jiangc` 生成 LLVM IR、目标文件或可执行文件。
   </Card>
 </CardGrid>
+
+## 项目状态
+
+Jiang 正在从 Stage0 原型编译器过渡到 Stage1 自举编译器。Stage0 使用 C 实现，用来验证语言行为；Stage1 使用 Jiang 编写，目标是成为长期维护的编译器。
+
+现阶段可以把官网文档视为持续更新的语言指南，而不是完全冻结的规范。相对稳定的内容包括命名风格、类型写法、分层可变性、数组、指针、可选类型、导入规则和当前编译器命令行工作流。

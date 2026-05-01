@@ -3,4 +3,138 @@ title: 类型
 description: Jiang 类型系统概览。
 ---
 
-本节会记录基本类型、用户自定义类型、指针、可选类型和类型推导。
+Jiang 类型按从左到右、从里到外的方式阅读。每个类型后缀都会包裹它左侧已经形成的类型。
+
+## 基本类型
+
+常见基本类型包括：
+
+```c
+Bool flag = true;
+Int count = -123;
+UInt size = 123;
+UInt8 byte = 255;
+Int16 small = -45;
+Float value = 12.3;
+Double precise = 132.54;
+Char ch = 'a';
+```
+
+`Int` 和 `UInt` 是指针宽度整数。需要固定 ABI、文件格式或协议布局时，使用 `Int32`、`UInt64` 等固定宽度类型。
+
+`()` 是 Unit 类型。它是零大小值，也用于表示函数没有有意义的返回数据。
+
+## 类型推导
+
+使用 `_` 让初始化器决定类型：
+
+```c
+_ answer = 42;
+_ name = "Jiang";
+_ values = [1, 2, 3];
+```
+
+类型推导不会自动让内部层级可变。如果数组元素、tuple 元素或结构体字段需要可变性，需要显式写出类型。
+
+## 分层可变性
+
+`!` 表示当前类型层级可变：
+
+```c
+Bool! flag = true;
+flag = false;
+
+Int[3]! values = [1, 2, 3];
+values = [4, 5, 6];
+
+Int![3]! mutable_items = [1, 2, 3];
+mutable_items[0] = 10;
+mutable_items = [4, 5, 6];
+```
+
+对于聚合值，成员是否可变由成员自己的类型决定。外层绑定可变，不代表所有字段或元素自动可变。
+
+## 数组和切片
+
+数组长度是类型的一部分：
+
+```c
+Int[3] values = [1, 2, 3];
+Int[_] inferred = [1, 2, 3];
+```
+
+嵌套数组通过继续添加后缀表达：
+
+```c
+Int[2][3] matrix = [[1, 2], [3, 4], [5, 6]];
+```
+
+`T[]` 是切片，也就是运行时长度的元素视图。数组可以切成 slice：
+
+```c
+Int[_] values = [1, 2, 3];
+Int[] view = values[..];
+```
+
+## 指针和引用
+
+Jiang 当前采用较简单的指针规则：
+
+- `T*` 是自动解引用的单对象指针。
+- `T&` 是临时引用。
+- `T[*]` 是支持下标访问的 many pointer。
+
+```c
+Int* value = new Int(42);
+Int result = value;
+value$.free();
+```
+
+如果要操作指针本身，使用 `$` 进入隐式操作层。
+
+## 可选类型
+
+`T?` 表示值可能为 `null`：
+
+```c
+Int? maybe = 42;
+Int? none = null;
+```
+
+字段访问可以使用 optional chaining：
+
+```c
+_ field = user?.name;
+```
+
+`??` 用于提供默认值：
+
+```c
+Int value = maybe ?? 0;
+```
+
+`is some` 用于解包：
+
+```c
+if maybe is some value {
+    return value;
+}
+```
+
+## Errorable
+
+`T@E` 表示计算结果要么是 `T`，要么是 `E` 类型的错误：
+
+```c
+enum Err {
+    bad = 1,
+}
+
+Int@Err ok() {
+    return 42;
+}
+
+Int main() {
+    return try ok() catch 0;
+}
+```

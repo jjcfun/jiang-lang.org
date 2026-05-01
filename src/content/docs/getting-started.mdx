@@ -3,24 +3,73 @@ title: Getting Started
 description: Compile and run a first Jiang program.
 ---
 
-Jiang is under active development. These docs will track the compiler as the language evolves.
+This guide assumes you have built `jiangc` from the main repository. If not, start with [Installation](/install/).
 
-## Create a Program
+## Write a Program
 
-```text
-fn main() {
-  print("hello, jiang");
+Create `hello.jiang`:
+
+```c
+Int add(Int a, Int b) {
+    return a + b;
+}
+
+Int main() {
+    return add(40, 2);
 }
 ```
 
-## Compile
+A Jiang function always has a return type. The process entry point is `main`; returning `42` gives the host process exit code `42`.
+
+## Compile to an Executable
+
+From the Jiang repository:
 
 ```bash
-jiangc hello.jiang
+./build/jiangc hello.jiang -o hello
 ```
 
-## Next Steps
+Run it:
 
-- Read the [language overview](/language/syntax/).
-- Try the [examples](/examples/hello-world/).
-- Check the [compiler CLI](/compiler/cli/).
+```bash
+./hello
+echo $?
+```
+
+The result should be `42`.
+
+## Inspect LLVM IR
+
+During language development it is often useful to inspect the generated LLVM IR:
+
+```bash
+./build/jiangc --emit-llvm hello.jiang
+```
+
+Use `-o` to write the IR to a file:
+
+```bash
+./build/jiangc --emit-llvm hello.jiang -o hello.ll
+```
+
+## Language Shape
+
+Jiang source is declaration-oriented. A small file usually contains type declarations, functions, and a `main` function:
+
+```c
+struct Pair {
+    Int left;
+    Int right;
+}
+
+Int sum_pair(Pair pair) {
+    return pair.left + pair.right;
+}
+
+Int main() {
+    Pair pair = Pair { left: 20, right: 22 };
+    return sum_pair(pair);
+}
+```
+
+Next, read the [syntax overview](/language/syntax/) and [types guide](/language/types/).
