@@ -1,0 +1,40 @@
+.site-title {
+  gap: 0.55rem;
+}
+
+.site-title img {
+  width: 2.2rem;
+  height: 2.2rem;
+}
+
+.site-title span {
+  font-size: 1.35rem;
+  line-height: 1;
+}
+
+.hero .stack,
+.hero .copy {
+  align-items: center;
+  text-align: center;
+}
+
+.hero .actions {
+  justify-content: center;
+}
+
+.hero .copy::before {
+  content: '';
+  display: block;
+  width: 9rem;
+  height: 9rem;
+  margin: 0 auto 1.5rem;
+  background: url('/logo.svg') center / contain no-repeat;
+}
+
+@media (max-width: 50rem) {
+  .hero .copy::before {
+    width: 7rem;
+    height: 7rem;
+    margin-bottom: 1rem;
+  }
+}

@@ -11,6 +11,7 @@ export default defineConfig({
         src: './public/logo.svg',
         alt: 'Jiang logo',
       },
+      customCss: ['/src/styles/custom.css'],
       locales: {
         root: {
           label: 'English',
