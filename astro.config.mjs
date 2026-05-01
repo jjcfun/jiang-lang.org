@@ -8,10 +8,14 @@ export default defineConfig({
       title: 'Jiang',
       description: 'Documentation for the Jiang programming language.',
       logo: {
-        src: './public/logo.svg',
+        light: './public/logo.svg',
+        dark: './public/logo-white.svg',
         alt: 'Jiang logo',
       },
       customCss: ['/src/styles/custom.css'],
+      components: {
+        Hero: './src/components/JiangHero.astro',
+      },
       locales: {
         root: {
           label: 'English',
