@@ -1,0 +1,37 @@
+---
+title: Jiang
+description: Jiang 编程语言文档。
+template: splash
+hero:
+  tagline: 一个关注清晰系统编程的编程语言项目。
+  actions:
+    - text: 快速开始
+      link: /zh/getting-started/
+      icon: right-arrow
+    - text: GitHub
+      link: https://github.com/jjcfun/jiang
+      icon: external
+---
+
+import { Card, CardGrid } from '@astrojs/starlight/components';
+
+<p align="center">
+  <img src="/logo.svg" alt="Jiang logo" width="160" height="160" />
+</p>
+
+## 文档
+
+<CardGrid>
+  <Card title="快速开始" icon="rocket">
+    安装 Jiang，并编译第一个程序。
+  </Card>
+  <Card title="语言参考" icon="document">
+    学习语法、类型系统、函数和模块。
+  </Card>
+  <Card title="编译器" icon="setting">
+    使用编译器 CLI，并理解诊断信息。
+  </Card>
+  <Card title="示例" icon="seti:folder">
+    阅读小型 Jiang 程序。
+  </Card>
+</CardGrid>
