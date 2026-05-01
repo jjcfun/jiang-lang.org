@@ -18,6 +18,19 @@
   text-align: center;
 }
 
+.hero {
+  min-height: 34rem;
+  padding-block: clamp(4rem, 12vw, 7rem);
+}
+
+.hero .copy {
+  max-width: 48rem;
+}
+
+.hero h1 {
+  margin-top: 0;
+}
+
 .hero .actions {
   justify-content: center;
 }
