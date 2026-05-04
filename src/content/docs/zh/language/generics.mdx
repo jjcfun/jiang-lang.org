@@ -1,0 +1,132 @@
+---
+title: 泛型与多态
+description: Jiang 语言中的泛型定义、参数化、单态化与概念（Concept）约束。
+---
+
+泛型参数在编译期单态化，每个具体类型生成独立副本。使用 `Type<T1, T2>` 语法定义泛型。
+
+## 基本泛型
+
+```c
+struct Pair<T1, T2> {
+  T1 first;
+  T2 second;
+}
+
+// 初始化
+Pair<Int, Int> p = Pair(1, 2);
+Pair<Int, float> p2 = Pair(1, 2);
+
+// 泛型函数
+T id<T>(T value) {
+  return value;
+}
+```
+
+## 专用化 (Specialize)
+
+通过 `specialize` 为具体类型或条件提供定制实现：
+
+```c
+specialize T get<T>(T x) where T == Int {
+  return x + 1;
+}
+
+specialize T get<T>(T x) where T == float {
+  return x + 0.5;
+}
+```
+
+## 概念 (Concept)
+
+Concept 描述类型约束而不指定具体类型，编译器自动检查类型是否满足。可用于泛型约束，也用作元组和枚举的去糖抽象，就像数组概念为下标访问提供抽象一样。
+
+### 定义与实现
+
+```c
+concept C { }
+
+// 为具体类型实现
+impl C for MyType { }
+
+// 为泛型参数实现
+impl<T> C for T { }
+```
+
+### 方法约束
+
+```c
+concept Printable {
+  Int print() const;
+}
+```
+
+`impl` 中 `self` 的类型与概念目标类型一致：
+
+```c
+impl Printable for Int {
+  Int print() const {
+    // self 的类型是 Int
+    write(self);
+    return 0;
+  }
+}
+```
+
+### 泛型约束
+
+```c
+T do_something<T>(T x) where T: Printable {
+  x.print();
+  return x;
+}
+```
+
+`where T: Concept` 与 `T: Concept` 等价：
+
+```c
+fn process<T: Printable>(T value) { }
+```
+
+### 多个约束
+
+```c
+fn complex_op<T>(T value) where T: Printable, T: Comparable {
+  if value > 0 {
+    value.print();
+  }
+}
+```
+
+## concept 作为枚举/联类型的抽象
+
+concept 用作枚举和联类型的抽象，当不同的 enum variant 需要共享行为时，可以通过 concept + impl 统一接口：
+
+```c
+enum Shape {
+  Circle(Int),
+  Square(Int),
+}
+
+concept Area {
+  Int area() const;
+}
+
+impl Area for Shape {
+  Int area() const {
+    // self 是 Shape
+    return switch self {
+      Shape::Circle(r) => r * 2,
+      Shape::Square(w) => w * w,
+    };
+  }
+}
+
+Shape::Circle(4).area();  // 8
+```
+
+## 当前限制
+
+- 泛型参数只能接受类型，不支持非类型参数
+- concept 参数必须为指定类型，不支持 `self` 推导
+- concept 不支持联合/交集，每个类型最多实现一次

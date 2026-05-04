@@ -1,0 +1,153 @@
+---
+title: Structs & Records
+description: Structs, records, init, deinit, and member functions in Jiang.
+---
+
+## Struct
+
+### Definition
+
+```c
+struct Point {
+  Int x;
+  Int y;
+}
+
+// Multiple fields of the same type
+struct Offset {
+  Int x, y;  // equivalent to Int x; Int y;
+}
+```
+
+### Initialization
+
+```c
+// Field-literal initialization (when no init is defined)
+Point point = Point { x: 0, y: 0 };
+
+// Copy by value
+Point p2 = p1;
+
+// Owning pointer (reference semantics)
+Point^ p3 = new Point { x: 100, y: 200 };
+
+// Owning pointer auto-dereference
+print("p3.x = %d, p3.y = %d", p3.x, p3.y);
+```
+
+### Field Mutability
+
+Field mutability is determined by the field's own type, not by whether the outer variable carries `!`:
+
+```c
+struct User {
+  Int id;               // immutable
+  Int! age;             // mutable
+  UInt8[]?! nick_name;  // nullable, mutable
+}
+
+User user = User(id: 123, age: 18);
+user.age += 1;  // ok
+// user.id = 200;  // compile error
+```
+
+Optional fields may be omitted and default-initialize to `null`.
+
+### init function
+
+`init` is the special constructor for structs:
+
+```c
+struct Point {
+  Int x;
+  Int y;
+
+  public init(Int x, Int y) {
+    self.x = x;
+    self.y = y;
+  }
+
+  public init(Int value) {
+    self.x = value;
+    self.y = value;
+  }
+}
+
+Point p1 = Point(1, 2);
+Point p2 = Point(3);
+Point^ p3 = new Point(4, 5);
+```
+
+Rules:
+- `init` implicitly has `self` and does not declare a return type
+- Multiple `init` functions can be defined (resolved by parameter overload)
+- Once any `init` is defined, `Point { ... }` syntax is no longer allowed
+- Visibility modifiers are supported (`public init`)
+
+### deinit function
+
+`deinit` is called automatically when `ptr$.free()` is invoked:
+
+```c
+struct List {
+  Int[]! data;
+
+  deinit() {
+    if self.data != null {
+      self.data$.free();
+      self.data = null;
+    }
+    return;
+  }
+}
+```
+
+### Member Functions
+
+Structs support `static` methods and instance methods:
+
+```c
+struct User {
+  Int id;
+
+  static Int zero() {
+    return 0;
+  }
+
+  Int value() {
+    return self.id;
+  }
+}
+
+Int a = User.zero();
+User u = User { id: 42 };
+Int b = u.value();
+```
+
+## Record
+
+`record` is a lightweight data type with named fields. It does not require `init` by default:
+
+```c
+record Point {
+  Int x;
+  Int y = 2;
+}
+
+Point p1 = Point { x: 40 };
+Point p2 = { x: 1, y: 2 };  // type name can be omitted when expected type is known
+```
+
+- `record` fields support default values
+- `struct` supports `Type { ... }` syntax only when no `init` is defined
+
+### Multi-name Declarations of the Same Type
+
+```c
+// Struct fields
+struct S {
+  Int x, y, z;
+}
+
+// Local variables (each must be explicitly initialized)
+Int a = 1, b = 2, c = 3;

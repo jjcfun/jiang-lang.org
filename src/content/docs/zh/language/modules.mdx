@@ -56,6 +56,10 @@ public import "leaf.jiang";
 
 这不会把 `leaf` 中的声明摊平成当前模块的顶层声明。外部代码仍然应该通过重新导出的模块命名空间访问。
 
-## 当前边界
+## Using 声明
 
-Stage1 编译器已经围绕默认模块名、显式别名和模块名重新导出实现了解析、模块图和 resolver 相关工作。package 路径解析和 ambiguous re-export 诊断仍在继续细化。
+`using` 将模块的 public 声明引入当前作用域，减少命名空间重复：
+
+```c
+using std.math;
+```

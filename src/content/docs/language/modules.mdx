@@ -56,6 +56,10 @@ public import "leaf.jiang";
 
 This does not flatten `leaf` declarations into the current module. External code should access them through the re-exported namespace.
 
-## Current Boundaries
+## Using Declarations
 
-The Stage1 compiler has parser, module graph, and resolver work for default module names, explicit aliases, and module-name re-exports. Package path resolution and ambiguous re-export diagnostics are still being refined.
+`using` brings a module's public declarations into the current scope, reducing namespace repetition:
+
+```c
+using std.math;
+```

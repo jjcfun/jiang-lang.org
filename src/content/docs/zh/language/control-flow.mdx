@@ -1,0 +1,145 @@
+---
+title: 控制流
+description: Jiang 语言中的控制流语句，包括 if、for、while、loop、break、continue 和条件解包。
+---
+
+## `if` 语句
+
+```c
+if x > 0 {
+  return true;
+}
+
+if x >= 0 {
+  return true;
+} else if y > 1 {
+  return false;
+}
+
+// if 作为表达式
+_ value = if x {
+  42
+} else {
+  0
+};
+```
+
+if 条件可选 `( )`：
+
+```c
+if (x > 0 && y == 42) {
+  print("both conditions met");
+}
+```
+
+## `for` 循环
+
+Jiang 的 for 循环在可迭代类型中遍历：
+
+```c
+Int[_] arr = [10, 20, 30];
+
+// 元素迭代
+for item in arr {
+    print("item %d", item);
+}
+
+// 索引+元素迭代
+for (i, item) in arr.indexed() {
+    print("arr[%d] = %d", i, item);
+}
+```
+
+for 循环中的解构：
+
+```c
+(Int, Int)[_] pairs = [(1, 2), (3, 4)];
+
+for (a, b) in pairs {
+    print("a=%d, b=%d", a, b);
+}
+
+for (i, (a, b)) in pairs.indexed() {
+    print("index=%d, a=%d, b=%d", i, a, b);
+}
+```
+
+## `while` 循环
+
+```c
+Int count = 0;
+while count < 5 {
+  count += 1;
+}
+while true {
+  if count >= 10 {
+    break;
+  }
+  count += 1;
+}
+```
+
+### `while-is` 模式
+
+`while-is` 在每次迭代中自动匹配和绑定：
+
+```c
+while a is some x {
+  // x 不为 null
+  a = next(a);
+}
+```
+
+匹配 bindings 支持可变：
+
+```c
+while result is Foo::C(x, y!) {
+  y += 100;
+  print("x = %d y = %d", x, y);
+  result = get_next();
+}
+```
+
+## `loop` 无限循环
+
+`loop` 等价于 `while true`：
+
+```c
+Int count = 0;
+loop {
+  if count > 10 {
+    break;
+  }
+  count += 1;
+}
+```
+
+## `break` 与 `continue`
+
+```c
+for item in items {
+  if item == 0 {
+    continue;
+  }
+  if item < 0 {
+    break;
+  }
+  print("item = %d", item);
+}
+```
+
+`break` 和 `continue` 只作用于直接包含的循环层。
+
+## 表达式 vs 语句
+
+if 可以作为表达式时，所有分支必须产生值：
+
+```c
+_ tag = if x > 0 {
+  1
+} else {
+  0
+};
+```
+
+带块分支最后要有分号 `;`。

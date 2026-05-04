@@ -1,0 +1,74 @@
+---
+title: Tuples
+description: Tuples in Jiang, including multi-tuples, one-tuples, the Unit type, and destructuring.
+---
+
+Tuples group multiple values together. Tuple types are written as `(T1, T2, ...)`.
+
+## Multi-tuples
+
+```c
+// Function returning multiple values via tuple
+(Int, Int) foo(Int a, Int b) {
+  return (a * a, b * 2);
+}
+
+// Receive the tuple return
+_ result = foo(10, 200);
+print("result0 = %d", result[0]);  // prints: 10
+print("result1 = %d", result[1]);  // prints: 200
+
+// Destructure the tuple
+(_ a, _ b) = foo(10, 200);
+print("x = %d, y = %d", a, b);  // prints: a = 100, b = 200
+```
+
+Specify mutability when destructuring:
+
+```c
+(_ x, _! y) = foo(10, 200);
+y += 100;
+print("x = %d, y = %d", x, y);  // prints: x = 100, y = 300
+```
+
+## One-tuples
+
+A one-tuple `(T)` is equivalent to its element type `T` and occupies the same memory space:
+
+```c
+// These two function signatures are equivalent
+(Int) add(Int a, Int b);
+Int add(Int a, Int b);
+
+// These two syntaxes are also equivalent
+(Int! x) = add(1, 2);
+Int! x = add(1, 2);
+```
+
+## Unit
+
+`()` denotes the `Unit` type. `Unit` occupies zero memory space and expresses "no meaningful return value":
+
+```c
+() hello() {
+  print("Hello World!");
+  return ();
+}
+```
+
+`Unit` can be used as a value, parameter, local variable, or field like any other type.
+
+## Destructuring in for loops
+
+In `for-in` loops, multi-element patterns must be wrapped in parentheses:
+
+```c
+(Int, Int)[_] pairs = [(1, 2), (3, 4)];
+
+for (a, b) in pairs {
+    print("a=%d, b=%d", a, b);
+}
+
+for (i, (a, b)) in pairs.indexed() {
+    print("index=%d, a=%d, b=%d", i, a, b);
+}

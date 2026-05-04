@@ -1,0 +1,153 @@
+---
+title: 结构体与 Record
+description: Jiang 语言中的 struct、record、init、deinit 和内部函数。
+---
+
+## Struct
+
+### 定义
+
+```c
+struct Point {
+  Int x;
+  Int y;
+}
+
+// 同类型多字段声明
+struct Offset {
+  Int x, y;  // 等价于 Int x; Int y;
+}
+```
+
+### 初始化
+
+```c
+// 字段字面量初始化（没有 init 时）
+Point point = Point { x: 0, y: 0 };
+
+// 值拷贝
+Point p2 = p1;
+
+// owning pointer（引用语义）
+Point^ p3 = new Point { x: 100, y: 200 };
+
+// owning pointer 自动解引用
+print("p3.x = %d, p3.y = %d", p3.x, p3.y);
+```
+
+### 字段可变性
+
+字段可变性由字段类型自身决定，不由外层变量是否带 `!` 决定：
+
+```c
+struct User {
+  Int id;               // 不可变
+  Int! age;             // 可变
+  UInt8[]?! nick_name;  // 可空、可变
+}
+
+User user = User(id: 123, age: 18);
+user.age += 1;  // 正确
+// user.id = 200;  // 编译错误
+```
+
+optional 字段可省略，默认初始化为 `null`。
+
+### init 函数
+
+`init` 是结构体的特殊构造器：
+
+```c
+struct Point {
+  Int x;
+  Int y;
+
+  public init(Int x, Int y) {
+    self.x = x;
+    self.y = y;
+  }
+
+  public init(Int value) {
+    self.x = value;
+    self.y = value;
+  }
+}
+
+Point p1 = Point(1, 2);
+Point p2 = Point(3);
+Point^ p3 = new Point(4, 5);
+```
+
+规则：
+- `init` 隐式拥有 `self`，不声明返回类型
+- 可定义多个 `init`（按参数做重载决议）
+- 只要定义了 `init`，就不允许再用 `Point { ... }`
+- 支持可见性修饰（`public init`）
+
+### deinit 函数
+
+`deinit` 在 `ptr$.free()` 时自动调用：
+
+```c
+struct List {
+  Int[]! data;
+
+  deinit() {
+    if self.data != null {
+      self.data$.free();
+      self.data = null;
+    }
+    return;
+  }
+}
+```
+
+### 内部函数
+
+结构体支持 `static` 方法和实例方法：
+
+```c
+struct User {
+  Int id;
+
+  static Int zero() {
+    return 0;
+  }
+
+  Int value() {
+    return self.id;
+  }
+}
+
+Int a = User.zero();
+User u = User { id: 42 };
+Int b = u.value();
+```
+
+## Record
+
+`record` 是轻量数据类型，字段命名但默认不要求 `init`：
+
+```c
+record Point {
+  Int x;
+  Int y = 2;
+}
+
+Point p1 = Point { x: 40 };
+Point p2 = { x: 1, y: 2 };  // expected type 已知时可省略类型名
+```
+
+- `record` 字段支持默认值
+- `struct` 只有在没有定义 `init` 时才支持 `Type { ... }`
+
+### 同类型多名字声明
+
+```c
+// 结构体字段
+struct S {
+  Int x, y, z;
+}
+
+// 局部变量（每个都必须显式初始化）
+Int a = 1, b = 2, c = 3;

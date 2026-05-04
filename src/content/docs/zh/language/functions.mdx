@@ -13,16 +13,15 @@ Int add(Int left, Int right) {
 
 ## 返回类型
 
-函数总是有返回类型。没有有意义的返回值时使用 `()`：
+函数总是有返回类型。没有有意义的返回值时使用 `()`表示Unit类型：
 
 ```c
 () log_done() {
     print("done");
     return ();
 }
-```
 
-Unit 返回值也需要显式返回。这样可以让函数签名和控制流保持清晰。
+```
 
 ## 参数
 
@@ -75,22 +74,37 @@ Int main() {
 
 `(T)` 与 `T` 等价；一元 tuple 不会形成独立的运行时形态。
 
-## 方法和 Trait
+## 方法与 Concept
 
-Jiang 的语言设计中包含 `struct`、`trait` 和 `extend` 形式的方法与约束能力。这部分仍在对齐 Stage0 行为和 Stage1 编译器实现。
-
-目标形态类似：
+结构体通过成员函数支持实例方法：
 
 ```c
-trait Hashable {
-    UInt64 hash();
+struct User {
+  Int id;
+
+  Int value() {
+    return self.id;
+  }
 }
 
-extend Int: Hashable {
-    UInt64 hash() {
-        return UInt64(self);
-    }
-}
+User u = User { id: 42 };
+Int b = u.value();
 ```
 
-为了让示例在当前阶段更稳定，建议先优先使用普通顶层函数，等 Stage1 的方法和 trait 语义稳定后再大量依赖。
+Concept 定义跨类型的共享接口：
+
+```c
+concept Hashable {
+  UInt hashU() const;
+}
+
+impl Hashable for Int {
+  UInt hashU() const {
+    return UInt(self);
+  }
+}
+
+Int h = 123.hashU();
+```
+
+参见[泛型与多态](/zh/language/generics)了解 concept 约束与类型边界。

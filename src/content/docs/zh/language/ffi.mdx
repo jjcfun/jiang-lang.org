@@ -1,0 +1,80 @@
+---
+title: FFI 与外部函数接口
+description: Jiang 语言中的 extern 声明、C 互操作、显式链接和 RawPointer。
+---
+
+`extern` 声明用于链接外部 C 符号（包括常见的 `libc` 或自定义动态库）。编译器将 extern 函数视为普通函数调用，不做类型安全的特殊处理。
+
+## 基本 extern 声明
+
+```c
+extern fn printf(fmt: CString, ...);
+extern fn scanf(fmt: CString, ...);
+
+extern fn printf(fmt: CString, ...);
+printf("hello %d\n", 42);
+```
+
+## CString 与 RawPointer
+
+`CString` 是编译期的特殊类型，用于与 C 字符串常量交互：
+
+```c
+extern fn puts(s: CString);
+
+// 字符串字面量可作为 CString 传递
+puts("Hello World!");
+```
+
+对任意类型的 `T`，可以使用 `RawPointer<T>` 作为低层裸指针：
+
+```c
+Int value = 42;
+_ raw_ptr = value$.ptr();  // raw_ptr: RawPointer<Int>
+```
+
+## 显式链接
+
+可以通过 `@link` 属性指定符号来源（当符号不在默认 libc 中时）：
+
+```c
+@link("m")
+extern fn sqrt(x: Float) Float;
+
+@link("my_lib")
+extern fn my_function(x: Int) Int;
+```
+
+编译器在链接阶段添加对应的 `-lmylib` 标志。
+
+## Variadic 参数
+
+```c
+extern fn printfln(fmt: CString, ...);
+printfln("int %d, float %f", 42, 3.14);
+```
+
+## 导入 extern block
+
+```c
+@link("SDL2")
+extern {
+  fn SDL_Init(flags: UInt32) Int;
+  fn SDL_Quit();
+}
+```
+
+## 外部全局变量
+
+```c
+extern Int errno;
+```
+
+目前 extern 变量视为只读指针导入。
+
+## 注意事项
+
+- extern 函数在 Jiang 中没有模块/包前缀，它们位于全局命名空间
+- 可变参数通过 `...` 标记，接收任意数量的额外参数
+- 编译器不会对 extern 声明进行类型安全验证
+- 未定义行为由调用者负责

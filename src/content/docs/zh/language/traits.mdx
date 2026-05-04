@@ -1,0 +1,121 @@
+---
+title: 内置类型与特性
+description: Jiang 语言内建的特性和类型操作，包括 Sized、字段反射、Hashable、Ord、Concat、Stringer、下标访问与 as 转换。
+---
+
+## 内置特性
+
+Jiang 提供一组编译器识别的概念，无需显式 impl，根据类型结构自动满足。
+
+### Sized
+
+提供类型的字节大小：
+
+```c
+record User {
+  Int id, age;
+}
+
+UInt size = User$.bytes; // 8
+```
+
+### Fields
+
+通过 `$.fields()` 字段反射访问编译期字段信息：
+
+```c
+struct Point {
+  Int x;
+  Int y;
+}
+
+_ fields = Point$.fields();
+```
+
+编译期反射遍历 fields 列表，字段以 record 形式提供信息。
+
+### Hashable
+
+可哈希特性，`hashU()` 返回 `UInt`：
+
+```c
+Int h = 123.hashU();
+```
+
+内置类型和 `struct`/`record` 自动满足 Hashable。
+
+### Ord
+
+可比较特性，支持 `==`、`<`、`>` 等运算：
+
+```c
+if 1 > 2 {
+  print("unreachable");
+}
+```
+
+### Concat
+
+拼接特性，支持 `else` 合并：
+
+```c
+Int x = 0;
+Int y = 0;
+if true {
+  x = 1;
+  y = 1;
+} else {
+  x = 2;
+  y = 2;
+}
+```
+
+### Stringer
+
+转换为字符串的特性：
+
+```c
+_ display = 123.printable();
+print(42);  // 隐式调用 printable()
+```
+
+## 下标语法
+
+`T[K]` 通过 concept 去糖为下标访问。`self` 类型是概念目标类型：
+
+```c
+impl<T> SubscriptRead<Int, Value> for T {
+  Value get(Int index) const {
+    // 读写实现
+  }
+}
+
+impl<T> SubscriptWrite<Int, Value> for T {
+  void set(Int index, Value value) {
+    // 写入实现
+  }
+}
+```
+
+## 数组重复初始化
+
+`[value; N]` 对每个元素执行值拷贝：
+
+```c
+Int[4] arr = [0; 4];  // [0, 0, 0, 0]
+Int[4] arr = ones;    // 从变量拷贝
+```
+
+## `as` 类型转换
+
+`as` 操作符适用于类型兼容场景：
+
+```c
+Int x = 42;
+Float y = x as Float;
+```
+
+与 `as?` 组合实现安全的类型重新解释：
+
+```c
+Int? z = x as? Int;

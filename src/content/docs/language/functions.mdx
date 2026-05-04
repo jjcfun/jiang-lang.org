@@ -75,22 +75,37 @@ Int main() {
 
 `(T)` is equivalent to `T`; a one-element tuple does not create a distinct runtime shape.
 
-## Methods and Traits
+## Methods and Concepts
 
-Jiang supports method-style declarations through `struct`, `trait`, and `extend` in the language design. This area is still being aligned between Stage0 behavior and the Stage1 compiler.
-
-The intended shape is:
+Structs support instance methods via member functions:
 
 ```c
-trait Hashable {
-    UInt64 hash();
+struct User {
+  Int id;
+
+  Int value() {
+    return self.id;
+  }
 }
 
-extend Int: Hashable {
-    UInt64 hash() {
-        return UInt64(self);
-    }
-}
+User u = User { id: 42 };
+Int b = u.value();
 ```
 
-For portable examples today, prefer ordinary top-level functions until the Stage1 method and trait implementation is finalized.
+Concepts define shared interfaces across types:
+
+```c
+concept Hashable {
+  UInt hashU() const;
+}
+
+impl Hashable for Int {
+  UInt hashU() const {
+    return UInt(self);
+  }
+}
+
+Int h = 123.hashU();
+```
+
+See [Generics & Polymorphism](/language/generics) for concept constraints and type bounds.

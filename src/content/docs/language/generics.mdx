@@ -1,0 +1,132 @@
+---
+title: Generics & Polymorphism
+description: Generic definitions, parameterization, monomorphization, and Concept constraints in Jiang.
+---
+
+Generic parameters are monomorphized at compile time, generating separate copies for each concrete type. Define generics using `Type<T1, T2>` syntax.
+
+## Basic Generics
+
+```c
+struct Pair<T1, T2> {
+  T1 first;
+  T2 second;
+}
+
+// Initialization
+Pair<Int, Int> p = Pair(1, 2);
+Pair<Int, float> p2 = Pair(1, 2);
+
+// Generic function
+T id<T>(T value) {
+  return value;
+}
+```
+
+## Specialization
+
+Use `specialize` to provide custom implementations for specific types or conditions:
+
+```c
+specialize T get<T>(T x) where T == Int {
+  return x + 1;
+}
+
+specialize T get<T>(T x) where T == float {
+  return x + 0.5;
+}
+```
+
+## Concept
+
+Concepts describe type constraints without specifying concrete types. The compiler automatically checks whether a type satisfies the constraint. Concepts can be used for generic bounds, and also serve as desugaring abstractions for enums and tuples—just as array concepts provide an abstraction for subscript access.
+
+### Definition & Implementation
+
+```c
+concept C { }
+
+// Implement for a concrete type
+impl C for MyType { }
+
+// Implement for a generic parameter
+impl<T> C for T { }
+```
+
+### Methods as Requirements
+
+```c
+concept Printable {
+  Int print() const;
+}
+```
+
+`self` inside `impl` has the same type as the concept target type:
+
+```c
+impl Printable for Int {
+  Int print() const {
+    // self has type Int
+    write(self);
+    return 0;
+  }
+}
+```
+
+### Generic Constraints
+
+```c
+T do_something<T>(T x) where T: Printable {
+  x.print();
+  return x;
+}
+```
+
+`where T: Concept` is equivalent to `T: Concept`:
+
+```c
+fn process<T: Printable>(T value) { }
+```
+
+### Multiple Constraints
+
+```c
+fn complex_op<T>(T value) where T: Printable, T: Comparable {
+  if value > 0 {
+    value.print();
+  }
+}
+```
+
+## Concept as Enum/Union Abstraction
+
+Concepts serve as an abstraction for enums and union-like types. When different enum variants need to share behavior, concepts with impl unify the interface:
+
+```c
+enum Shape {
+  Circle(Int),
+  Square(Int),
+}
+
+concept Area {
+  Int area() const;
+}
+
+impl Area for Shape {
+  Int area() const {
+    // self is Shape
+    return switch self {
+      Shape::Circle(r) => r * 2,
+      Shape::Square(w) => w * w,
+    };
+  }
+}
+
+Shape::Circle(4).area();  // 8
+```
+
+## Current Limitations
+
+- Generic parameters accept only types; non-type parameters are not supported
+- Concept parameters must declare the target type; `self` deduction is not supported
+- Concepts do not support union/intersection; each type can implement a concept at most once

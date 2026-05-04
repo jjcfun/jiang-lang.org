@@ -1,0 +1,80 @@
+---
+title: FFI & External Function Interface
+description: Extern declarations, C interop, explicit linking, and RawPointer in Jiang.
+---
+
+`extern` declarations link external C symbols (including common `libc` or custom dynamic libraries). The compiler treats extern functions as normal function calls without special type-safety handling.
+
+## Basic extern Declaration
+
+```c
+extern fn printf(fmt: CString, ...);
+extern fn scanf(fmt: CString, ...);
+
+extern fn printf(fmt: CString, ...);
+printf("hello %d\n", 42);
+```
+
+## CString & RawPointer
+
+`CString` is a compile-time special type for interacting with C string constants:
+
+```c
+extern fn puts(s: CString);
+
+// String literals can be passed as CString
+puts("Hello World!");
+```
+
+For any type `T`, you can use `RawPointer<T>` as a low-level bare pointer:
+
+```c
+Int value = 42;
+_ raw_ptr = value$.ptr();  // raw_ptr: RawPointer<Int>
+```
+
+## Explicit Linking
+
+Use the `@link` attribute to specify the symbol source (when the symbol is not in the default libc):
+
+```c
+@link("m")
+extern fn sqrt(x: Float) Float;
+
+@link("my_lib")
+extern fn my_function(x: Int) Int;
+```
+
+The compiler adds the corresponding `-lmylib` flag during the link stage.
+
+## Variadic Arguments
+
+```c
+extern fn printfln(fmt: CString, ...);
+printfln("int %d, float %f", 42, 3.14);
+```
+
+## Import extern Block
+
+```c
+@link("SDL2")
+extern {
+  fn SDL_Init(flags: UInt32) Int;
+  fn SDL_Quit();
+}
+```
+
+## External Global Variables
+
+```c
+extern Int errno;
+```
+
+Currently extern variables are imported as read-only pointers.
+
+## Notes
+
+- Extern functions in Jiang have no module/package prefix; they reside in the global namespace
+- Variadic arguments are marked with `...`, accepting any number of additional arguments
+- The compiler does not perform type-safety validation on extern declarations
+- Undefined behavior is the caller's responsibility

@@ -1,0 +1,116 @@
+---
+title: 指针与引用
+description: Jiang 语言中的 owning pointer、临时引用、many-pointer 和自动解引用规则。
+---
+
+Jiang 当前不引入所有权和借用系统，只使用默认堆分配器。指针语义如下：
+
+- `T^`：自动解引用的 owning heap pointer，适合 `new T` 场景
+- `T&`：自动解引用的临时引用，不承担释放职责
+- `RawPointer<T>`：裸指针，主要用于 FFI / ABI / 低层场景
+- `T[*]`：many-pointer，支持下标访问，不默认自动解引用
+
+指针类型也遵循 **从左往右，从里到外** 的规则。
+
+## 基本用法
+
+```c
+// 栈上分配
+Int a = 123;
+
+// 堆上分配 owning pointer
+Int^ b = new Int(123);
+
+// 堆上创建数组
+Int[3]^ c = new [1, 2, 3];
+
+// 临时引用
+Int& d = a$.ref();
+```
+
+`^` 和 `&` 必须紧跟在元素类型后面，不能有空格：
+
+```c
+Int^ a;     // 正确
+// Int ^ a;  // 错误
+```
+
+## 与 optional / mutable 组合
+
+```c
+Int!^? maybe_owner;   // optional owning pointer to mutable Int
+Int?& maybe_ref;      // reference to optional Int
+Int^! owner_slot;     // owning pointer 绑定本身可变
+```
+
+## 自动解引用
+
+`T^` 和 `T&` 默认自动解引用，除非 expected type 与 pointer/reference 类型一致。Jiang 没有前缀解引用语法 `*ptr`；需要显式解引用时使用 `ptr$.get()`。
+
+```c
+Int&! ref = value$.ref();
+
+_ copied = ref;              // copied: Int&
+_! mutable = ref;            // mutable: Int&!
+Int copied_value = ref;      // expected type 是 Int，自动解引用
+Int& kept = ref;             // expected type 是 Int&，保留 reference
+
+_ raw_ref = ref$.ref();      // raw_ref: Int&
+Int explicit_value = ref$.get();  // 显式解引用
+```
+
+类型推导会保留 pointer/reference 层，并默认得到不可变绑定。
+
+## 隐式操作层 `$`
+
+`$` 操作符会阻止自动解引用，并进入隐式操作层。通过它可以调用 pointer/reference 自身的低层操作：
+
+```c
+Int a = 100;
+Int^ b = new Int(200);
+
+// 自动解引用，直接参与运算
+Int c = a + b;
+print("c = %d", c);  // 输出：c = 300
+
+// $ 阻止自动解引用，释放 own pointer 管理的内存
+b$.free();
+```
+
+`$.ref()` 和 `$.ptr()` 返回 `T&` 和 `RawPointer<T>`：
+
+```c
+Int^ p = new Int(41);
+
+_ ref = p$.ref();   // ref: Int&
+_ raw = p$.ptr();   // raw: RawPointer<Int>
+
+// 隐式层返回的引用不会再次自动解引用
+// Int bad = p$.ref() + 1;  // 编译错误
+```
+
+## Many-pointer `T[*]`
+
+`T[*]` 不参与默认自动解引用。它表示一段可按元素索引的连续地址，必须通过下标访问：
+
+```c
+Int[*] ptr = items[0]$.as(Int[*]);
+
+_ raw = ptr;       // raw: Int[*]
+Int value = ptr[0];
+ptr[1] = 42;
+
+_ item_ref = ptr[1]$.ref();  // item_ref: Int&
+_ item_ptr = ptr[1]$.ptr();  // item_ptr: RawPointer<Int>
+```
+
+## 释放
+
+当前 `T^` owning pointer 可通过 `ptr$.free()` 主动释放：
+
+```c
+Int^ a = new Int(100);
+a$.free();
+```
+
+`&` 引用只是临时引用，不参与释放。

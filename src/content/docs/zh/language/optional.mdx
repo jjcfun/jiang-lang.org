@@ -1,0 +1,67 @@
+---
+title: 可选类型
+description: Jiang 语言中的 Optional 类型（T?），包括条件解包、链接访问和 Coalesce 操作。
+---
+
+Optional 是语言内建类型层，使用 `T?` 表示。它不是普通泛型类型。
+
+## 基本用法
+
+```c
+Int? a1 = 123;
+_ a2 = a1;           // a2 为 Int? 类型
+
+Bar? b1 = {x: 1, y: 2};
+_ b2 = b1?.x;        // b2 为 Int? 类型
+```
+
+## 可选链
+
+通过 `?.` 安全访问嵌套字段：
+
+```c
+_ foo = x?.y?.z;
+```
+
+## 条件解包
+
+使用 `is some` 模式匹配解包可选值：
+
+```c
+if a1 is some x {
+  // x 类型为 Int，值不为 null
+} else {
+  // x 为 null
+}
+
+// 显式写出推导类型
+if a1 is some _ x {
+  // 等价于 some x
+}
+
+// 可变绑定
+if a1 is some _! x {
+  // x 为可变绑定
+}
+```
+
+## Coalesce `??`
+
+提供默认值或提前退出：
+
+```c
+Int value = maybe ?? 42;
+Int other = maybe ?? fallback();
+```
+
+`??` 支持提前退出控制流（仅限局部变量初始化右侧）：
+
+```c
+Int value = maybe ?? return;
+Int value = maybe ?? return 42;
+Int value = maybe ?? break;
+Int value = maybe ?? continue;
+```
+
+- 左侧必须是 optional
+- `return expr` 按当前函数返回类型检查

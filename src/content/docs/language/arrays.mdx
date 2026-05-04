@@ -1,0 +1,94 @@
+---
+title: Arrays & Slices
+description: Complete guide to arrays, slices, and multidimensional arrays in Jiang.
+---
+
+Array length is part of the type. It must be known at compile time and cannot change at runtime.
+
+## Immutable Arrays
+
+```c
+Int[3] a = [1, 2, 3];
+
+// Length mismatch is a compile error
+// Int[5] a = [1, 2, 3];  // error
+
+// Heap-allocated owning pointer
+Int[3]^ x = new [1, 2, 3];
+
+// Owning pointer auto-dereferences, direct access to length
+print("array %d", x.length);
+```
+
+## Type Inference
+
+Use `_` or `Int[_]` to let the compiler infer the array length:
+
+```c
+// All three are equivalent
+_ a = [1, 2, 3];
+Int[_] b = [1, 2, 3];
+Int[3] c = [1, 2, 3];
+```
+
+## Array Mutability
+
+Array length is fixed, but element mutability and binding mutability are independently controlled:
+
+```c
+// Mutable elements
+Int![_] b = [1, 2, 3];
+b[1] = 4;  // b: [1, 4, 3]
+
+// Mutable binding, immutable elements
+Int[_]! c = [1, 2, 3];
+c = [4, 5, 6];
+
+// Both mutable
+Int![_]! d = [1, 2, 3];
+d[1] = 4;
+d = [4, 5, 6];
+
+// Mutable binding for owning pointer
+Int[_]^! e = new [1, 2, 3];
+e = new [4, 5, 6];
+```
+
+## Multidimensional Arrays
+
+Jiang has no true multidimensional arrays—nested arrays serve that purpose. Take `Int[2][3]`: reading inside-out, the outermost layer has 3 elements, each of type `Int[2]`.
+
+```c
+Int[2][3] foo = [[1, 2], [3, 4], [5, 6]];
+
+foo[0];      // [1, 2]
+foo[0][1];   // 2
+```
+
+Type reading order is **left to right, inside to outside**: `Int -> Int[2] -> Int[2][3]`. The type scope grows wider toward the right. Simply put: **the further right, the larger the scope**.
+
+Pointer types follow the same rule:
+
+```c
+Int?[2][3] b = [[1, null], [3, 4], [5, 6]];
+Int?[2]?[3] c = [[1, null], null, [5, 6]];
+
+Int[3]^ b = new [1, 2, 3];
+Int?[3]^ c = new [1, null, 3];
+```
+
+## Slices
+
+A slice `T[]` is a fat pointer with a `length` property, sized at runtime. Think of it as a lightweight `{ ptr, len }` view with no ownership semantics.
+
+```c
+Int[_] x = [1, 2, 3];
+Int[] y = x[..];
+
+print("y.length = %d", y.length);  // prints: y.length = 3
+```
+
+Slice subscript access returns an element reference:
+
+```c
+_ item_ref = y[1]$.ref();  // item_ref: Int&

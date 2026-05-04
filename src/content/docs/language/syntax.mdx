@@ -102,10 +102,10 @@ if maybe is some value {
 }
 ```
 
-Use `some!` when the unwrapped binding itself should be mutable:
+Use `some _!` when the unwrapped binding itself should be mutable:
 
 ```c
-if maybe is some! value {
+if maybe is some _! value {
     value = value + 1;
 }
 ```

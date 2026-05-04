@@ -1,0 +1,116 @@
+---
+title: Pointers & References
+description: Owning pointers, temporary references, many-pointers, and auto-dereference rules in Jiang.
+---
+
+Jiang currently uses a simple heap allocator without an ownership/borrowing system. Pointer semantics:
+
+- `T^`: auto-dereference owning heap pointer, suitable for `new T`
+- `T&`: auto-dereference temporary reference, does not take ownership
+- `RawPointer<T>`: bare pointer, mainly for FFI / ABI / low-level use
+- `T[*]`: many-pointer, supports subscript access, no default auto-dereference
+
+Pointer types also follow the **left-to-right, inside-to-outside** rule.
+
+## Basic Usage
+
+```c
+// Stack allocation
+Int a = 123;
+
+// Heap-allocated owning pointer
+Int^ b = new Int(123);
+
+// Heap-allocated array
+Int[3]^ c = new [1, 2, 3];
+
+// Temporary reference
+Int& d = a$.ref();
+```
+
+`^` and `&` must immediately follow the element type, no spaces allowed:
+
+```c
+Int^ a;     // correct
+// Int ^ a;  // error
+```
+
+## Combining with optional / mutable
+
+```c
+Int!^? maybe_owner;   // optional owning pointer to mutable Int
+Int?& maybe_ref;      // reference to optional Int
+Int^! owner_slot;     // owning pointer binding itself is mutable
+```
+
+## Auto-dereference
+
+`T^` and `T&` auto-dereference by default, unless the expected type matches the pointer/reference type. Jiang has no prefix dereference syntax `*ptr`; use `ptr$.get()` for explicit dereference.
+
+```c
+Int&! ref = value$.ref();
+
+_ copied = ref;              // copied: Int&
+_! mutable = ref;            // mutable: Int&!
+Int copied_value = ref;      // expected type is Int, auto-dereferenced
+Int& kept = ref;             // expected type is Int&, reference preserved
+
+_ raw_ref = ref$.ref();      // raw_ref: Int&
+Int explicit_value = ref$.get();  // explicit dereference
+```
+
+Type inference preserves the pointer/reference layer and defaults to an immutable binding.
+
+## Implicit Operation Layer `$`
+
+The `$` operator prevents auto-dereference and enters the implicit operation layer. Use it to call low-level operations on the pointer/reference itself:
+
+```c
+Int a = 100;
+Int^ b = new Int(200);
+
+// Auto-dereference, participate in arithmetic directly
+Int c = a + b;
+print("c = %d", c);  // prints: c = 300
+
+// $ prevents auto-dereference, free the owning pointer
+b$.free();
+```
+
+`$.ref()` and `$.ptr()` return `T&` and `RawPointer<T>`:
+
+```c
+Int^ p = new Int(41);
+
+_ ref = p$.ref();   // ref: Int&
+_ raw = p$.ptr();   // raw: RawPointer<Int>
+
+// References returned by the implicit layer do not auto-dereference again
+// Int bad = p$.ref() + 1;  // compile error
+```
+
+## Many-pointer `T[*]`
+
+`T[*]` does not participate in default auto-dereference. It represents a contiguous addressable region accessed by element, requiring subscript:
+
+```c
+Int[*] ptr = items[0]$.as(Int[*]);
+
+_ raw = ptr;       // raw: Int[*]
+Int value = ptr[0];
+ptr[1] = 42;
+
+_ item_ref = ptr[1]$.ref();  // item_ref: Int&
+_ item_ptr = ptr[1]$.ptr();  // item_ptr: RawPointer<Int>
+```
+
+## Freeing
+
+`T^` owning pointers can be freed explicitly via `ptr$.free()`:
+
+```c
+Int^ a = new Int(100);
+a$.free();
+```
+
+`&` references are temporary and do not participate in freeing.

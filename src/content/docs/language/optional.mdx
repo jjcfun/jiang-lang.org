@@ -1,0 +1,67 @@
+---
+title: Optional Type
+description: The Optional type (T?) in Jiang, including conditional unwrapping, chained access, and Coalesce.
+---
+
+Optional is a built-in type layer, written as `T?`. It is not a generic type.
+
+## Basic Usage
+
+```c
+Int? a1 = 123;
+_ a2 = a1;           // a2 is Int?
+
+Bar? b1 = {x: 1, y: 2};
+_ b2 = b1?.x;        // b2 is Int?
+```
+
+## Optional Chaining
+
+Safely access nested fields with `?.`:
+
+```c
+_ foo = x?.y?.z;
+```
+
+## Conditional Unwrap
+
+Use `is some` to pattern-match and unwrap an optional:
+
+```c
+if a1 is some x {
+  // x has type Int, value is not null
+} else {
+  // x is null
+}
+
+// Explicitly write the inferred type
+if a1 is some _ x {
+  // equivalent to some x
+}
+
+// Mutable binding
+if a1 is some _! x {
+  // x is a mutable binding
+}
+```
+
+## Coalesce `??`
+
+Provide a default value or early exit:
+
+```c
+Int value = maybe ?? 42;
+Int other = maybe ?? fallback();
+```
+
+`??` supports early-exit control flow (only on the right-hand side of a local variable initializer):
+
+```c
+Int value = maybe ?? return;
+Int value = maybe ?? return 42;
+Int value = maybe ?? break;
+Int value = maybe ?? continue;
+```
+
+- The left-hand side must be optional
+- `return expr` is checked against the current function's return type

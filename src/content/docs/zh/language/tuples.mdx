@@ -1,0 +1,74 @@
+---
+title: 元组
+description: Jiang 语言中的元组（Tuple），包括多元组、一元组、Unit 类型和解构。
+---
+
+元组用于将多个值组合在一起。Jiang 的元组类型写作 `(T1, T2, ...)`。
+
+## 多元组
+
+```c
+// 函数通过元组返回多个值
+(Int, Int) foo(Int a, Int b) {
+  return (a * a, b * 2);
+}
+
+// 接收元组返回值
+_ result = foo(10, 200);
+print("result0 = %d", result[0]);  // 输出：10
+print("result1 = %d", result[1]);  // 输出：200
+
+// 解构元组
+(_ a, _ b) = foo(10, 200);
+print("x = %d, y = %d", a, b);  // 输出：a = 100, b = 200
+```
+
+解构时可以指定可变性：
+
+```c
+(_ x, _! y) = foo(10, 200);
+y += 100;
+print("x = %d, y = %d", x, y);  // 输出：x = 100, y = 300
+```
+
+## 一元组
+
+一元组 `(T)` 与它的元素类型 `T` 等价，占用内存空间也一致：
+
+```c
+// 以下两个函数签名等价
+(Int) add(Int a, Int b);
+Int add(Int a, Int b);
+
+// 以下两种语法也等价
+(Int! x) = add(1, 2);
+Int! x = add(1, 2);
+```
+
+## Unit
+
+`()` 表示 `Unit` 类型。`Unit` 不占用内存空间，用于表达"无意义返回值"：
+
+```c
+() hello() {
+  print("Hello World!");
+  return ();
+}
+```
+
+`Unit` 可以像普通类型一样作为值、参数、局部变量和字段使用。
+
+## for 循环中的解构
+
+`for-in` 循环中，多元素模式必须用括号包裹：
+
+```c
+(Int, Int)[_] pairs = [(1, 2), (3, 4)];
+
+for (a, b) in pairs {
+    print("a=%d, b=%d", a, b);
+}
+
+for (i, (a, b)) in pairs.indexed() {
+    print("index=%d, a=%d, b=%d", i, a, b);
+}

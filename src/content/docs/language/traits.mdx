@@ -1,0 +1,121 @@
+---
+title: Built-in Traits & Types
+description: Built-in traits and type operations in Jiang, including Sized, field reflection, Hashable, Ord, Concat, Stringer, subscript access, and as conversion.
+---
+
+## Built-in Traits
+
+Jiang provides a set of compiler-recognized concepts. These do not require explicit `impl`—they are automatically satisfied based on type structure.
+
+### Sized
+
+Provides the byte size of a type:
+
+```c
+record User {
+  Int id, age;
+}
+
+UInt size = User$.bytes; // 8
+```
+
+### Fields
+
+Access compile-time field information via `$.fields()` field reflection:
+
+```c
+struct Point {
+  Int x;
+  Int y;
+}
+
+_ fields = Point$.fields();
+```
+
+Compile-time reflection iterates over the fields list; fields are provided as record-type information.
+
+### Hashable
+
+Hashable trait, `hashU()` returns `UInt`:
+
+```c
+Int h = 123.hashU();
+```
+
+Built-in types and `struct`/`record` automatically satisfy Hashable.
+
+### Ord
+
+Comparable trait, supports `==`, `<`, `>`, etc.:
+
+```c
+if 1 > 2 {
+  print("unreachable");
+}
+```
+
+### Concat
+
+Concatenation trait, supports `else` merging:
+
+```c
+Int x = 0;
+Int y = 0;
+if true {
+  x = 1;
+  y = 1;
+} else {
+  x = 2;
+  y = 2;
+}
+```
+
+### Stringer
+
+Trait for converting to string:
+
+```c
+_ display = 123.printable();
+print(42);  // implicit call to printable()
+```
+
+## Subscript Syntax
+
+`T[K]` is desugared through concepts to subscript access. `self` has the type of the concept target:
+
+```c
+impl<T> SubscriptRead<Int, Value> for T {
+  Value get(Int index) const {
+    // read implementation
+  }
+}
+
+impl<T> SubscriptWrite<Int, Value> for T {
+  void set(Int index, Value value) {
+    // write implementation
+  }
+}
+```
+
+## Array Repeat Initialization
+
+`[value; N]` performs value copy for each element:
+
+```c
+Int[4] arr = [0; 4];  // [0, 0, 0, 0]
+Int[4] arr = ones;    // copy from a variable
+```
+
+## `as` Type Conversion
+
+The `as` operator handles type-compatible scenarios:
+
+```c
+Int x = 42;
+Float y = x as Float;
+```
+
+Combine with `as?` for safe type reinterpretation:
+
+```c
+Int? z = x as? Int;

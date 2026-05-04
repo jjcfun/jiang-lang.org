@@ -1,0 +1,120 @@
+---
+title: 枚举与模式匹配
+description: Jiang 语言中的枚举（Enum）、关联数据与模式匹配（if-case、switch）。
+---
+
+Jiang 的 `enum` 支持关联数据，可以携带不同类型和数量的值。Enum variant 作为命名子类型，通过模式匹配按需解构。
+
+## 基本定义
+
+```c
+enum Foo {
+  A,
+  B,
+  C(Int, Int),
+  D { x: Int, y: Int },
+}
+```
+
+variant 的关联值可以是 positional 或 named：
+
+```c
+// 创建带 positional 值的 variant
+Foo my_variant = Foo::C(1, 2);
+
+// 创建带 named 值的 variant
+Foo my_other = Foo::D { x: 3, y: 4 };
+
+// 带记录的枚举 variant 支持类型推断
+Foo my_record = Foo::D(y: 2, x: 0);
+```
+
+## if-case 匹配
+
+匹配单个 variant：
+
+```c
+if result is Foo::C(x, y) {
+  print("x = %d y = %d", x, y);
+}
+```
+
+匹配时可直接绑定为可变：
+
+```c
+if result is Foo::C(x, y!) {
+  y += 100;
+  print("x = %d y = %d", x, y);
+}
+```
+
+## switch 匹配
+
+```c
+_ tag = switch result {
+  Foo::A => 0,
+  Foo::B => 1,
+  Foo::C(x, y) => x + y,
+  Foo::D(x, y) => x * y,
+};
+```
+
+switch 也可以使用块形式：
+
+```c
+switch result {
+  Foo::A => {
+    print("A");
+  }
+  Foo::B => {}
+  Foo::C(x, y) => {
+    print("%d + %d = %d", x, y, x + y);
+  }
+  Foo::D(y, x) => {}
+}
+```
+
+### switch 必须是穷尽的
+
+编译器检查 switch 是否覆盖所有 variant：
+
+```c
+// 编译错误：缺少 variant Foo::D
+_ tag = switch result {
+  Foo::A => 0,
+  Foo::B => 1,
+  Foo::C(x, y) => x + y,
+};
+```
+
+可以使用 `default` 或 `_` 分支做兜底：
+
+```c
+_ tag = switch result {
+  Foo::A => 0,
+  _ => 1,
+};
+```
+
+## 带记录的枚举 variant
+
+```c
+enum Option {
+  Some(Int, Int),
+  None,
+}
+
+Option a = Option::Some(5, 2);
+
+// 匹配带记录的 variant
+if a is Option::Some(x, y) {
+  print("this is %d", x + y);
+}
+```
+
+存取枚举 variant 的原始枚举类型会自动推导为目标枚举类型：
+
+```c
+// a 为 Some 类型，b 则是 Option 类型
+_ a = Option::Some(5, 2);
+Option b = Option::Some(5, 2);
