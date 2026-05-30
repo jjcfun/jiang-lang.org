@@ -13,7 +13,7 @@ hero:
       icon: external
 ---
 
-import { Card, CardGrid } from '@astrojs/starlight/components';
+import { Icon } from '@astrojs/starlight/components';
 
 Jiang is a systems programming language in active development. Its current focus is a clear core language, direct control over memory and layout, and continued work on a compiler that has reached an initial self-hosting milestone.
 
@@ -21,20 +21,28 @@ These docs are written as a practical guide first. They describe the language as
 
 ## Start Here
 
-<CardGrid>
-  <Card title="Install" icon="download" href="/install/">
-    Build the compiler from source and prepare the LLVM toolchain.
-  </Card>
-  <Card title="First Program" icon="rocket" href="/getting-started/">
-    Compile a small Jiang program and understand the basic workflow.
-  </Card>
-  <Card title="Language Guide" icon="seti:config" href="/language/syntax/">
-    Learn declarations, types, functions, modules, and control flow.
-  </Card>
-  <Card title="Compiler CLI" icon="terminal" href="/compiler/cli/">
-    Use `jiangc` to emit LLVM IR, object files, or executables.
-  </Card>
-</CardGrid>
+<div class="jiang-start-grid">
+  <a class="jiang-start-card" href="/install/">
+    <span class="jiang-start-icon"><Icon name="download" /></span>
+    <span class="jiang-start-title">Install</span>
+    <span class="jiang-start-description">Build the compiler from source and prepare the LLVM toolchain.</span>
+  </a>
+  <a class="jiang-start-card" href="/getting-started/">
+    <span class="jiang-start-icon"><Icon name="rocket" /></span>
+    <span class="jiang-start-title">First Program</span>
+    <span class="jiang-start-description">Compile a small Jiang program and understand the basic workflow.</span>
+  </a>
+  <a class="jiang-start-card" href="/language/syntax/">
+    <span class="jiang-start-icon"><Icon name="open-book" /></span>
+    <span class="jiang-start-title">Language Guide</span>
+    <span class="jiang-start-description">Learn declarations, types, functions, modules, and control flow.</span>
+  </a>
+  <a class="jiang-start-card" href="/compiler/cli/">
+    <span class="jiang-start-icon"><Icon name="laptop" /></span>
+    <span class="jiang-start-title">Compiler CLI</span>
+    <span class="jiang-start-description">Use <code>jiangc</code> to emit LLVM IR, object files, or executables.</span>
+  </a>
+</div>
 
 ## Project Status
 

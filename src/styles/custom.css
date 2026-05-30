@@ -28,3 +28,63 @@
   }
 
 }
+
+.jiang-start-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+  margin-block: 1.5rem 2rem;
+}
+
+.jiang-start-card {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0.35rem 0.85rem;
+  align-items: start;
+  padding: 1rem;
+  border: 1px solid var(--sl-color-gray-5);
+  border-radius: 0.5rem;
+  background: var(--sl-color-black);
+  color: inherit;
+  text-decoration: none;
+  box-shadow: var(--sl-shadow-sm);
+}
+
+.jiang-start-card:hover {
+  border-color: var(--sl-color-gray-2);
+  background: var(--sl-color-gray-7, var(--sl-color-gray-6));
+}
+
+.jiang-start-icon {
+  display: inline-flex;
+  grid-row: 1 / span 2;
+  width: 2rem;
+  height: 2rem;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--sl-color-purple);
+  border-radius: 0.35rem;
+  background: var(--sl-color-purple-low);
+  color: var(--sl-color-white);
+}
+
+.jiang-start-title {
+  color: var(--sl-color-white);
+  font-weight: 650;
+  line-height: var(--sl-line-height-headings);
+}
+
+.jiang-start-description {
+  color: var(--sl-color-gray-3);
+  line-height: 1.5;
+}
+
+.jiang-start-description code {
+  font-size: 0.9em;
+}
+
+@media (max-width: 44rem) {
+  .jiang-start-grid {
+    grid-template-columns: 1fr;
+  }
+}
