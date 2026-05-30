@@ -1,67 +1,86 @@
 ---
 title: Optional Type
-description: The Optional type (T?) in Jiang, including conditional unwrapping, chained access, and Coalesce.
+description: Optional type syntax, chaining, conditional unwrapping, coalesce, and guard.
+sidebar:
+  order: 9
 ---
 
-Optional is a built-in type layer, written as `T?`. It is not a generic type.
+Optional is a built-in type layer written as `T?`.
 
 ## Basic Usage
 
 ```c
-Int? a1 = 123;
-_ a2 = a1;           // a2 is Int?
+Int? maybe = 123;
+_ same = maybe;
 
-Bar? b1 = {x: 1, y: 2};
-_ b2 = b1?.x;        // b2 is Int?
+Bar? bar = Bar { x: 1, y: 2 }
+_ field = bar?.x;
 ```
 
 ## Optional Chaining
 
-Safely access nested fields with `?.`:
+Use `?.` to access a field only when the receiver is not `null`:
 
 ```c
-_ foo = x?.y?.z;
+_ value = user?.profile?.name;
 ```
 
-## Conditional Unwrap
+## Conditional Unwrapping
 
-Use `is some` to pattern-match and unwrap an optional:
+Use `is some`:
 
 ```c
-if a1 is some x {
-  // x has type Int, value is not null
+if maybe is some value {
+    print(value);
 } else {
-  // x is null
-}
-
-// Explicitly write the inferred type
-if a1 is some _ x {
-  // equivalent to some x
-}
-
-// Mutable binding
-if a1 is some _! x {
-  // x is a mutable binding
+    print(0);
 }
 ```
 
-## Coalesce `??`
+Explicit inferred and mutable bindings:
 
-Provide a default value or early exit:
+```c
+if maybe is some _ value {
+    print(value);
+}
+
+if maybe is some _! value {
+    value = value + 1;
+}
+```
+
+## `??`
+
+`??` provides a fallback value when the optional is empty:
 
 ```c
 Int value = maybe ?? 42;
 Int other = maybe ?? fallback();
 ```
 
-`??` supports early-exit control flow (only on the right-hand side of a local variable initializer):
+The left side must be optional. Use `guard` for early-exit control flow.
+
+## `guard`
 
 ```c
-Int value = maybe ?? return;
-Int value = maybe ?? return 42;
-Int value = maybe ?? break;
-Int value = maybe ?? continue;
+() print_value(Int? maybe) {
+    guard maybe is some value else {
+        return ();
+    }
+
+    print(value);
+    return ();
+}
 ```
 
-- The left-hand side must be optional
-- `return expr` is checked against the current function's return type
+The `else` block must be non-empty and end in `return`, `break`, `continue`, or `throw`.
+
+## Force Unwrap
+
+`optional$.some()` force unwraps an optional through the implicit operation layer:
+
+```c
+Int value = maybe$.some();
+```
+
+Ordinary code should prefer `is some`, `guard`, or `??`.

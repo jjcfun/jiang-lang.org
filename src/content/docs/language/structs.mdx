@@ -1,76 +1,78 @@
 ---
 title: Structs & Records
-description: Structs, records, init, deinit, and member functions in Jiang.
+description: Structs, records, init, deinit, fields, and methods in Jiang.
+sidebar:
+  order: 7
 ---
 
-## Struct
+## Structs
 
-### Definition
+`struct` declares a nominal type:
 
 ```c
 struct Point {
-  Int x;
-  Int y;
+    Int x;
+    Int y;
 }
 
-// Multiple fields of the same type
 struct Offset {
-  Int x, y;  // equivalent to Int x; Int y;
+    Int x, y;
 }
 ```
 
-### Initialization
+`Int x, y;` is shorthand for two fields of the same type.
+
+## Field Literals
+
+Structs without custom `init` can use field literals:
 
 ```c
-// Field-literal initialization (when no init is defined)
-Point point = Point { x: 0, y: 0 };
-
-// Copy by value
-Point p2 = p1;
-
-// Owning pointer (reference semantics)
-Point^ p3 = new Point { x: 100, y: 200 };
-
-// Owning pointer auto-dereference
-print("p3.x = %d, p3.y = %d", p3.x, p3.y);
+Point point = Point { x: 0, y: 0 }
+Point^ heap_point = new (Point { x: 100, y: 200 });
 ```
 
-### Field Mutability
+Owning pointers do not auto-dereference in assignment, initialization, or arithmetic value contexts. Field access can pass through `T^`:
 
-Field mutability is determined by the field's own type, not by whether the outer variable carries `!`:
+```c
+print(heap_point.x);
+```
+
+## Field Mutability
+
+A field is writable only when the field type itself is mutable:
 
 ```c
 struct User {
-  Int id;               // immutable
-  Int! age;             // mutable
-  UInt8[]?! nick_name;  // nullable, mutable
+    Int id;
+    Int! age;
+    UInt8[]? nick_name;
 }
 
-User user = User(id: 123, age: 18);
-user.age += 1;  // ok
-// user.id = 200;  // compile error
+User user = User { id: 123, age: 18 }
+user.age = user.age + 1;
+// user.id = 200; // error
 ```
 
-Optional fields may be omitted and default-initialize to `null`.
+## `init`
 
-### init function
-
-`init` is the special constructor for structs:
+`init` is a constructor entry in a struct or record body:
 
 ```c
 struct Point {
-  Int x;
-  Int y;
+    Int x;
+    Int y;
 
-  public init(Int x, Int y) {
-    self.x = x;
-    self.y = y;
-  }
+    init(Int x, Int y) {
+        self.x = x;
+        self.y = y;
+        return ();
+    }
 
-  public init(Int value) {
-    self.x = value;
-    self.y = value;
-  }
+    init(Int value) {
+        self.x = value;
+        self.y = value;
+        return ();
+    }
 }
 
 Point p1 = Point(1, 2);
@@ -78,76 +80,67 @@ Point p2 = Point(3);
 Point^ p3 = new Point(4, 5);
 ```
 
-Rules:
-- `init` implicitly has `self` and does not declare a return type
-- Multiple `init` functions can be defined (resolved by parameter overload)
-- Once any `init` is defined, `Point { ... }` syntax is no longer allowed
-- Visibility modifiers are supported (`public init`)
+Use `init(...)` for ordinary constructors. Jiang also reserves additional `init` forms for named or fallible construction.
 
-### deinit function
+## `deinit`
 
-`deinit` is called automatically when `ptr$.free()` is invoked:
+`deinit` is declared without a return type:
 
 ```c
-struct List {
-  Int[]! data;
+struct Buffer {
+    UInt8[*] data;
 
-  deinit() {
-    if self.data != null {
-      self.data$.free();
-      self.data = null;
+    deinit() {
+        self.data$.free();
+        return ();
     }
-    return;
-  }
 }
 ```
 
-### Member Functions
+## Methods
 
-Structs support `static` methods and instance methods:
+Types can define `static` methods and instance methods:
 
 ```c
 struct User {
-  Int id;
+    Int id;
 
-  static Int zero() {
-    return 0;
-  }
+    static Int zero() {
+        return 0;
+    }
 
-  Int value() {
-    return self.id;
-  }
+    Int value() {
+        return self.id;
+    }
 }
 
 Int a = User.zero();
-User u = User { id: 42 };
+User u = User { id: 42 }
 Int b = u.value();
 ```
 
-## Record
+## Records
 
-`record` is a lightweight data type with named fields. It does not require `init` by default:
+`record` is written like a lightweight data type with named fields:
 
 ```c
-record Point {
-  Int x;
-  Int y = 2;
+record PointRecord {
+    Int x;
+    Int y = 2;
 }
 
-Point p1 = Point { x: 40 };
-Point p2 = { x: 1, y: 2 };  // type name can be omitted when expected type is known
+PointRecord p1 = PointRecord { x: 40 }
+PointRecord p2 = PointRecord { x: 1, y: 2 }
 ```
 
-- `record` fields support default values
-- `struct` supports `Type { ... }` syntax only when no `init` is defined
+Record fields can have default values and same-type multi-field declarations.
 
-### Multi-name Declarations of the Same Type
+## Local Declarations
+
+Local variable declarations bind one name at a time:
 
 ```c
-// Struct fields
-struct S {
-  Int x, y, z;
-}
-
-// Local variables (each must be explicitly initialized)
-Int a = 1, b = 2, c = 3;
+Int a = 1;
+Int b = 2;
+Int c = 3;
+```

@@ -1,0 +1,165 @@
+---
+title: Implicit Operation Layer
+description: The `$` operation layer for values, types, explicit dereference, moves, layout queries, and casts.
+sidebar:
+  order: 11
+---
+
+`$` enters the implicit operation layer for a value or a type. It exposes low-level operations as
+explicit method-like calls: taking references, taking raw pointers, explicit dereference, explicit
+move, freeing resources, querying layout, and casting.
+
+## Basic Form
+
+Value operations are written as `value$.op(...)`:
+
+```c
+Int value = 42;
+
+Int& ref = value$.ref();
+Int* ptr = value$.ptr();
+Int copied = ref$.get();
+```
+
+Type operations are written as `Type$.op(...)`:
+
+```c
+Int size = Int$.size();
+Int align = Int$.align();
+Int^ value = Int$.alloc();
+```
+
+## Binding Rules
+
+`$` binds to the complete expression on its left:
+
+```c
+a$.b     // equivalent to (a$).b
+a.b$     // equivalent to (a.b)$
+```
+
+Use parentheses for compound expressions:
+
+```c
+Int raw = (left + right)$.as(Int);
+```
+
+Do not read `$` as part of field access. It first switches the left-hand expression into the implicit
+operation layer, then resolves the following operation.
+
+## Value Operations
+
+| Operation | Meaning |
+| --- | --- |
+| `value$.ref()` | returns a `T&` reference |
+| `value$.ptr()` | returns a `T*` single-object raw pointer |
+| `value$.get()` | explicitly reads through `T^`, `T&`, or `T*` |
+| `value$.set(new_value)` | explicitly writes through a `T!*` target |
+| `value$.move()` | transfers ownership and invalidates the source |
+| `value$.addr()` | gets the address value of the current value |
+| `value$.free()` | frees an object allocated by the default heap allocator |
+| `value$.as(Type)` | low-level cast |
+
+These operations are not ordinary method calls. The compiler recognizes them and lowers them to their
+corresponding low-level HIR/MIR semantics.
+
+## Explicit Dereference
+
+`T^`, `T&`, and `T*` do not auto-dereference in ordinary value contexts. Use `$.get()` when you need
+the pointed-to value:
+
+```c
+Int^ owner = new Int(42);
+Int copied = owner$.get();
+
+Int value = 10;
+Int& ref = value$.ref();
+Int copied_ref = ref$.get();
+```
+
+Member access is the exception: `owner.member` can pass through `T^` to access the owned value.
+
+## Ownership Transfer
+
+`$.move()` is the explicit boundary for ownership transfer:
+
+```c
+Int^ a = new Int(42);
+Int^ b = a$.move();
+```
+
+The source is invalid after the move:
+
+```c
+Int value = a$.get(); // error: a has been moved.
+```
+
+See [Ownership, Borrowing & Lifetimes](/language/ownership/) for the complete ownership rules.
+
+## Type Operations
+
+Types can enter the implicit operation layer too:
+
+```c
+Int size = Int$.size();
+Int align = Int$.align();
+Int max_align = Int$.max_align();
+Int^ value = Int$.alloc();
+Int[*] values = Int$.alloc_array(10);
+```
+
+These operations query layout information or perform low-level allocation. Layout information is
+also consumed by the backend.
+
+| Operation | Meaning |
+| --- | --- |
+| `Type$.size()` | type size |
+| `Type$.align()` | ABI alignment |
+| `Type$.max_align()` | maximum Jiang type alignment supported by the default allocator |
+| `Type$.alloc()` | allocates one uninitialized object and returns `Type^` |
+| `Type$.alloc_array(n)` | allocates contiguous array storage and returns `Type[*]` |
+
+## Casts
+
+Prefer target-type initialization for normal safe conversions. Do not write ordinary conversions as
+`$.as(...)`:
+
+```c
+Float f = Float(10);
+Int i = Int(f);
+```
+
+`value$.as(Type)` only represents a low-level cast: it is closer to interpreting or converting the
+current value as the target type. Use it mainly for raw pointers, integer addresses, and FFI. Do not
+use it as the normal spelling for numeric conversions, construction, or everyday APIs.
+
+```c
+Int address = 0x1000;
+Int* ptr = address$.as(Int*);
+```
+
+In the 0.2 stage, packages are treated as globally unsafe by default. The compiler does not reject
+raw pointer casts or raw pointer access solely because they are unsafe. If capability or unsafe gates
+are introduced later, these low-level operations should be checked there.
+
+## Optional Operations
+
+`maybe$.some()` force-unwraps an optional value:
+
+```c
+Int? maybe = 42;
+Int value = maybe$.some();
+```
+
+| Operation | Meaning |
+| --- | --- |
+| `optional$.some()` | force-unwraps an optional and returns its `T` value |
+
+Prefer `is some`, `guard`, or `??` in ordinary code:
+
+```c
+Int value = maybe ?? 0;
+```
+
+Forced unwrap is best reserved for low-level paths where surrounding logic already guarantees a
+present value.

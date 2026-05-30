@@ -1,120 +1,156 @@
 ---
-title: Enums & Pattern Matching
-description: Enums with associated data, if-case, and switch pattern matching in Jiang.
+title: Enums, Unions & Patterns
+description: Enums, tagged unions, optional and variant patterns, and switch.
+sidebar:
+  order: 8
 ---
 
-Jiang `enum` supports associated data, carrying values of different types and arities. Enum variants are named subtypes, destructured on demand via pattern matching.
+Jiang separates finite tag sets from payload-bearing sum types:
 
-## Basic Definition
+- `enum` defines named members.
+- `union` defines a safe tagged union where variants may carry payloads.
+
+## Enums
 
 ```c
-enum Foo {
-  A,
-  B,
-  C(Int, Int),
-  D { x: Int, y: Int },
+enum Mode {
+    read,
+    write,
+}
+
+Mode mode = Mode.read;
+Mode other = .write;
+```
+
+Members may specify values:
+
+```c
+enum Priority {
+    low = 1,
+    medium,
+    high,
 }
 ```
 
-Variant associated values can be positional or named:
+Enums can define `static` and instance methods:
 
 ```c
-// Create a variant with positional values
-Foo my_variant = Foo::C(1, 2);
+enum Mode {
+    read,
+    write,
 
-// Create a variant with named values
-Foo my_other = Foo::D { x: 3, y: 4 };
+    static Int answer() {
+        return 42;
+    }
 
-// Named enum variant supports type inference
-Foo my_record = Foo::D(y: 2, x: 0);
+    Int value() {
+        return self.value;
+    }
+}
+
+Int a = Mode.answer();
+Int b = Mode.read.value();
 ```
 
-## if-case Matching
-
-Match a single variant:
+## Unions
 
 ```c
-if result is Foo::C(x, y) {
-  print("x = %d y = %d", x, y);
+union Result<T, E> {
+    T ok;
+    E err;
+}
+
+Result<Int, ParseErr> a = Result.ok(42);
+Result<Int, ParseErr> b = .err(ParseErr.bad);
+```
+
+Same-type variants can be grouped:
+
+```c
+union Value {
+    Int int_value, code;
+    Double float_value;
+    UInt8[] text;
 }
 ```
 
-Bind as mutable directly:
+Unions can bind an explicit tag enum:
 
 ```c
-if result is Foo::C(x, y!) {
-  y += 100;
-  print("x = %d y = %d", x, y);
+enum Kind {
+    int_value,
+    text,
+}
+
+union(Kind) TaggedValue {
+    Int int_value;
+    UInt8[] text;
 }
 ```
 
-## switch Matching
+## `is`
 
 ```c
-_ tag = switch result {
-  Foo::A => 0,
-  Foo::B => 1,
-  Foo::C(x, y) => x + y,
-  Foo::D(x, y) => x * y,
-};
-```
-
-switch can also use block form:
-
-```c
-switch result {
-  Foo::A => {
-    print("A");
-  }
-  Foo::B => {}
-  Foo::C(x, y) => {
-    print("%d + %d = %d", x, y, x + y);
-  }
-  Foo::D(y, x) => {}
+if value is .int_value(_ n) {
+    print(n);
+} else {
+    print(0);
 }
 ```
 
-### switch must be exhaustive
-
-The compiler checks that switch covers all variants:
+Use `_!` for a mutable inferred binding:
 
 ```c
-// Compile error: missing variant Foo::D
-_ tag = switch result {
-  Foo::A => 0,
-  Foo::B => 1,
-  Foo::C(x, y) => x + y,
-};
-```
-
-Use `default` or `_` as a catch-all:
-
-```c
-_ tag = switch result {
-  Foo::A => 0,
-  _ => 1,
-};
-```
-
-## Enum variants with records
-
-```c
-enum Option {
-  Some(Int, Int),
-  None,
-}
-
-Option a = Option::Some(5, 2);
-
-// Matching a variant with positional data
-if a is Option::Some(x, y) {
-  print("this is %d", x + y);
+if value is .int_value(_! n) {
+    n = n + 1;
 }
 ```
 
-Accessing an enum variant directly infers the target enum type:
+Optional values use `some`:
 
 ```c
-// a has type Some, while b has type Option
-_ a = Option::Some(5, 2);
-Option b = Option::Some(5, 2);
+if maybe is some payload {
+    print(payload);
+} else {
+    print(0);
+}
+```
+
+## `switch`
+
+```c
+Int code = switch mode {
+    .read => 1,
+    .write => 2,
+}
+```
+
+Union payloads:
+
+```c
+Int result = switch value {
+    .int_value(_ n) => n,
+    .code(_ code) => code,
+    .float_value(_) => 0,
+    .text(_ bytes) => bytes.length,
+}
+```
+
+Optional values:
+
+```c
+Int value = switch maybe {
+    some payload => payload,
+    null => 0,
+}
+```
+
+## Pattern Roots
+
+`is` and `switch` branch roots accept:
+
+- optional patterns: `some payload`
+- variant patterns: `.name(...)` or `Type.name(...)`
+- literal patterns such as `null`, numbers, chars, and booleans
+
+Bindings and wildcards are sub-patterns of optional or variant payloads. Tuple patterns are not switch roots; use destructuring statements for tuples.

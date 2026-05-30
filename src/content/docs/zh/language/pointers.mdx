@@ -1,116 +1,114 @@
 ---
-title: 指针与引用
-description: Jiang 语言中的 owning pointer、临时引用、many-pointer 和自动解引用规则。
+title: 指针与引用类型
+description: Jiang 语言中的所有权指针、引用、单对象裸指针、多元素裸指针、切片和显式解引用。
+sidebar:
+  order: 10
 ---
 
-Jiang 当前不引入所有权和借用系统，只使用默认堆分配器。指针语义如下：
+Jiang 用不同的类型后缀区分拥有资源的指针、普通引用、裸指针、多元素裸指针和切片。这里先介绍
+这些类型的写法和基本操作；资源移动和生命周期规则见[所有权、借用与生命周期](/zh/language/ownership/)。
 
-- `T^`：自动解引用的 owning heap pointer，适合 `new T` 场景
-- `T&`：自动解引用的临时引用，不承担释放职责
-- `RawPointer<T>`：裸指针，主要用于 FFI / ABI / 低层场景
-- `T[*]`：many-pointer，支持下标访问，不默认自动解引用
+## 指针类别
 
-指针类型也遵循 **从左往右，从里到外** 的规则。
+- `T^`：拥有所有权的堆指针，通常来自 `new T(...)`，拥有堆上对象。
+- `T&`：不拥有所有权的引用，不拥有资源，不参与释放。
+- `T*`：单对象裸指针，用于 FFI / ABI / 低层能力。
+- `T[*]`：多元素裸指针，可通过下标访问连续地址中的元素。
+- `T[]`：切片引用，带运行时长度，不拥有底层内存。
 
-## 基本用法
+只有 `T^` 表达语言级所有权。`T&`、`T[]`、`T[*]` 和 `T*` 都不拥有目标对象。
+所有权转移、自动析构和生命周期约束在独立章节中展开。
 
-```c
-// 栈上分配
-Int a = 123;
-
-// 堆上分配 owning pointer
-Int^ b = new Int(123);
-
-// 堆上创建数组
-Int[3]^ c = new [1, 2, 3];
-
-// 临时引用
-Int& d = a$.ref();
-```
-
-`^` 和 `&` 必须紧跟在元素类型后面，不能有空格：
+## 创建所有者和引用
 
 ```c
-Int^ a;     // 正确
-// Int ^ a;  // 错误
+Int value = 123;
+
+Int^ owner = new Int(123);
+Int[3]^ array_owner = new [1, 2, 3];
+
+Int& ref = value$.ref();
+Int* raw = value$.ptr();
 ```
 
-## 与 optional / mutable 组合
+`^`、`&` 和 `*` 都是类型后缀，紧跟在被包裹的类型后面：
 
 ```c
-Int!^? maybe_owner;   // optional owning pointer to mutable Int
-Int?& maybe_ref;      // reference to optional Int
-Int^! owner_slot;     // owning pointer 绑定本身可变
+Int^ owner;
+Int& ref;
+Int* raw;
 ```
 
-## 自动解引用
+## 与可选和可变组合
 
-`T^` 和 `T&` 默认自动解引用，除非 expected type 与 pointer/reference 类型一致。Jiang 没有前缀解引用语法 `*ptr`；需要显式解引用时使用 `ptr$.get()`。
+类型后缀仍按从左到右、从里到外阅读：
 
 ```c
-Int&! ref = value$.ref();
-
-_ copied = ref;              // copied: Int&
-_! mutable = ref;            // mutable: Int&!
-Int copied_value = ref;      // expected type 是 Int，自动解引用
-Int& kept = ref;             // expected type 是 Int&，保留 reference
-
-_ raw_ref = ref$.ref();      // raw_ref: Int&
-Int explicit_value = ref$.get();  // 显式解引用
+Int!^? maybe_owner; // 可为空的拥有所有权指针，指向可变 Int
+Int?& maybe_ref;    // 指向可空 Int 的引用
+Int^! owner_slot;   // 拥有所有权的指针变量本身可重新赋值
 ```
 
-类型推导会保留 pointer/reference 层，并默认得到不可变绑定。
+同一层级同时出现可选和可变时，规范顺序是 `?` 再 `!`，例如 `Int?!`。
 
-## 隐式操作层 `$`
+## 解引用和成员访问
 
-`$` 操作符会阻止自动解引用，并进入隐式操作层。通过它可以调用 pointer/reference 自身的低层操作：
+`T^` 不会在赋值、初始化或算术这类普通值上下文中自动解引用。需要读取指向的值时，使用 `$.get()`：
 
 ```c
-Int a = 100;
-Int^ b = new Int(200);
+Int^ make_value();
 
-// 自动解引用，直接参与运算
-Int c = a + b;
-print("c = %d", c);  // 输出：c = 300
-
-// $ 阻止自动解引用，释放 own pointer 管理的内存
-b$.free();
+Int^ owner = make_value();
+_ inferred = make_value();        // inferred: Int^
+Int copied = make_value()$.get();
+Int sum = make_value()$.get() + 1;
 ```
 
-`$.ref()` 和 `$.ptr()` 返回 `T&` 和 `RawPointer<T>`：
+成员访问是例外：`owner.member` 会自动穿过 `T^` 访问被拥有对象的成员。
 
 ```c
-Int^ p = new Int(41);
+struct Box {
+    Int value;
+}
 
-_ ref = p$.ref();   // ref: Int&
-_ raw = p$.ptr();   // raw: RawPointer<Int>
-
-// 隐式层返回的引用不会再次自动解引用
-// Int bad = p$.ref() + 1;  // 编译错误
+Box^ box = new (Box { value: 42 });
+Int n = box.value;
 ```
 
-## Many-pointer `T[*]`
-
-`T[*]` 不参与默认自动解引用。它表示一段可按元素索引的连续地址，必须通过下标访问：
+`T&` 和 `T*` 不默认自动解引用，需要使用 `$.get()` 显式读取：
 
 ```c
-Int[*] ptr = items[0]$.as(Int[*]);
+Int value = 41;
+Int& ref = value$.ref();
+Int copied = ref$.get();
 
-_ raw = ptr;       // raw: Int[*]
-Int value = ptr[0];
-ptr[1] = 42;
-
-_ item_ref = ptr[1]$.ref();  // item_ref: Int&
-_ item_ptr = ptr[1]$.ptr();  // item_ptr: RawPointer<Int>
+Int* raw = value$.ptr();
+Int raw_value = raw$.get();
 ```
 
-## 释放
-
-当前 `T^` owning pointer 可通过 `ptr$.free()` 主动释放：
+写入单对象裸指针指向的目标时，被指向值的顶层必须可变：
 
 ```c
-Int^ a = new Int(100);
-a$.free();
+Int! value = 0;
+Int!* raw = value$.ptr();
+raw$.set(42);
 ```
 
-`&` 引用只是临时引用，不参与释放。
+## 隐式操作层
+
+`$` 会阻止接收者自动解引用，并进入隐式操作层。`$.get()`、`$.ref()`、`$.ptr()`、`$.move()`、
+`$.free()`、`Type$.size()` 这类操作都在独立章节中说明：见[隐式操作层](/zh/language/implicit-layer/)。
+
+## 多元素裸指针
+
+`T[*]` 是裸指针的一种，表示一段可下标访问的连续地址。它没有长度，不参与默认自动解引用：
+
+```c
+UInt8[*] bytes;
+
+UInt8 first = bytes[0];
+bytes[1] = 42;
+```
+
+和 C 不同，`T*` 是单对象裸指针，不用来表达“指针加偏移后访问任意位置”。需要按位置访问
+连续内存时，使用 `T[*]`；需要带长度的连续内存视图时，使用 `T[]` 切片。

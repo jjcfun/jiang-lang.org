@@ -1,145 +1,184 @@
 ---
 title: 控制流
-description: Jiang 语言中的控制流语句，包括 if、for、while、loop、break、continue 和条件解包。
+description: Jiang 语言中的 if、switch、while、for、guard、defer、break 和 continue。
+sidebar:
+  order: 4
 ---
 
-## `if` 语句
+Jiang 把控制流分成两类：改变执行路径的语句，以及能产生值的表达式。`if`、`switch` 和代码块可以在需要值的地方使用；`return`、`throw`、`break` 和 `continue` 是不会正常继续执行的语句。
+
+## 代码块
 
 ```c
-if x > 0 {
-  return true;
+Int value = {
+    Int base = 40;
+    base + 2
 }
+```
 
-if x >= 0 {
-  return true;
-} else if y > 1 {
-  return false;
+代码块的值来自最后一个不带分号的尾表达式。没有尾表达式时，代码块的值是 `()`。
+
+## `if`
+
+`if` 条件后直接跟代码块，不需要强制写括号。作为语句使用时，`else` 可以省略：
+
+```c
+if value < 0 {
+    print("negative");
 }
+```
 
-// if 作为表达式
-_ value = if x {
-  42
+作为表达式使用时，必须有 `else`，两个分支都要产生兼容的值：
+
+```c
+Int sign = if value < 0 {
+    -1
 } else {
-  0
-};
-```
-
-if 条件可选 `( )`：
-
-```c
-if (x > 0 && y == 42) {
-  print("both conditions met");
+    1
 }
 ```
 
-## `for` 循环
-
-Jiang 的 for 循环在可迭代类型中遍历：
+如果语句分支只执行语句，代码块没有尾表达式，结果就是 `()`：
 
 ```c
-Int[_] arr = [10, 20, 30];
-
-// 元素迭代
-for item in arr {
-    print("item %d", item);
-}
-
-// 索引+元素迭代
-for (i, item) in arr.indexed() {
-    print("arr[%d] = %d", i, item);
+if value < 0 {
+    print("negative");
+} else {
+    print("non-negative");
 }
 ```
 
-for 循环中的解构：
+## `switch`
+
+`switch` 用模式匹配分支。它可以作为表达式使用：
 
 ```c
-(Int, Int)[_] pairs = [(1, 2), (3, 4)];
-
-for (a, b) in pairs {
-    print("a=%d, b=%d", a, b);
+enum Mode {
+    read,
+    write,
 }
 
-for (i, (a, b)) in pairs.indexed() {
-    print("index=%d, a=%d, b=%d", i, a, b);
+Mode mode = Mode.read;
+
+Int code = switch mode {
+    .read => 1,
+    .write => 2,
+}
+```
+
+`switch` 分支右侧可以是单个表达式，也可以是代码块：
+
+```c
+Int code = switch mode {
+    .read => {
+        print("read");
+        1
+    },
+    .write => 2,
 }
 ```
 
 ## `while` 循环
 
 ```c
-Int count = 0;
+Int! count = 0;
 while count < 5 {
-  count += 1;
-}
-while true {
-  if count >= 10 {
-    break;
-  }
-  count += 1;
+    count = count + 1;
 }
 ```
 
-### `while-is` 模式
-
-`while-is` 在每次迭代中自动匹配和绑定：
+`break` 结束当前循环，`continue` 进入下一轮：
 
 ```c
-while a is some x {
-  // x 不为 null
-  a = next(a);
+while count < 10 {
+    count = count + 1;
+
+    if count == 3 {
+        continue;
+    } else {
+        print(count);
+    }
+
+    if count == 8 {
+        break;
+    }
 }
 ```
 
-匹配 bindings 支持可变：
+## `for in`
+
+`for 绑定 in 被遍历值` 用于遍历数组、切片和其他可遍历值。`in` 前面写绑定模式，`in` 后面写被遍历的值。当前内建支持数组和切片：
 
 ```c
-while result is Foo::C(x, y!) {
-  y += 100;
-  print("x = %d y = %d", x, y);
-  result = get_next();
+Int[_] values = [10, 20, 30];
+
+for item in values {
+    print(item);
 }
 ```
 
-## `loop` 无限循环
-
-`loop` 等价于 `while true`：
+`for` 前面的绑定模式必须是不可失败绑定。需要解构元组时，在循环体内写独立解构语句：
 
 ```c
-Int count = 0;
-loop {
-  if count > 10 {
-    break;
-  }
-  count += 1;
+(Int, Int)[_] pairs = [(1, 2), (3, 4)];
+
+for pair in pairs {
+    (_ left, _ right) = pair;
+    print(left + right);
 }
 ```
 
-## `break` 与 `continue`
+Range 表达式写成 `start..end`，当前约定为左闭右开：
 
 ```c
-for item in items {
-  if item == 0 {
-    continue;
-  }
-  if item < 0 {
-    break;
-  }
-  print("item = %d", item);
+for i in 0..10 {
+    print(i);
 }
 ```
 
-`break` 和 `continue` 只作用于直接包含的循环层。
+## `guard`
 
-## 表达式 vs 语句
-
-if 可以作为表达式时，所有分支必须产生值：
+`guard` 用于提前退出，并把成功匹配得到的绑定带到后续作用域。`else` 代码块必须非空，最后一条语句必须是 `return`、`break`、`continue` 或 `throw`。
 
 ```c
-_ tag = if x > 0 {
-  1
-} else {
-  0
-};
+() print_value(Int? maybe) {
+    guard maybe is some value else {
+        return ();
+    }
+
+    print(value);
+    return ();
+}
 ```
 
-带块分支最后要有分号 `;`。
+## `defer`
+
+`defer` 会在当前块退出时按后进先出顺序执行：
+
+```c
+defer handle$.free();
+
+defer {
+    log("closing");
+    handle$.free();
+}
+```
+
+`defer` 的语法是 `defer expr;` 或 `defer { ... }`。
+
+## `try catch`
+
+`try expr catch (...) => 备用值` 用于把 `T@E` 结果显式转换成成功值 `T`。备用值会在失败时使用：
+
+```c
+Int value = try parse(text) catch (err) => {
+    log_error(err);
+    0
+}
+```
+
+`catch ()` 表示不需要错误值：
+
+```c
+Int value = try parse(text) catch () => 0;
+```

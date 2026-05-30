@@ -1,13 +1,13 @@
 ---
-title: Types
-description: Jiang type system overview.
+title: Type System Basics
+description: Primitive types, type suffixes, and type inference in Jiang.
+sidebar:
+  order: 2
 ---
 
-Jiang types are read from left to right, from the inner value outward. Each suffix wraps the type before it.
+Jiang types are read left to right, from the inner value outward. Each suffix wraps the type before it.
 
 ## Primitive Types
-
-Common primitive types include:
 
 ```c
 Bool flag = true;
@@ -20,13 +20,46 @@ Double precise = 132.54;
 Char ch = 'a';
 ```
 
-`Int` and `UInt` are pointer-sized integers. Use fixed-width integer types such as `Int32` and `UInt64` when ABI, file format, or protocol layout matters.
+`Int` and `UInt` are pointer-sized integers. Use fixed-width types such as `Int32` or `UInt64` when ABI, file, or protocol layout needs an exact width.
 
-`()` is the Unit type. It is a zero-sized value and is used as the return type for functions that do not return useful data.
+`()` is the Unit type. It is a zero-size value and is also used for functions with no meaningful returned data.
+
+String literals are UTF-8 byte sequences:
+
+```c
+UInt8[_] bytes = "jiang";
+UInt8[] view = "jiang";
+```
+
+## Type Suffixes
+
+Suffixes farther to the right wrap a wider layer:
+
+```c
+Int[2][3] matrix;
+Int?[2][3] nullable_items;
+Int?[2]?[3] nullable_rows;
+```
+
+Common suffix forms:
+
+| Syntax | Meaning |
+| --- | --- |
+| `T!` | the current type layer is mutable |
+| `T?` | optional layer |
+| `T^` | owning heap pointer |
+| `T&` | non-owning reference |
+| `T*` | single-object raw pointer |
+| `T[]` | slice reference |
+| `T[*]` | many raw pointer |
+| `T[N]` | fixed-size array |
+| `T@E` | errorable function return type |
+
+Within one layer, `?` must come before `!`: write `Int?!`, not `Int!?`, `Int??`, or `Int!!`.
 
 ## Type Inference
 
-Use `_` when the initializer should determine the type:
+Use `_` to infer the type from the initializer:
 
 ```c
 _ answer = 42;
@@ -34,11 +67,25 @@ _ name = "Jiang";
 _ values = [1, 2, 3];
 ```
 
-Inference does not make inner layers mutable. If inner array elements, tuple fields, or struct fields need mutability, write the type explicitly.
+Inference creates an immutable binding by default. Use `_!` for a mutable outer binding:
+
+```c
+_! count = 0;
+count = count + 1;
+```
+
+Inference preserves the expression's natural type:
+
+```c
+Int^ make_value();
+
+_ owner = make_value();  // owner: Int^
+Int copied = make_value()$.get();
+```
 
 ## Layered Mutability
 
-`!` means the current type layer is mutable:
+`!` applies to the current type layer:
 
 ```c
 Bool! flag = true;
@@ -52,7 +99,18 @@ mutable_items[0] = 10;
 mutable_items = [4, 5, 6];
 ```
 
-For aggregate values, mutability belongs to the member type itself. A mutable outer binding does not automatically make every field or element mutable.
+For aggregate values, a member is writable only when that member's own type is mutable.
+
+```c
+struct User {
+    Int id;
+    Int! age;
+}
+
+User user = User { id: 1, age: 18 }
+user.age = 19;
+// user.id = 2; // error
+```
 
 ## Arrays and Slices
 
@@ -63,13 +121,13 @@ Int[3] values = [1, 2, 3];
 Int[_] inferred = [1, 2, 3];
 ```
 
-Nested arrays are written by adding more suffixes:
+Nested arrays use repeated suffixes:
 
 ```c
 Int[2][3] matrix = [[1, 2], [3, 4], [5, 6]];
 ```
 
-`T[]` is a slice: a runtime-sized view over elements. Arrays can be sliced:
+`T[]` is a slice reference with runtime length:
 
 ```c
 Int[_] values = [1, 2, 3];
@@ -78,19 +136,26 @@ Int[] view = values[..];
 
 ## Pointers and References
 
-Jiang currently uses simple pointer rules:
-
-- `T*` is an automatically dereferenced single-object pointer.
-- `T&` is a temporary reference.
-- `T[*]` is a many pointer that supports indexing.
-
 ```c
-Int* value = new Int(42);
-Int result = value;
-value$.free();
+Int^ owner = new Int(42);
+Int value = owner$.get();
+owner$.free();
 ```
 
-To operate on the pointer itself, enter the implicit operation layer with `$`.
+`T^`, `T&`, and `T*` do not auto-dereference in ordinary value contexts. Use `$.get()` for explicit reads. Member access is the exception: `owner.member` can pass through `T^`:
+
+```c
+Int value = 41;
+Int& ref = value$.ref();
+Int copied = ref$.get();
+
+struct Box {
+    Int value;
+}
+
+Box^ box = new (Box { value: 42 });
+Int n = box.value;
+```
 
 ## Optional
 
@@ -101,29 +166,22 @@ Int? maybe = 42;
 Int? none = null;
 ```
 
-Use optional chaining for fields:
+Use optional chaining, `??`, or `is some`:
 
 ```c
 _ field = user?.name;
-```
-
-Use `??` to provide a fallback:
-
-```c
 Int value = maybe ?? 0;
-```
 
-Use `is some` to unwrap:
-
-```c
-if maybe is some value {
-    return value;
+if maybe is some payload {
+    return payload;
+} else {
+    return 0;
 }
 ```
 
-## Errorable
+## Errorable Returns
 
-`T@E` means a computation returns either a `T` or an error of type `E`:
+`T@E` is used in function and method return position:
 
 ```c
 enum Err {
@@ -135,6 +193,8 @@ Int@Err ok() {
 }
 
 Int main() {
-    return try ok() catch 0;
+    return try ok() catch () => 0;
 }
 ```
+
+Use `throw expr;` to return the error side and `try expr catch (...) => fallback` to handle it.

@@ -1,0 +1,156 @@
+---
+title: 隐式操作层
+description: Jiang 中 `$` 隐式操作层的绑定规则、值操作、类型操作和低层能力边界。
+sidebar:
+  order: 11
+---
+
+`$` 用来进入值或类型的隐式操作层。它把一些低层能力写成显式方法调用形式，例如取引用、
+取裸指针、显式解引用、显式 move、释放资源、查询类型布局和强制转换。
+
+## 基本形式
+
+值操作写成 `value$.op(...)`：
+
+```c
+Int value = 42;
+
+Int& ref = value$.ref();
+Int* ptr = value$.ptr();
+Int copied = ref$.get();
+```
+
+类型操作写成 `Type$.op(...)`：
+
+```c
+Int size = Int$.size();
+Int align = Int$.align();
+Int^ value = Int$.alloc();
+```
+
+## 绑定规则
+
+`$` 绑定在它左侧的完整表达式上：
+
+```c
+a$.b     // 等价于 (a$).b
+a.b$     // 等价于 (a.b)$
+```
+
+如果要对复合表达式进入隐式层，必须写括号：
+
+```c
+Int raw = (left + right)$.as(Int);
+```
+
+不要把 `$` 理解成字段访问的一部分。它先把左侧表达式切换到隐式操作层，然后再解析后面的操作。
+
+## 值操作
+
+| 操作 | 含义 |
+| --- | --- |
+| `value$.ref()` | 返回 `T&` 引用 |
+| `value$.ptr()` | 返回 `T*` 单对象裸指针 |
+| `value$.get()` | 显式读取 `T^` / `T&` / `T*` 指向的值 |
+| `value$.set(new_value)` | 显式写入 `T!*` 指向的目标 |
+| `value$.move()` | 显式转移所有权，源变量随后失效 |
+| `value$.addr()` | 获取当前值的地址值 |
+| `value$.free()` | 释放默认堆分配器上的对象 |
+| `value$.as(Type)` | 低层强制转换 |
+
+这些操作不表示普通方法调用。它们由编译器识别，并在 HIR/MIR 阶段降低成对应的低层语义。
+
+## 显式解引用
+
+`T^`、`T&` 和 `T*` 在普通值上下文中不会自动解引用。需要读取指向的值时，使用 `$.get()`：
+
+```c
+Int^ owner = new Int(42);
+Int copied = owner$.get();
+
+Int value = 10;
+Int& ref = value$.ref();
+Int copied_ref = ref$.get();
+```
+
+成员访问是例外，`owner.member` 可以自动穿过 `T^` 访问被拥有对象的成员。
+
+## 所有权转移
+
+`$.move()` 是所有权转移的显式边界：
+
+```c
+Int^ a = new Int(42);
+Int^ b = a$.move();
+```
+
+move 后源变量失效：
+
+```c
+Int value = a$.get(); // 错误：a 已经被 move。
+```
+
+这条规则的完整说明见[所有权、借用与生命周期](/zh/language/ownership/)。
+
+## 类型操作
+
+类型本身也可以进入隐式操作层：
+
+```c
+Int size = Int$.size();
+Int align = Int$.align();
+Int max_align = Int$.max_align();
+Int^ value = Int$.alloc();
+Int[*] values = Int$.alloc_array(10);
+```
+
+这些操作用于查询布局信息或执行底层分配。布局相关信息也会被 backend 使用。
+
+| 操作 | 含义 |
+| --- | --- |
+| `Type$.size()` | 类型大小 |
+| `Type$.align()` | ABI 对齐 |
+| `Type$.max_align()` | 默认分配器保证支持的最大 Jiang 类型对齐 |
+| `Type$.alloc()` | 分配一个未初始化对象，返回 `Type^` |
+| `Type$.alloc_array(n)` | 分配连续数组存储，返回 `Type[*]` |
+
+## 强制转换
+
+普通代码中的安全转换优先使用目标类型初始化，不要写成 `$.as(...)`：
+
+```c
+Float f = Float(10);
+Int i = Int(f);
+```
+
+`value$.as(Type)` 只表示低层强制转换：它更接近“把当前值按目标类型解释/转换”，主要用于
+裸指针、整数地址或 FFI 相关场景。不要把它当作普通数值转换、普通构造或日常 API 调用写法。
+
+```c
+Int address = 0x1000;
+Int* ptr = address$.as(Int*);
+```
+
+0.2 阶段 package 默认处在全局 unsafe 模式，因此编译器不会因为裸指针转换或裸指针访问本身报错。
+后续如果引入 capability/unsafe gate，这类低层能力会被纳入显式能力检查。
+
+## 可选值操作
+
+`maybe$.some()` 可以强制解包可选值：
+
+```c
+Int? maybe = 42;
+Int value = maybe$.some();
+```
+
+| 操作 | 含义 |
+| --- | --- |
+| `optional$.some()` | 强制解包 optional，取得其中的 `T` 值 |
+
+日常代码优先使用 `is some`、`guard` 或 `??`：
+
+```c
+Int value = maybe ?? 0;
+```
+
+强制解包适合已经由外层逻辑保证一定存在值的低层路径。

@@ -1,132 +1,124 @@
 ---
-title: Generics & Polymorphism
-description: Generic definitions, parameterization, monomorphization, and Concept constraints in Jiang.
+title: Generics & Bounds
+description: Generic functions, generic types, @where, and associated type bounds.
+sidebar:
+  order: 13
 ---
 
-Generic parameters are monomorphized at compile time, generating separate copies for each concrete type. Define generics using `Type<T1, T2>` syntax.
+Generics let one declaration work with multiple types. Generic parameters are written after the declaration name.
 
-## Basic Generics
+## Generic Functions
 
 ```c
-struct Pair<T1, T2> {
-  T1 first;
-  T2 second;
-}
-
-// Initialization
-Pair<Int, Int> p = Pair(1, 2);
-Pair<Int, float> p2 = Pair(1, 2);
-
-// Generic function
 T id<T>(T value) {
-  return value;
+    return value;
 }
+
+Int a = id<Int>(42);
+_ b = id(42);
 ```
 
-## Specialization
-
-Use `specialize` to provide custom implementations for specific types or conditions:
+## Generic Types
 
 ```c
-specialize T get<T>(T x) where T == Int {
-  return x + 1;
+struct Pair<A, B> {
+    A first;
+    B second;
 }
 
-specialize T get<T>(T x) where T == float {
-  return x + 0.5;
+Pair<Int, UInt8[]> pair = Pair<Int, UInt8[]> {
+    first: 1,
+    second: "one",
 }
 ```
 
-## Concept
-
-Concepts describe type constraints without specifying concrete types. The compiler automatically checks whether a type satisfies the constraint. Concepts can be used for generic bounds, and also serve as desugaring abstractions for enums and tuples—just as array concepts provide an abstraction for subscript access.
-
-### Definition & Implementation
+Type arguments may include suffixes:
 
 ```c
-concept C { }
-
-// Implement for a concrete type
-impl C for MyType { }
-
-// Implement for a generic parameter
-impl<T> C for T { }
+Pair<Int?, UInt8[]> maybe_pair;
+Pair<Int!, Int[3]^> mutable_and_owner;
 ```
 
-### Methods as Requirements
+## `@where`
+
+`@where(...)` is a leading annotation:
 
 ```c
-concept Printable {
-  Int print() const;
+@where(T: Numeric)
+T add<T>(T left, T right) {
+    return left + right;
 }
 ```
 
-`self` inside `impl` has the same type as the concept target type:
+Multiple constraints use commas:
 
 ```c
-impl Printable for Int {
-  Int print() const {
-    // self has type Int
-    write(self);
-    return 0;
-  }
-}
+@where(T: Hashable, U: Equatable)
+Pair<T, U> make_pair<T, U>(T left, U right);
 ```
 
-### Generic Constraints
+Intersection bounds use `&`:
 
 ```c
-T do_something<T>(T x) where T: Printable {
-  x.print();
-  return x;
-}
+@where(T: Hashable & Equatable)
+UInt hash_key<T>(T value);
 ```
 
-`where T: Concept` is equivalent to `T: Concept`:
+## Equality Constraints
+
+Generic parameter equality:
 
 ```c
-fn process<T: Printable>(T value) { }
+@where(T == UInt8)
+Int use_byte<T>(T value);
 ```
 
-### Multiple Constraints
+Projected associated type equality uses `T.[Trait].Assoc == Type`:
 
 ```c
-fn complex_op<T>(T value) where T: Printable, T: Comparable {
-  if value > 0 {
-    value.print();
-  }
-}
+@where(T.[Iterable].Item == UInt8)
+Int count_bytes<T>(T value);
 ```
 
-## Concept as Enum/Union Abstraction
+## Associated Type Bindings
 
-Concepts serve as an abstraction for enums and union-like types. When different enum variants need to share behavior, concepts with impl unify the interface:
+Trait bounds can bind associated types:
 
 ```c
-enum Shape {
-  Circle(Int),
-  Square(Int),
-}
-
-concept Area {
-  Int area() const;
-}
-
-impl Area for Shape {
-  Int area() const {
-    // self is Shape
-    return switch self {
-      Shape::Circle(r) => r * 2,
-      Shape::Square(w) => w * w,
-    };
-  }
-}
-
-Shape::Circle(4).area();  // 8
+@where(T: Iterable<Item = UInt8>)
+Int count<T>(T value);
 ```
 
-## Current Limitations
+## Mutable Generic Parameters
 
-- Generic parameters accept only types; non-type parameters are not supported
-- Concept parameters must declare the target type; `self` deduction is not supported
-- Concepts do not support union/intersection; each type can implement a concept at most once
+Top-level mutability can be expressed through a `Mutable` bound:
+
+```c
+@where(T: Mutable)
+struct Slot<T> {
+    T value;
+}
+
+Slot<Int!> slot = Slot<Int!> { value: 1 }
+```
+
+## Errorable Returns
+
+Generic functions can return `T@E` in result position:
+
+```c
+@where(T: Numeric)
+T@ParseErr parse_number<T>(UInt8[] text);
+```
+
+If the success value is optional, put `?` on the left side of `@`:
+
+```c
+T?@ParseErr parse_optional<T>(UInt8[] text);
+```
+
+## Grammar Boundaries
+
+- Generic parameters accept types, not non-type parameters.
+- `@where(...)` is written before the declaration, not after it.
+- Associated type projection constraints use the `T.[Trait].Name == Type` form.

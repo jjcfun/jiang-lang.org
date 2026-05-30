@@ -1,80 +1,87 @@
 ---
-title: FFI & External Function Interface
-description: Extern declarations, C interop, explicit linking, and RawPointer in Jiang.
+title: FFI & External Interface
+description: Extern declarations, C interop, single-object raw pointers, many raw pointers, and ABI usage.
+sidebar:
+  order: 17
 ---
 
-`extern` declarations link external C symbols (including common `libc` or custom dynamic libraries). The compiler treats extern functions as normal function calls without special type-safety handling.
+Use `extern` declarations to call external symbols such as C library functions or system APIs. When using FFI, make sure your parameter types, memory layout, and resource cleanup match the external API.
 
-## Basic extern Declaration
-
-```c
-extern fn printf(fmt: CString, ...);
-extern fn scanf(fmt: CString, ...);
-
-extern fn printf(fmt: CString, ...);
-printf("hello %d\n", 42);
-```
-
-## CString & RawPointer
-
-`CString` is a compile-time special type for interacting with C string constants:
+## Extern Blocks
 
 ```c
-extern fn puts(s: CString);
-
-// String literals can be passed as CString
-puts("Hello World!");
-```
-
-For any type `T`, you can use `RawPointer<T>` as a low-level bare pointer:
-
-```c
-Int value = 42;
-_ raw_ptr = value$.ptr();  // raw_ptr: RawPointer<Int>
-```
-
-## Explicit Linking
-
-Use the `@link` attribute to specify the symbol source (when the symbol is not in the default libc):
-
-```c
-@link("m")
-extern fn sqrt(x: Float) Float;
-
-@link("my_lib")
-extern fn my_function(x: Int) Int;
-```
-
-The compiler adds the corresponding `-lmylib` flag during the link stage.
-
-## Variadic Arguments
-
-```c
-extern fn printfln(fmt: CString, ...);
-printfln("int %d, float %f", 42, 3.14);
-```
-
-## Import extern Block
-
-```c
-@link("SDL2")
 extern {
-  fn SDL_Init(flags: UInt32) Int;
-  fn SDL_Quit();
+    public Int puts(UInt8[*] text);
+    public Int open(UInt8[*] path, Int options);
+    public Int errno;
 }
 ```
 
-## External Global Variables
+Single declarations can use top-level modifiers:
 
 ```c
-extern Int errno;
+extern public Int puts(UInt8[*] text);
+public extern Int errno;
 ```
 
-Currently extern variables are imported as read-only pointers.
+## C Strings
 
-## Notes
+C-style string pointers use `UInt8[*]`. A string literal in a `UInt8[*]` context can be emitted as null-terminated read-only data:
 
-- Extern functions in Jiang have no module/package prefix; they reside in the global namespace
-- Variadic arguments are marked with `...`, accepting any number of additional arguments
-- The compiler does not perform type-safety validation on extern declarations
-- Undefined behavior is the caller's responsibility
+```c
+extern public Int puts(UInt8[*] text);
+
+puts("hello from Jiang");
+```
+
+When an API needs a length, use a slice or an explicit length parameter:
+
+```c
+extern public Int write(Int fd, UInt8[] buf, Int count);
+```
+
+## Raw Pointers
+
+`T*` is a single-object raw pointer for FFI, ABI, and low-level code:
+
+```c
+Int value = 42;
+Int* raw = value$.ptr();
+Int copied = raw$.get();
+```
+
+Writing through a single-object raw pointer requires a mutable pointee:
+
+```c
+Int! value = 0;
+Int!* raw = value$.ptr();
+raw$.set(42);
+```
+
+## Many Raw Pointers
+
+`T[*]` is also a raw pointer form. It is useful for C buffer parameters:
+
+```c
+extern public Int read(Int fd, UInt8[*] buf, Int count);
+```
+
+`T*` is not used for free position movement like a C pointer. Use `T[*]` for position-based access
+into contiguous memory. `T[*]` has no length. Wrap it with a length field or use `T[]` when Jiang code
+needs a length-bearing view.
+
+## Resource Boundaries
+
+When wrapping external resources, make ownership explicit:
+
+```c
+struct CBuffer {
+    UInt8[*] data;
+    Int length;
+
+    deinit() {
+        self.data$.free();
+        return ();
+    }
+}
+```

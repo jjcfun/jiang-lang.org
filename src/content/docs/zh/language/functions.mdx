@@ -1,6 +1,8 @@
 ---
 title: 函数
-description: Jiang 函数声明和调用。
+description: Jiang 函数声明、value block、命名参数、默认参数、重载和函数值。
+sidebar:
+  order: 3
 ---
 
 函数声明先写返回类型，然后是函数名、参数和函数体。
@@ -13,53 +15,120 @@ Int add(Int left, Int right) {
 
 ## 返回类型
 
-函数总是有返回类型。没有有意义的返回值时使用 `()`表示Unit类型：
+函数总是有返回类型。没有有意义的返回值时使用 `()` 表示单元类型：
 
 ```c
 () log_done() {
     print("done");
     return ();
 }
-
 ```
 
 ## 参数
 
-参数按位置匹配：
+参数列表中每个参数写成 `类型 名字`。参数可以带默认值；带默认值的参数必须位于参数列表尾部。
+当前默认值只支持 literal，并按参数的 expected type 检查：
 
 ```c
-Int scale(Int value, Int factor) {
+Int scale(Int value, Int factor = 2) {
     return value * factor;
 }
 
 Int result = scale(21, 2);
+Int defaulted = scale(21);
 ```
 
-Stage1 目标语言不依赖参数标签和默认参数。旧的 Stage0 示例中可能还能看到相关语法，但新代码建议使用简单的位置参数调用。
-
-## 结构体值
-
-`struct` 是带命名字段的名义类型：
+调用实参可以直接按位置提供，也可以写成 `name: expr`。位置参数必须出现在命名参数之前；
+命名参数可以重排，也可以跳过带默认值的参数：
 
 ```c
-struct Pair {
-    Int left;
-    Int right;
+Int value = scale(21, 2);
+Int named = scale(value: 21, factor: 2);
+Int reordered = scale(factor: 2, value: 21);
+Int defaulted = scale(value: 21);
+```
+
+命名参数之后不能再出现位置参数：
+
+```c
+Int bad = scale(value: 21, 2); // 错误：命名参数后不能再写位置参数。
+```
+
+type check 会把实参重排成函数签名顺序，并为缺失的默认参数补上默认值。后续 MIR lowering
+只消费这个已经排好的实参列表，不重新做默认参数匹配。
+
+## 默认参数和重载
+
+如果一个名字有多个重载，调用时会根据实参数量、参数名字和参数类型选择匹配的函数。默认参数
+参与重载歧义检查：如果两个 overload 在同一调用点可能同时满足参数数量和参数类型，必须诊断为歧义。
+
+```c
+Int f(Int value) {
+    return value;
 }
 
-Int sum_pair(Pair pair) {
-    return pair.left + pair.right;
+Int f(Int value, Int extra = 1) {
+    return value + extra;
 }
 
-Int main() {
-    Pair pair = Pair { left: 20, right: 22 };
-    return sum_pair(pair);
+Int a = f(10); // 错误：两个 overload 都可以匹配。
+```
+
+这类函数应该改成不同名字，或让参数类型/数量不重叠。
+
+## 局部声明、value block 和返回
+
+函数体是一个代码块。局部变量声明以类型开头；可以用 `return` 显式返回：
+
+```c
+Int abs(Int value) {
+    if value < 0 {
+        return -value;
+    } else {
+        return value;
+    }
 }
 ```
+
+`return` 是语句，不是普通表达式。显式返回 `()` 时需要写出单元值：
+
+```c
+() done() {
+    return ();
+}
+```
+
+代码块可以作为 value block 使用。`stmt` 不贡献 block 的值；block 的值只来自最后一个不带分号的
+tail expression。没有 tail expression 的 block 值为 `()`：
+
+```c
+Int value = {
+    Int base = 40;
+    base + 2
+}
+
+() unit_value = {
+    Int ignored = 1;
+}
+```
+
+函数体本身也是 block，因此函数体末尾的 tail expression 可以作为函数返回值。下面两种写法等价：
+
+```c
+Int add(Int left, Int right) {
+    return left + right;
+}
+
+Int add_tail(Int left, Int right) {
+    left + right
+}
+```
+
+需要提前返回、从分支里直接退出，或者返回 `()` 时，继续使用 `return`。
 
 ## 多返回值
 
-可以使用 tuple 返回多个值：
+可以使用元组返回多个值：
 
 ```c
 (Int, Int) split(Int value) {
@@ -72,39 +141,79 @@ Int main() {
 }
 ```
 
-`(T)` 与 `T` 等价；一元 tuple 不会形成独立的运行时形态。
+`(T)` 与 `T` 等价；一元元组不会形成独立的运行时形态。
 
-## 方法与 Concept
+## 泛型函数
 
-结构体通过成员函数支持实例方法：
+泛型参数写在函数名之后：
+
+```c
+T id<T>(T value) {
+    return value;
+}
+
+@where(T: Numeric)
+T add<T>(T left, T right) {
+    return left + right;
+}
+```
+
+`@where(...)` 是约束注解，写在泛型声明之前。
+
+## 方法
+
+类型里的函数分为实例方法和 `static` 方法。
 
 ```c
 struct User {
-  Int id;
+    Int id;
 
-  Int value() {
-    return self.id;
-  }
+    static User zero() {
+        return User { id: 0 }
+    }
+
+    Int value() {
+        return self.id;
+    }
 }
 
-User u = User { id: 42 };
-Int b = u.value();
+User user = User { id: 42 }
+Int a = user.value();
+User z = User.zero();
 ```
 
-Concept 定义跨类型的共享接口：
+实例方法体内有隐式 `self`。`static` 方法没有接收者，不能使用 `self`。
+
+`init(...)` 是构造函数，拥有初始化中的 `self` 目标，只能通过 `Type(...)` / `new Type(...)`
+调用，不作为普通函数值暴露。`deinit()` 是资源清理入口，不能手动当作普通函数调用。
+
+实例方法可以用两种方式调用：
 
 ```c
-concept Hashable {
-  UInt hashU() const;
-}
-
-impl Hashable for Int {
-  UInt hashU() const {
-    return UInt(self);
-  }
-}
-
-Int h = 123.hashU();
+Int a = user.value();
+Int b = User.value(user$.ref());
 ```
 
-参见[泛型与多态](/zh/language/generics)了解 concept 约束与类型边界。
+第二种形式把接收者引用作为第一个参数传入，适合需要把方法当作函数值保存或传递的场景。
+
+## 函数指针
+
+`Fn<R, A, B, ...>` 表示函数指针类型。第一个类型参数是返回类型，后续参数是调用参数类型。
+
+```c
+Bool less(Int left, Int right) {
+    return left < right;
+}
+
+Fn<Bool, Int, Int> compare = less;
+Bool ok = compare(1, 2);
+```
+
+实例方法作为未绑定函数值时，接收者展开为第一个参数：
+
+```c
+Fn<Int, User&> get_value = User.value;
+Int value = get_value(user$.ref());
+```
+
+当前示例使用已有函数名或方法名形成函数值；匿名函数语法尚未作为日常写法介绍。

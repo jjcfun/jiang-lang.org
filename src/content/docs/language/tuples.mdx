@@ -1,74 +1,67 @@
 ---
 title: Tuples
-description: Tuples in Jiang, including multi-tuples, one-tuples, the Unit type, and destructuring.
+description: Tuples, Unit, and destructuring in Jiang.
+sidebar:
+  order: 5
 ---
 
-Tuples group multiple values together. Tuple types are written as `(T1, T2, ...)`.
+Tuples group multiple values. Tuple types are written as `(T1, T2, ...)`.
 
-## Multi-tuples
+## Multiple Values
 
 ```c
-// Function returning multiple values via tuple
-(Int, Int) foo(Int a, Int b) {
-  return (a * a, b * 2);
+(Int, Int) split(Int value) {
+    return (value, value + 1);
 }
 
-// Receive the tuple return
-_ result = foo(10, 200);
-print("result0 = %d", result[0]);  // prints: 10
-print("result1 = %d", result[1]);  // prints: 200
+_ result = split(41);
+print(result[0]);
+print(result[1]);
 
-// Destructure the tuple
-(_ a, _ b) = foo(10, 200);
-print("x = %d, y = %d", a, b);  // prints: a = 100, b = 200
+(_ left, _ right) = split(41);
 ```
 
-Specify mutability when destructuring:
+Destructuring bindings can choose mutability:
 
 ```c
-(_ x, _! y) = foo(10, 200);
-y += 100;
-print("x = %d, y = %d", x, y);  // prints: x = 100, y = 300
+(_ x, _! y) = split(41);
+y = y + 1;
 ```
 
-## One-tuples
+## One-element Tuples
 
-A one-tuple `(T)` is equivalent to its element type `T` and occupies the same memory space:
+`(T)` is equivalent to `T`:
 
 ```c
-// These two function signatures are equivalent
 (Int) add(Int a, Int b);
 Int add(Int a, Int b);
 
-// These two syntaxes are also equivalent
 (Int! x) = add(1, 2);
 Int! x = add(1, 2);
 ```
 
 ## Unit
 
-`()` denotes the `Unit` type. `Unit` occupies zero memory space and expresses "no meaningful return value":
+`()` is the Unit type:
 
 ```c
 () hello() {
-  print("Hello World!");
-  return ();
+    print("Hello World!");
+    return ();
 }
 ```
 
-`Unit` can be used as a value, parameter, local variable, or field like any other type.
+Unit can be used as a value, parameter, local, and field type.
 
-## Destructuring in for loops
+## Destructuring in Loops
 
-In `for-in` loops, multi-element patterns must be wrapped in parentheses:
+`for in` binds one pattern before `in`. Destructure tuples inside the loop body:
 
 ```c
 (Int, Int)[_] pairs = [(1, 2), (3, 4)];
 
-for (a, b) in pairs {
-    print("a=%d, b=%d", a, b);
+for pair in pairs {
+    (_ a, _ b) = pair;
+    print(a + b);
 }
-
-for (i, (a, b)) in pairs.indexed() {
-    print("index=%d, a=%d, b=%d", i, a, b);
-}
+```

@@ -1,9 +1,11 @@
 ---
-title: 类型
-description: Jiang 类型系统概览。
+title: 类型系统基础
+description: Jiang 基本类型、类型后缀和类型推导。
+sidebar:
+  order: 2
 ---
 
-Jiang 类型按从左到右、从里到外的方式阅读。每个类型后缀都会包裹它左侧已经形成的类型。
+Jiang 类型按“从左到右、从里到外”的方式阅读。每个类型后缀都会包裹它左侧已经形成的类型。
 
 ## 基本类型
 
@@ -20,9 +22,48 @@ Double precise = 132.54;
 Char ch = 'a';
 ```
 
-`Int` 和 `UInt` 是指针宽度整数。需要固定 ABI、文件格式或协议布局时，使用 `Int32`、`UInt64` 等固定宽度类型。
+`Int` 和 `UInt` 是指针宽度整数。需要固定 ABI、文件格式或网络协议布局时，使用 `Int8`、`Int16`、`Int32`、`Int64` 或 `UInt8`、`UInt16`、`UInt32`、`UInt64`。
 
-`()` 是 Unit 类型。它是零大小值，也用于表示函数没有有意义的返回数据。
+`()` 是单元类型。它是零大小值，也用于表示函数没有有意义的返回数据。
+
+字符串字面量按 UTF-8 字节序列处理，当前主要用于 `UInt8[_]`、`UInt8[]` 和 FFI 场景。
+
+```c
+UInt8[_] bytes = "jiang";
+UInt8[] view = "jiang";
+```
+
+## 类型后缀
+
+类型后缀越靠右，包裹范围越大：
+
+```c
+Int[2][3] matrix;
+Int?[2][3] nullable_items;
+Int?[2]?[3] nullable_rows;
+```
+
+可以把 `Int[2][3]` 读成：
+
+1. `Int`
+2. `Int[2]`：两个 `Int` 的数组
+3. `Int[2][3]`：三个 `Int[2]` 的数组
+
+常见后缀如下：
+
+| 语法 | 含义 |
+| --- | --- |
+| `T!` | 当前类型层级可变 |
+| `T?` | 可选类型层 |
+| `T^` | 拥有所有权的堆指针 |
+| `T&` | 不拥有所有权的引用 |
+| `T*` | 单对象裸指针 |
+| `T[]` | 切片引用 |
+| `T[*]` | 多元素裸指针 |
+| `T[N]` | 定长数组 |
+| `T@E` | errorable 返回类型中的成功值和错误类型 |
+
+同一层级里 `?` 必须写在 `!` 前面，例如 `Int?!`。`Int!?`、`Int??`、`Int!!` 都应诊断为错误。
 
 ## 类型推导
 
@@ -34,7 +75,23 @@ _ name = "Jiang";
 _ values = [1, 2, 3];
 ```
 
-类型推导不会自动让内部层级可变。如果数组元素、tuple 元素或结构体字段需要可变性，需要显式写出类型。
+类型推导默认得到不可变绑定。需要让推导结果的最外层可变时写 `_!`：
+
+```c
+_! count = 0;
+count = count + 1;
+```
+
+类型推导会保留表达式的自然类型，不会为了推导局部变量自动解引用 `T^` 或 `T&`：
+
+```c
+Int^ make_value();
+
+_ owner = make_value(); // owner: Int^
+Int copied = make_value()$.get();
+```
+
+推导只决定最外层绑定。数组元素、元组元素、`union` 携带值或结构体字段如果需要可变性，要在对应类型位置显式写出 `!`。
 
 ## 分层可变性
 
@@ -54,6 +111,19 @@ mutable_items = [4, 5, 6];
 
 对于聚合值，成员是否可变由成员自己的类型决定。外层绑定可变，不代表所有字段或元素自动可变。
 
+```c
+struct User {
+    Int id;
+    Int! age;
+}
+
+User user = User { id: 1, age: 18 }
+user.age = 19; // 允许
+// user.id = 2; // 编译错误
+```
+
+赋值、初始化、传参和 `return` 都是把值写入目标位置的场景。这里以目标类型为准，在相同结构位置忽略可变标记，但不会忽略可选层、指针种类、数组长度或字段结构差异。
+
 ## 数组和切片
 
 数组长度是类型的一部分：
@@ -69,7 +139,7 @@ Int[_] inferred = [1, 2, 3];
 Int[2][3] matrix = [[1, 2], [3, 4], [5, 6]];
 ```
 
-`T[]` 是切片，也就是运行时长度的元素视图。数组可以切成 slice：
+`T[]` 是切片，也就是运行时长度的元素视图。数组可以切成切片：
 
 ```c
 Int[_] values = [1, 2, 3];
@@ -78,19 +148,33 @@ Int[] view = values[..];
 
 ## 指针和引用
 
-Jiang 当前采用较简单的指针规则：
+指针和引用分成几类：
 
-- `T*` 是自动解引用的单对象指针。
-- `T&` 是临时引用。
-- `T[*]` 是支持下标访问的 many pointer。
+- `T^`：拥有所有权的堆指针，通常来自 `new T(...)`。
+- `T&`：不拥有所有权的引用，不表达释放职责。
+- `T*`：单对象裸指针，用于 FFI / ABI / 低层能力。
+- `T[*]`：多元素裸指针，可通过下标访问连续内存元素。
 
 ```c
-Int* value = new Int(42);
-Int result = value;
-value$.free();
+Int^ owner = new Int(42);
+Int value = owner$.get();
+owner$.free();
 ```
 
-如果要操作指针本身，使用 `$` 进入隐式操作层。
+`T^`、`T&` 和 `T*` 在普通值上下文中都不会自动解引用，需要用 `$.get()` 显式读取。成员访问是例外，`owner.member` 会自动穿过 `T^`：
+
+```c
+Int value = 41;
+Int& ref = value$.ref();
+Int copied = ref$.get();
+
+struct Box {
+    Int value;
+}
+
+Box^ box = new (Box { value: 42 });
+Int n = box.value;
+```
 
 ## 可选类型
 
@@ -101,7 +185,7 @@ Int? maybe = 42;
 Int? none = null;
 ```
 
-字段访问可以使用 optional chaining：
+字段访问可以使用可选链：
 
 ```c
 _ field = user?.name;
@@ -118,12 +202,14 @@ Int value = maybe ?? 0;
 ```c
 if maybe is some value {
     return value;
+} else {
+    return 0;
 }
 ```
 
 ## Errorable
 
-`T@E` 表示计算结果要么是 `T`，要么是 `E` 类型的错误：
+`T@E` 表示函数成功时产生 `T`，失败时产生 `E`。`@E` 只出现在函数、方法和函数类型的返回位：
 
 ```c
 enum Err {
@@ -135,6 +221,24 @@ Int@Err ok() {
 }
 
 Int main() {
-    return try ok() catch 0;
+    return try ok() catch () => 0;
 }
 ```
+
+可错值不会隐式变成 `T`。需要成功值时，要么在同错误类型的 `T@E` 函数中让错误传播，要么使用 `try expr catch (...) => 备用值` 显式处理错误分支。
+
+## 数值转换
+
+数值字面量在定型前可以由上下文决定类型。已经定型的数值之间不做隐式提升：
+
+```c
+Float f = 0.5;
+Float a = 2 + f; // 2 是字面量，可按 Float 参与表达式
+
+Int two = 2;
+// Float b = two + f; // 编译错误：Int 变量不会隐式提升为 Float
+Float b = Float(two) + f;
+```
+
+安全转换使用目标类型初始化形式，例如 `Float(two)`、`Int(f)`。普通代码不要用 `value$.as(Type)`
+表示日常转换；`$.as` 是低层强制转换，主要用于裸指针、整数地址、FFI 或其他能力受控的底层场景。

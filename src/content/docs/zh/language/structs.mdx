@@ -1,76 +1,80 @@
 ---
-title: 结构体与 Record
-description: Jiang 语言中的 struct、record、init、deinit 和内部函数。
+title: 结构体与记录类型
+description: Jiang 语言中的 struct、record、init、deinit 和方法。
+sidebar:
+  order: 7
 ---
 
 ## Struct
 
-### 定义
+`struct` 是名义类型。即使两个结构体字段完全相同，它们也是不同类型。
 
 ```c
 struct Point {
-  Int x;
-  Int y;
+    Int x;
+    Int y;
 }
 
-// 同类型多字段声明
 struct Offset {
-  Int x, y;  // 等价于 Int x; Int y;
+    Int x, y;
 }
 ```
 
-### 初始化
+同类型多字段声明只是语法糖，`Int x, y;` 等价于分别声明 `Int x;` 和 `Int y;`。
+
+## 字段字面量初始化
+
+没有自定义 `init` 的 `struct` 可以使用字段字面量初始化：
 
 ```c
-// 字段字面量初始化（没有 init 时）
-Point point = Point { x: 0, y: 0 };
-
-// 值拷贝
-Point p2 = p1;
-
-// owning pointer（引用语义）
-Point^ p3 = new Point { x: 100, y: 200 };
-
-// owning pointer 自动解引用
-print("p3.x = %d, p3.y = %d", p3.x, p3.y);
+Point point = Point { x: 0, y: 0 }
+Point^ heap_point = new (Point { x: 100, y: 200 });
 ```
 
-### 字段可变性
+拥有所有权的指针不会在赋值、初始化或算术这类值上下文中自动解引用；但字段访问会自动穿过 `T^`，因此可以直接访问字段：
 
-字段可变性由字段类型自身决定，不由外层变量是否带 `!` 决定：
+```c
+print("x=%d y=%d", heap_point.x, heap_point.y);
+```
+
+## 字段可变性
+
+字段能否被写入由字段类型自身决定，不由外层变量是否带 `!` 决定：
 
 ```c
 struct User {
-  Int id;               // 不可变
-  Int! age;             // 可变
-  UInt8[]?! nick_name;  // 可空、可变
+    Int id;
+    Int! age;
+    UInt8[]? nick_name;
 }
 
-User user = User(id: 123, age: 18);
-user.age += 1;  // 正确
-// user.id = 200;  // 编译错误
+User user = User { id: 123, age: 18 }
+user.age = user.age + 1;
+// user.id = 200; // 编译错误：字段自身不可变
 ```
 
-optional 字段可省略，默认初始化为 `null`。
+可选字段可以默认初始化为 `null`。如果字段有默认值或是可选字段，构造时可以省略对应字段。
 
-### init 函数
+## `init`
 
-`init` 是结构体的特殊构造器：
+`init` 是 `struct` 的构造器入口。它不声明返回类型，函数体内有正在初始化的 `self`：
 
 ```c
 struct Point {
-  Int x;
-  Int y;
+    Int x;
+    Int y;
 
-  public init(Int x, Int y) {
-    self.x = x;
-    self.y = y;
-  }
+    init(Int x, Int y) {
+        self.x = x;
+        self.y = y;
+        return ();
+    }
 
-  public init(Int value) {
-    self.x = value;
-    self.y = value;
-  }
+    init(Int value) {
+        self.x = value;
+        self.y = value;
+        return ();
+    }
 }
 
 Point p1 = Point(1, 2);
@@ -79,75 +83,80 @@ Point^ p3 = new Point(4, 5);
 ```
 
 规则：
-- `init` 隐式拥有 `self`，不声明返回类型
-- 可定义多个 `init`（按参数做重载决议）
-- 只要定义了 `init`，就不允许再用 `Point { ... }`
-- 支持可见性修饰（`public init`）
 
-### deinit 函数
+- `init` 隐式拥有 `self`，不声明返回类型。
+- 可定义多个 `init`，按参数数量和类型重载。
+- 只要类型定义了 `init`，就不再使用 `Point { ... }` 字段字面量构造。
+- `init` 可以写可见性修饰，例如 `public init(...)`。
+- `init` 只能通过 `Type(...)` 或 `new Type(...)` 调用，不作为普通函数值暴露。
 
-`deinit` 在 `ptr$.free()` 时自动调用：
+## `deinit`
+
+`deinit` 是 `struct` 的析构入口。它由作用域退出、拥有所有权的指针析构和拥有所有权的字段析构触发；`ptr$.free()` 是低层释放操作，不作为普通析构入口使用。
 
 ```c
-struct List {
-  Int[]! data;
+struct Buffer {
+    UInt8[*] data;
 
-  deinit() {
-    if self.data != null {
-      self.data$.free();
-      self.data = null;
+    deinit() {
+        self.data$.free();
+        return ();
     }
-    return;
-  }
 }
 ```
 
-### 内部函数
+如果 `struct` 有 `T^` 字段，离开生命周期时这些拥有所有权的字段会被自动释放。若结构体同时定义了自定义 `deinit`，会先执行自定义 `deinit`，再按字段声明逆序释放拥有所有权的字段。
+
+## 方法
 
 结构体支持 `static` 方法和实例方法：
 
 ```c
 struct User {
-  Int id;
+    Int id;
 
-  static Int zero() {
-    return 0;
-  }
+    static Int zero() {
+        return 0;
+    }
 
-  Int value() {
-    return self.id;
-  }
+    Int value() {
+        return self.id;
+    }
 }
 
 Int a = User.zero();
-User u = User { id: 42 };
+User u = User { id: 42 }
 Int b = u.value();
 ```
 
-## Record
+实例方法体内有隐式 `self: Self&`。字段能否赋值仍只由字段类型自身是否带 `!` 决定，方法不需要额外的 `mutating` 标记。
 
-`record` 是轻量数据类型，字段命名但默认不要求 `init`：
+## 记录类型
+
+`record` 是偏数据记录的名义类型。它使用字段字面量初始化，字段支持默认值：
 
 ```c
-record Point {
-  Int x;
-  Int y = 2;
+record PointRecord {
+    Int x;
+    Int y = 2;
 }
 
-Point p1 = Point { x: 40 };
-Point p2 = { x: 1, y: 2 };  // expected type 已知时可省略类型名
+PointRecord p1 = PointRecord { x: 40 }
+PointRecord p2 = PointRecord { x: 1, y: 2 }
 ```
 
-- `record` 字段支持默认值
-- `struct` 只有在没有定义 `init` 时才支持 `Type { ... }`
+常用规则：
 
-### 同类型多名字声明
+- `record` 支持 `Type { field: value }`。
+- `record` 字段支持默认值和同类型多名字声明。
+- `record` 的定义体语法与 `struct` 共用，可以包含字段、方法、`init`、`deinit` 和关联类型实现。
+
+## 局部声明
+
+局部变量声明一次只绑定一个名字。需要多个局部变量时，写成多条声明：
 
 ```c
-// 结构体字段
-struct S {
-  Int x, y, z;
-}
-
-// 局部变量（每个都必须显式初始化）
-Int a = 1, b = 2, c = 3;
+Int a = 1;
+Int b = 2;
+Int c = 3;
+```

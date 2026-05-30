@@ -1,121 +1,190 @@
 ---
-title: Built-in Traits & Types
-description: Built-in traits and type operations in Jiang, including Sized, field reflection, Hashable, Ord, Concat, Stringer, subscript access, and as conversion.
+title: Traits & Extend
+description: Trait methods, associated types, trait inheritance, extend, and built-in traits.
+sidebar:
+  order: 14
 ---
+
+`trait` describes capabilities a type must provide. Use traits to constrain generics and organize shared APIs. A trait is not a normal value type.
+
+## Defining Traits
+
+Empty traits can be declared with a semicolon:
+
+```c
+trait Numeric;
+```
+
+Traits with required methods use a body:
+
+```c
+trait Equatable {
+    static Bool equal(Self& lhs, Self& rhs);
+}
+
+trait Hashable: Equatable {
+    UInt64 hash();
+}
+```
+
+Non-`static` required methods use the current type as the receiver. `static` required methods do not have `self`.
+
+## Implementing in a Type Body
+
+Types can list traits in their declaration and provide matching methods:
+
+```c
+trait HasValue {
+    Int value();
+}
+
+struct Box: HasValue {
+    Int inner;
+
+    Int value() {
+        return self.inner;
+    }
+}
+```
+
+## `extend`
+
+`extend` adds methods or a trait implementation after the type declaration:
+
+```c
+struct User {
+    Int id;
+}
+
+extend User {
+    Int id_value() {
+        return self.id;
+    }
+}
+
+extend User: HasValue {
+    Int value() {
+        return self.id;
+    }
+}
+```
+
+`extend` members follow `member_decl`; `init` and `deinit` are not member declarations.
+
+## Associated Types
+
+```c
+trait Iterable {
+    associated Item;
+    Item item();
+}
+```
+
+Associated types can have bounds:
+
+```c
+trait HasItem {
+    associated Item: Hashable & Equatable;
+    Item item();
+}
+```
+
+Implementations bind associated types:
+
+```c
+struct Counter: Iterable {
+    associated Item = UInt8;
+
+    UInt8 item() {
+        return 42;
+    }
+}
+```
+
+`extend` can bind them too:
+
+```c
+struct RangeCounter {}
+
+extend RangeCounter: Iterable {
+    associated Item = Int;
+
+    Int item() {
+        return 0;
+    }
+}
+```
+
+Use a qualified associated type path when multiple traits expose the same associated name:
+
+```c
+trait Left {
+    associated Item;
+    Item left();
+}
+
+trait Right {
+    associated Item;
+    Item right();
+}
+
+struct Pair: Left, Right {
+    associated Left.Item = UInt8;
+    associated Right.Item = Int;
+
+    UInt8 left() {
+        return 20;
+    }
+
+    Int right() {
+        return 22;
+    }
+}
+```
+
+## Trait Bounds
+
+```c
+@where(T: Hashable & Equatable)
+UInt hash_key<T>(T value);
+```
+
+Associated type binding:
+
+```c
+@where(T: Iterable<Item = UInt8>)
+Int count<T>(T value);
+```
+
+Projected equality:
+
+```c
+@where(T.[Iterable].Item == UInt8)
+Int count_bytes<T>(T value);
+```
 
 ## Built-in Traits
 
-Jiang provides a set of compiler-recognized concepts. These do not require explicit `impl`—they are automatically satisfied based on type structure.
+The prelude provides common trait and bound names such as:
 
-### Sized
+- `Numeric`
+- `Mutable`
+- `Hashable`
+- `Equatable`
+- `FromStringLiteral`
+- `SubscriptGet` / `SubscriptSet`
 
-Provides the byte size of a type:
+Subscript traits can model `value[index]`:
 
 ```c
-record User {
-  Int id, age;
+public trait SubscriptGet {
+    associated Index: Equatable;
+    associated Value;
+
+    Value subscript_get(Index index);
 }
 
-UInt size = User$.bytes; // 8
-```
-
-### Fields
-
-Access compile-time field information via `$.fields()` field reflection:
-
-```c
-struct Point {
-  Int x;
-  Int y;
-}
-
-_ fields = Point$.fields();
-```
-
-Compile-time reflection iterates over the fields list; fields are provided as record-type information.
-
-### Hashable
-
-Hashable trait, `hashU()` returns `UInt`:
-
-```c
-Int h = 123.hashU();
-```
-
-Built-in types and `struct`/`record` automatically satisfy Hashable.
-
-### Ord
-
-Comparable trait, supports `==`, `<`, `>`, etc.:
-
-```c
-if 1 > 2 {
-  print("unreachable");
+public trait SubscriptSet: SubscriptGet {
+    () subscript_set(Index index, Value value);
 }
 ```
-
-### Concat
-
-Concatenation trait, supports `else` merging:
-
-```c
-Int x = 0;
-Int y = 0;
-if true {
-  x = 1;
-  y = 1;
-} else {
-  x = 2;
-  y = 2;
-}
-```
-
-### Stringer
-
-Trait for converting to string:
-
-```c
-_ display = 123.printable();
-print(42);  // implicit call to printable()
-```
-
-## Subscript Syntax
-
-`T[K]` is desugared through concepts to subscript access. `self` has the type of the concept target:
-
-```c
-impl<T> SubscriptRead<Int, Value> for T {
-  Value get(Int index) const {
-    // read implementation
-  }
-}
-
-impl<T> SubscriptWrite<Int, Value> for T {
-  void set(Int index, Value value) {
-    // write implementation
-  }
-}
-```
-
-## Array Repeat Initialization
-
-`[value; N]` performs value copy for each element:
-
-```c
-Int[4] arr = [0; 4];  // [0, 0, 0, 0]
-Int[4] arr = ones;    // copy from a variable
-```
-
-## `as` Type Conversion
-
-The `as` operator handles type-compatible scenarios:
-
-```c
-Int x = 42;
-Float y = x as Float;
-```
-
-Combine with `as?` for safe type reinterpretation:
-
-```c
-Int? z = x as? Int;

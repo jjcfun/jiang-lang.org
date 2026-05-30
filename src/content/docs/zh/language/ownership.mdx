@@ -1,0 +1,182 @@
+---
+title: 所有权、借用与生命周期
+description: Jiang 的所有权转移、引用借用、自动析构和生命周期约束。
+sidebar:
+  order: 12
+---
+
+Jiang 使用 `T^` 表达拥有所有权的值，使用 `T&` / `T[]` 表达不拥有资源的借用视图。
+这一章集中说明资源如何移动、何时析构，以及引用如何避免悬垂。
+
+## Copy、move 和析构
+
+普通 `struct`、`record`、`union` 默认可以隐式 copy。`T^` 是内建资源类型，不能隐式 copy；
+显式声明 `Movable` 的 nominal type 也不能隐式 copy。`T&`、`T[*]`、`T*` 和 `T[]`
+都是 non-owning view，字段中包含这些类型不影响 implicit copy。`!` 只是当前类型层级的可变性标记，
+不改变所有权分类。
+
+拥有所有权的值只能有一个当前所有者。把 `T^` 赋给另一个变量时，必须显式写 `$.move()`：
+
+```c
+Int^ a = new Int(42);
+Int^ b = a$.move();
+
+Int value = b$.get();
+```
+
+不能隐式复制或隐式转移所有权：
+
+```c
+Int^ a = new Int(42);
+Int^ b = a; // 错误：T^ 不能隐式 copy，也不能通过普通赋值隐式 move。
+```
+
+显式 move 使用 `value$.move()`：
+
+```c
+Buffer^ a = new Buffer();
+Buffer^ b = a$.move();
+
+// a 已经失效，后续不能读取、写入、调用方法或再次 move。
+```
+
+move 之后继续使用源变量会报错：
+
+```c
+Int^ a = new Int(1);
+Int^ b = a$.move();
+Int value = a$.get(); // 错误：a 已经被 move。
+```
+
+普通值仍然可以 copy：
+
+```c
+Int a = 1;
+Int b = a;
+Int c = a + b;
+```
+
+直接或间接包含 `Movable` 字段的 nominal type 必须显式声明 `Movable`，并且不能隐式 copy：
+
+```c
+struct Box: Movable {
+    Int^ value;
+}
+
+Box a = Box { value: new Int(1) }
+Box b = a; // 错误：Box 是 Movable，不能隐式 copy。
+Box c = a$.move();
+```
+
+non-owning view 字段不会让类型变成 `Movable`：
+
+```c
+struct SliceView {
+    UInt8[] data;
+}
+
+SliceView a = SliceView { data: "abc" }
+SliceView b = a; // 允许：T[] 不拥有资源，不影响 implicit copy。
+```
+
+析构规则：
+
+- 局部变量离开作用域时，如果变量类型有 `deinit`，会自动调用该 `deinit`。
+- `T^` 离开作用域时会析构指向的 `T`，并释放堆存储。
+- `struct` 的 `T^` 字段会自动析构。
+- `T&`、`T[*]`、`T*` 和 `T[]` 字段不会自动释放。
+- 如果 `struct` 有自定义 `deinit`，先执行自定义 `deinit`，再自动析构拥有所有权的字段。
+
+## 引用规则
+
+引用不拥有目标对象。创建引用时，引用的使用范围不能超过被引用的值：
+
+```c
+Int value = 10;
+Int& ref = value$.ref();
+Int copied = ref$.get();
+```
+
+返回局部变量引用是不允许的，因为函数返回后局部变量已经不存在：
+
+```c
+Int& bad_ref() {
+    Int value = 10;
+    return value$.ref(); // 错误：返回值引用了局部变量。
+}
+```
+
+如果要返回一个值，直接返回值本身：
+
+```c
+Int make_value() {
+    Int value = 10;
+    return value;
+}
+```
+
+如果要返回一个堆上对象的所有权，返回 `T^`：
+
+```c
+Int^ make_owner() {
+    return new Int(10);
+}
+```
+
+Jiang 的引用规则不把“共享引用”和“可变引用”设计成两套互斥能力。它关注的是引用是否悬垂；
+数据竞争和更严格的别名规则不属于当前 borrow check 的核心目标。
+
+## 生命周期约束
+
+存储 `T&` 或 `T[]` 字段时，目标对象的生命周期必须覆盖包含该字段的值。跨函数或存储到字段的关系使用 `@life(...)` 表达：
+
+```c
+@life(data > self)
+struct Slice {
+    UInt8[] data;
+    Int len;
+}
+
+@life(buffer > return)
+Slice make_slice(Buffer& buffer);
+```
+
+`@life(a > b)` 表示 `a` 的目标生命周期必须长于 `b`。这套规则用于避免悬垂引用，不提供 Rust 式共享/可变别名检查，也不保证数据竞争安全。
+
+正例：结构体字段保存外部 slice 时，用 `@life(data > self)` 表示 `data` 指向的存储必须长于结构体本身：
+
+```c
+@life(data > self)
+struct ByteView {
+    UInt8[] data;
+}
+
+ByteView view(UInt8[] data) {
+    return ByteView { data: data }
+}
+```
+
+反例：把局部数组切片存进返回值会产生悬垂引用：
+
+```c
+@life(data > self)
+struct ByteView {
+    UInt8[] data;
+}
+
+ByteView bad_view() {
+    UInt8[_] local = "abc";
+    return ByteView { data: local[..] } // 错误：local 的生命周期短于返回值。
+}
+```
+
+函数返回值借用参数时，用 `@life(arg > return)` 表达关系：
+
+```c
+@life(data > return)
+UInt8[] first_two(UInt8[] data) {
+    return data[0..2];
+}
+```
+
+如果没有足够长的输入生命周期，应该返回拥有所有权的值，而不是返回引用视图。

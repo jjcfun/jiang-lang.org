@@ -1,17 +1,19 @@
 ---
 title: Syntax
 description: Jiang source files, declarations, statements, and expressions.
+sidebar:
+  order: 1
 ---
 
-Jiang syntax is designed to keep the core language readable while still exposing systems-level operations directly.
+Jiang syntax is organized around declarations, explicit types, and visible low-level operations. When reading a file, start with imports and top-level declarations, then move into statements and expressions inside function bodies.
 
 ## Naming Style
 
 The project uses these conventions:
 
 - Type names use `PascalCase`.
-- Function names, variables, fields, enum members, and module aliases use `snake_case`.
-- Built-in type names such as `Int`, `Bool`, and `UInt8` are resolved as names, not lexer keywords.
+- Function names, variable names, field names, enum members, and module aliases use `snake_case`.
+- Primitive types such as `Int`, `Bool`, and `UInt8` are written like ordinary type names.
 
 ```c
 enum TokenKind {
@@ -30,30 +32,40 @@ UInt8[] read_source(UInt8[] file_path) {
 }
 ```
 
-## Declarations
+`Self` is a special name in type position. `self` is available in instance methods and `init` bodies; `static` methods do not have `self`.
 
-Top-level files can contain imports, aliases, globals, functions, and type declarations:
+## Source Files
+
+A source file is a sequence of top-level items:
+
+- `import`
+- `alias`
+- global declarations
+- functions
+- `struct`, `record`, `enum`, `union`, `trait`
+- `extend`
 
 ```c
-import math = "math.jiang";
+import math = "utils/math.jiang";
 
 alias Byte = UInt8;
+alias answer = math.answer;
 
-struct Pair {
+public struct Pair {
     Int left;
     Int right;
 }
 
-Int add(Int left, Int right) {
+public Int add(Int left, Int right) {
     return left + right;
 }
 ```
 
-Declarations are explicit. Function return types are always written; use `()` for a function that returns no meaningful value.
+`public` marks a declaration as visible outside the module.
 
 ## Statements
 
-Common statements include local declarations, assignments, `if`, `while`, `for`, `return`, `break`, `continue`, `throw`, `try`, and `defer`.
+Blocks contain declarations, destructuring statements, assignments, call statements, control-flow statements, and `defer`.
 
 ```c
 Int main() {
@@ -67,32 +79,64 @@ Int main() {
 }
 ```
 
-`defer` runs when the current block exits, in last-in-first-out order:
+Most statements end with semicolons. Control-flow forms that own a block, such as `if`, `switch`, `while`, and `for`, do not need an extra semicolon after the block.
+
+## Blocks
+
+A block has a value only when it ends with a tail expression without a semicolon:
 
 ```c
-defer handle$.free();
-
-defer {
-    print("closing");
-    handle$.free();
+Int value = {
+    Int base = 40;
+    base + 2
 }
 ```
 
+Without a tail expression, the block value is `()`.
+
 ## Expressions
 
-Jiang supports block expressions, `if` expressions, `switch` expressions, calls, field access, indexing, slicing, arithmetic, comparison, and pattern checks.
+Jiang expressions include literals, names, calls, field access, indexing, slicing, arithmetic, comparisons, `if`, `switch`, `try catch`, and blocks.
 
 ```c
 Int value = if flag {
     1
 } else {
     2
-};
+}
 ```
 
-## Pattern Checks
+Field literals are written with their type path:
 
-`is` is used for pattern matching. Optional values can be unwrapped with `some`:
+```c
+Point origin = Point { x: 0, y: 0 }
+```
+
+## Implicit Operation Layer
+
+`$` enters the implicit operation layer for a value or type:
+
+```c
+Int value = 42;
+Int& ref = value$.ref();
+Int copied = ref$.get();
+
+UInt size = Int$.size();
+```
+
+Use parentheses when applying `$` to a compound expression:
+
+```c
+Int raw = (left + right)$.as(Int);
+```
+
+Prefer safe target-type initialization such as `Float(value)` for ordinary conversions. Do not use
+`value$.as(Type)` as the everyday conversion spelling; it is a low-level cast form for raw pointers,
+integer addresses, FFI, and similar code.
+
+## Patterns
+
+`is` performs pattern matching. Optional values use the `some` pattern:
 
 ```c
 if maybe is some value {
@@ -102,10 +146,12 @@ if maybe is some value {
 }
 ```
 
-Use `some _!` when the unwrapped binding itself should be mutable:
+Mutable inferred bindings use `_!`:
 
 ```c
 if maybe is some _! value {
     value = value + 1;
 }
 ```
+
+`switch` uses the same style of patterns for optional, variant, and literal matches.

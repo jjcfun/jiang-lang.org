@@ -1,0 +1,85 @@
+---
+title: 包
+description: Jiang package manifest、源码依赖、package root 和公开接口。
+sidebar:
+  order: 16
+---
+
+package 是 Jiang 的项目边界。目录中放置 `package.ini` 后，编译器可以从 package root
+开始编译整个可达源码闭包。
+
+## 包描述文件
+
+使用固定文件名 `package.ini`：
+
+```ini
+[package]
+name = app
+root = src/main.jiang
+```
+
+字段含义：
+
+- `name`：package 名称，未写时默认取目录名。
+- `root`：入口源文件，未写时默认取 `<name>.jiang`。
+
+当编译器输入路径是目录时，它读取该目录下的 `package.ini`，再编译 `root` 指向的源文件。
+
+## 依赖
+
+本地源码依赖写在 `[dependencies]` 中：
+
+```ini
+[package]
+name = app
+root = src/main.jiang
+
+[dependencies]
+util = ../util
+```
+
+在这个 package 内，通过依赖别名导入：
+
+```c
+import util;
+
+Int main() {
+    return util.answer();
+}
+```
+
+不带引号的 `import util;` 会优先匹配当前 package 的 `[dependencies]`。命中后，编译器读取
+依赖 package 的 manifest，并把依赖 package 的 root module 加入同一轮编译闭包。
+
+## 公开接口
+
+跨 package 访问只看依赖 package root module 的公开命名空间：
+
+- root 文件里的 `public` 声明是 package API。
+- root 文件里的 `public import` 可以重新导出一个模块命名空间。
+- root 文件里的 `public alias` 可以重新导出一个具体 public symbol，例如
+  `public alias answer = util.answer;`。
+- 非 root 文件中的 `public` 声明不会自动成为 package API。
+
+因此 package root 是明确的 API 边界。
+
+## 导入边界
+
+跨 package 不能用带引号路径直接导入依赖源码：
+
+```c
+import "../util/src/util.jiang"; // 错误：跨 package 文件导入
+```
+
+应该在 `package.ini` 中声明 dependency，然后写：
+
+```c
+import util;
+```
+
+package dependency cycle 不允许，但 module import cycle 当前允许。
+
+## 入口函数
+
+只有 root package 的 root module 会贡献可执行程序入口。依赖 package 即使定义了 `main`，
+也只是普通函数。

@@ -1,0 +1,87 @@
+---
+title: Packages
+description: Jiang package manifests, package dependencies, package roots, and public surfaces.
+sidebar:
+  order: 16
+---
+
+A package is Jiang's project boundary. A directory with `package.ini` can be compiled from its
+package root, and the compiler follows the reachable source dependency closure.
+
+## Package Manifest
+
+Use a fixed `package.ini` file:
+
+```ini
+[package]
+name = app
+root = src/main.jiang
+```
+
+Fields:
+
+- `name`: package name; defaults to the directory name.
+- `root`: entry source file; defaults to `<name>.jiang`.
+
+When the compiler input is a directory, it reads `package.ini` and compiles the source file named by
+`root`.
+
+## Dependencies
+
+Declare local source dependencies in `[dependencies]`:
+
+```ini
+[package]
+name = app
+root = src/main.jiang
+
+[dependencies]
+util = ../util
+```
+
+Inside the package, import a dependency by alias:
+
+```c
+import util;
+
+Int main() {
+    return util.answer();
+}
+```
+
+An unquoted `import util;` first checks the current package's `[dependencies]` table. If it matches,
+the compiler reads the dependency package manifest and adds its root module to the same compile
+closure.
+
+## Public Surface
+
+Cross-package access only sees the dependency package root module's public namespace:
+
+- `public` declarations in the root file are package API.
+- `public import` in the root file re-exports a module namespace.
+- `public alias` in the root file re-exports a concrete public symbol, such as
+  `public alias answer = util.answer;`.
+- `public` declarations in non-root files are not automatically package API.
+
+This makes the root file the explicit API boundary of a package.
+
+## Import Boundaries
+
+Do not use a quoted path to import dependency source across package boundaries:
+
+```c
+import "../util/src/util.jiang"; // error: cross-package file import
+```
+
+Declare the dependency in `package.ini`, then write:
+
+```c
+import util;
+```
+
+Package dependency cycles are rejected. Module import cycles are currently allowed.
+
+## Entry Function
+
+Only the root package root module contributes the executable entry. A dependency package may define a
+function named `main`, but it is treated as an ordinary function.

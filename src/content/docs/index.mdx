@@ -3,7 +3,7 @@ title: Jiang
 description: Documentation for the Jiang programming language.
 template: splash
 hero:
-  tagline: A clear systems programming language.
+  tagline: An all-in-one systems programming language.
   actions:
     - text: Get Started
       link: /getting-started/
@@ -15,9 +15,9 @@ hero:
 
 import { Card, CardGrid } from '@astrojs/starlight/components';
 
-Jiang is a systems programming language in active development. Its current focus is a clear core language, direct control over memory and layout, and a path toward a self-hosted compiler.
+Jiang is a systems programming language in active development. Its current focus is a clear core language, direct control over memory and layout, and continued work on a compiler that has reached an initial self-hosting milestone.
 
-These docs are written as a practical guide first. They describe the language as it exists today, while calling out areas that are still moving during the Stage1 compiler work.
+These docs are written as a practical guide first. They describe the language as it exists today, while treating fast-moving areas carefully.
 
 ## Start Here
 
@@ -38,6 +38,8 @@ These docs are written as a practical guide first. They describe the language as
 
 ## Project Status
 
-Jiang is currently moving from the Stage0 prototype compiler toward the Stage1 self-hosting compiler. Stage0 is implemented in C and is used to validate language behavior. Stage1 is written in Jiang and is intended to become the long-term compiler.
+The Jiang compiler has reached an initial self-hosting milestone: the Stage1 prototype remains as a bootstrap tool, while the Stage2 compiler is generated from Jiang code and can continue compiling the current compiler codebase.
 
-For now, treat the website as a living language guide rather than a frozen specification. The most stable pieces are naming style, type notation, mutability, arrays, pointers, optionals, imports, and the current compiler command-line workflow.
+The next priorities are broader language tests, stable package/module boundaries, backend and runtime coverage, and gradually reducing reliance on the bootstrap stage.
+
+For now, treat the website as a living language guide rather than a frozen specification. The most stable pieces are naming style, type notation, mutability, arrays, pointers, optionals, imports, packages, and the current compiler command-line workflow.

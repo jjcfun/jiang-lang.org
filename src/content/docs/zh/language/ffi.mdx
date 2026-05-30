@@ -1,80 +1,96 @@
 ---
 title: FFI 与外部函数接口
-description: Jiang 语言中的 extern 声明、C 互操作、显式链接和 RawPointer。
+description: Jiang 语言中的 extern 声明、C 互操作、单对象裸指针、多元素裸指针和 ABI 边界。
+sidebar:
+  order: 17
 ---
 
-`extern` 声明用于链接外部 C 符号（包括常见的 `libc` 或自定义动态库）。编译器将 extern 函数视为普通函数调用，不做类型安全的特殊处理。
+`extern` 声明用于调用外部符号，例如 C 库函数或系统接口。使用 FFI 时，要自己确认参数类型、内存布局和资源释放方式与外部接口一致。
 
-## 基本 extern 声明
+## 外部声明块
 
-```c
-extern fn printf(fmt: CString, ...);
-extern fn scanf(fmt: CString, ...);
-
-extern fn printf(fmt: CString, ...);
-printf("hello %d\n", 42);
-```
-
-## CString 与 RawPointer
-
-`CString` 是编译期的特殊类型，用于与 C 字符串常量交互：
+外部函数和全局变量可以写在 `extern { ... }` 代码块中：
 
 ```c
-extern fn puts(s: CString);
-
-// 字符串字面量可作为 CString 传递
-puts("Hello World!");
-```
-
-对任意类型的 `T`，可以使用 `RawPointer<T>` 作为低层裸指针：
-
-```c
-Int value = 42;
-_ raw_ptr = value$.ptr();  // raw_ptr: RawPointer<Int>
-```
-
-## 显式链接
-
-可以通过 `@link` 属性指定符号来源（当符号不在默认 libc 中时）：
-
-```c
-@link("m")
-extern fn sqrt(x: Float) Float;
-
-@link("my_lib")
-extern fn my_function(x: Int) Int;
-```
-
-编译器在链接阶段添加对应的 `-lmylib` 标志。
-
-## Variadic 参数
-
-```c
-extern fn printfln(fmt: CString, ...);
-printfln("int %d, float %f", 42, 3.14);
-```
-
-## 导入 extern block
-
-```c
-@link("SDL2")
 extern {
-  fn SDL_Init(flags: UInt32) Int;
-  fn SDL_Quit();
+    public Int puts(UInt8[*] text);
+    public Int open(UInt8[*] path, Int options);
+    public Int errno;
 }
 ```
 
-## 外部全局变量
+也可以写单条声明：
 
 ```c
-extern Int errno;
+extern public Int puts(UInt8[*] text);
+public extern Int errno;
 ```
 
-目前 extern 变量视为只读指针导入。
+顶层 `extern` 和 `public` 都是声明修饰符。`public` 表示这个外部符号声明也作为当前模块公开接口对外可见。
 
-## 注意事项
+## C 字符串
 
-- extern 函数在 Jiang 中没有模块/包前缀，它们位于全局命名空间
-- 可变参数通过 `...` 标记，接收任意数量的额外参数
-- 编译器不会对 extern 声明进行类型安全验证
-- 未定义行为由调用者负责
+传给 C 风格接口的字符串指针当前使用 `UInt8[*]` 表示。字符串字面量在 `UInt8[*]` 上下文中可以生成以 `\0` 结尾的只读全局数据：
+
+```c
+extern public Int puts(UInt8[*] text);
+
+puts("hello from Jiang");
+```
+
+如果接口需要长度，使用 `UInt8[]` 切片或显式长度参数：
+
+```c
+extern public Int write(Int fd, UInt8[] buf, Int count);
+```
+
+## 单对象裸指针
+
+`T*` 是单对象裸指针，主要用于 FFI / ABI / 低层能力场景。它不表达所有权，不参与自动析构，
+也不默认自动解引用。
+
+```c
+Int value = 42;
+Int* raw = value$.ptr();
+Int copied = raw$.get();
+```
+
+写入单对象裸指针指向的目标需要被指向值顶层可变：
+
+```c
+Int! value = 0;
+Int!* raw = value$.ptr();
+raw$.set(42);
+```
+
+## 多元素裸指针
+
+`T[*]` 也是裸指针，用于可按下标访问的一段连续地址，常见于 C 接口的缓冲区参数：
+
+```c
+extern public Int read(Int fd, UInt8[*] buf, Int count);
+```
+
+`T*` 不像 C 指针那样用于自由位置移动。需要按位置访问连续内存时使用 `T[*]`。`T[*]` 没有长度；
+如果 Jiang 代码需要保存长度视图，优先封装为 `T[]` 或 `{ ptr, len }` 风格的 `record` / `struct`。
+
+## 资源边界
+
+外部接口返回的内存是否需要释放、使用哪个分配器释放、是否允许别名写入，都不由 `extern` 声明自动表达。把这类资源包装成 Jiang `struct` 时，建议在包装类型中明确：
+
+- 哪个字段拥有资源。
+- 哪个字段只是视图或引用。
+- `deinit` 如何释放资源。
+- 是否禁止隐式 copy。
+
+```c
+struct CBuffer {
+    UInt8[*] data;
+    Int length;
+
+    deinit() {
+        self.data$.free();
+        return ();
+    }
+}
+```

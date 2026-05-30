@@ -1,0 +1,168 @@
+---
+title: Ownership, Borrowing & Lifetimes
+description: Ownership transfer, borrowing, destruction, and lifetime constraints in Jiang.
+sidebar:
+  order: 12
+---
+
+Jiang uses `T^` for owned values and `T&` / `T[]` for non-owning borrowed views.
+This chapter explains how resources move, when they are destroyed, and how references avoid dangling.
+
+## Move and Destruction
+
+Plain `struct`, `record`, and `union` types are implicitly copyable by default. `T^` is a built-in
+resource type and cannot be implicitly copied. Nominal types that explicitly declare `Movable` also
+cannot be implicitly copied. `T&`, `T[*]`, `T*`, and `T[]` are non-owning views; fields with these
+types do not affect implicit copy. `!` is the mutability marker for the current type layer and does
+not change ownership classification.
+
+Explicit move uses `value$.move()`:
+
+```c
+Int^ a = new Int(42);
+Int^ b = a$.move();
+
+Int value = b$.get();
+```
+
+Implicit copy or implicit move is not allowed for `T^`:
+
+```c
+Int^ a = new Int(42);
+Int^ b = a; // error: T^ cannot be implicitly copied or moved by plain assignment.
+```
+
+Using the source after a move is an error:
+
+```c
+Int^ a = new Int(1);
+Int^ b = a$.move();
+Int value = a$.get(); // error: a has been moved.
+```
+
+Plain values can still be copied:
+
+```c
+Int a = 1;
+Int b = a;
+Int c = a + b;
+```
+
+Nominal types that directly or indirectly contain `Movable` fields must explicitly declare
+`Movable`, and they cannot be implicitly copied:
+
+```c
+struct Box: Movable {
+    Int^ value;
+}
+
+Box a = Box { value: new Int(1) }
+Box b = a; // error: Box is Movable.
+Box c = a$.move();
+```
+
+Non-owning view fields do not make a type `Movable`:
+
+```c
+struct SliceView {
+    UInt8[] data;
+}
+
+SliceView a = SliceView { data: "abc" }
+SliceView b = a; // allowed: T[] does not own resources.
+```
+
+Resource-owning types should describe cleanup with `deinit` and avoid implicit copy unless they define their own copy behavior.
+
+## Reference Rules
+
+References do not own their target. A reference must not outlive the value it points to:
+
+```c
+Int value = 10;
+Int& ref = value$.ref();
+Int copied = ref$.get();
+```
+
+Returning a reference to a local variable is not allowed:
+
+```c
+Int& bad_ref() {
+    Int value = 10;
+    return value$.ref(); // error: returns a reference to a local variable.
+}
+```
+
+Return the value itself when you want a value:
+
+```c
+Int make_value() {
+    Int value = 10;
+    return value;
+}
+```
+
+Return `T^` when you want to transfer ownership of a heap object:
+
+```c
+Int^ make_owner() {
+    return new Int(10);
+}
+```
+
+Jiang's borrow checking focuses on preventing dangling references. It does not model Rust-style
+exclusive mutable borrows, and it does not provide data-race safety.
+
+## Lifetime Annotations
+
+`@life(a > b)` expresses that `a` must outlive `b`:
+
+```c
+@life(data > self)
+struct Slice {
+    UInt8[] data;
+    Int len;
+}
+
+@life(buffer > return)
+Slice make_slice(Buffer& buffer);
+```
+
+Positive example: a struct that stores an external slice can express that `data` must outlive
+`self`:
+
+```c
+@life(data > self)
+struct ByteView {
+    UInt8[] data;
+}
+
+ByteView view(UInt8[] data) {
+    return ByteView { data: data }
+}
+```
+
+Negative example: storing a slice of a local array in a returned value would dangle:
+
+```c
+@life(data > self)
+struct ByteView {
+    UInt8[] data;
+}
+
+ByteView bad_view() {
+    UInt8[_] local = "abc";
+    return ByteView { data: local[..] } // error: local does not outlive the return value.
+}
+```
+
+Use `@life(arg > return)` when a function returns a view borrowed from an argument:
+
+```c
+@life(data > return)
+UInt8[] first_two(UInt8[] data) {
+    return data[0..2];
+}
+```
+
+If there is no sufficiently long-lived input, return an owning value instead of a borrowed view.

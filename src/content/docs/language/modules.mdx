@@ -1,25 +1,29 @@
 ---
 title: Modules
-description: Jiang modules, imports, and visibility.
+description: Jiang source-file modules, imports, aliases, re-exports, and visibility.
+sidebar:
+  order: 15
 ---
 
-Jiang modules are source files connected by imports. The current design keeps imported APIs behind a module namespace instead of flattening everything into the current file.
+Jiang currently uses source files as modules. Imports connect source files, and imported APIs stay
+under a module namespace instead of being flattened into the current file.
 
-## Import a Module
+## File Imports
 
 ```c
 import "math.jiang";
 ```
 
-The default module name comes from the file name. After importing `math.jiang`, public declarations are accessed through `math.Name`.
+The default module name comes from the file name. After importing `math.jiang`, access public
+declarations through `math.Name`:
 
 ```c
 Int value = math.add(1, 2);
 ```
 
-## Import With an Alias
+## Import Aliases
 
-Use an explicit alias when the file name is not the module name you want to use:
+Use an alias when the file name is not the module name you want:
 
 ```c
 import m = "utils/math.jiang";
@@ -27,11 +31,26 @@ import m = "utils/math.jiang";
 Int value = m.add(1, 2);
 ```
 
-Module aliases use `snake_case` by convention.
+The alias names the target module namespace. It does not flatten imported declarations into the
+current module.
 
-## Public API
+## File Paths
 
-Mark declarations as `public` when they should be visible to importing modules:
+A quoted import is a file path import:
+
+```c
+import math = "utils/math.jiang";
+```
+
+File paths are interpreted relative to the importing source file. Write the full path; imports do
+not automatically add `.jiang` or search for a directory entry.
+
+Quoted file imports are only for files inside the current package. To import another package, declare
+it in `package.ini` and use an unquoted package import.
+
+## Visibility
+
+Declarations that should be visible to other modules use `public`:
 
 ```c
 public struct Point {
@@ -44,22 +63,42 @@ public Int distance(Point point) {
 }
 ```
 
-Declarations without `public` are local to their module.
+Declarations without `public` are module-local.
 
-## Re-export
+## Re-exports
 
-`public import` imports a module for local use and re-exports that module namespace as part of the current module's public API:
+`public import` imports a module for local use and re-exports that module namespace as part of the
+current module API:
 
 ```c
-public import "leaf.jiang";
+public import leaf = "leaf.jiang";
 ```
 
-This does not flatten `leaf` declarations into the current module. External code should access them through the re-exported namespace.
-
-## Using Declarations
-
-`using` brings a module's public declarations into the current scope, reducing namespace repetition:
+This does not flatten imported declarations:
 
 ```c
-using std.math;
+import middle = "middle.jiang";
+
+Int value = middle.leaf.answer();
+```
+
+## Alias
+
+Use `alias` to give a type or an existing symbol another name:
+
+```c
+alias Byte = UInt8;
+alias NameBytes = UInt8[];
+
+alias add = math.add;
+```
+
+If the right-hand side resolves to an existing namespace, type, value, or member symbol, the alias is
+bound in that same name domain. If it does not resolve to an existing symbol, the right-hand side is
+treated as type syntax and must be a valid type.
+
+`public alias` re-exports a concrete public symbol through the current module API:
+
+```c
+public alias answer = math.add;
 ```

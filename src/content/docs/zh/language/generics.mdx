@@ -1,132 +1,132 @@
 ---
-title: 泛型与多态
-description: Jiang 语言中的泛型定义、参数化、单态化与概念（Concept）约束。
+title: 泛型与约束
+description: Jiang 语言中的泛型函数、泛型类型、@where 和关联类型约束。
+sidebar:
+  order: 13
 ---
 
-泛型参数在编译期单态化，每个具体类型生成独立副本。使用 `Type<T1, T2>` 语法定义泛型。
+泛型让同一份代码适用于不同类型。泛型参数写在声明名之后。
 
-## 基本泛型
+## 泛型函数
 
 ```c
-struct Pair<T1, T2> {
-  T1 first;
-  T2 second;
-}
-
-// 初始化
-Pair<Int, Int> p = Pair(1, 2);
-Pair<Int, float> p2 = Pair(1, 2);
-
-// 泛型函数
 T id<T>(T value) {
-  return value;
+    return value;
 }
+
+Int a = id<Int>(42);
+_ b = id(42);
 ```
 
-## 专用化 (Specialize)
+当调用上下文足够明确时，类型参数可以由实参和目标类型推导。
 
-通过 `specialize` 为具体类型或条件提供定制实现：
+## 泛型类型
 
 ```c
-specialize T get<T>(T x) where T == Int {
-  return x + 1;
+struct Pair<A, B> {
+    A first;
+    B second;
 }
 
-specialize T get<T>(T x) where T == float {
-  return x + 0.5;
+Pair<Int, UInt8[]> pair = Pair<Int, UInt8[]> {
+    first: 1,
+    second: "one",
 }
 ```
 
-## 概念 (Concept)
-
-Concept 描述类型约束而不指定具体类型，编译器自动检查类型是否满足。可用于泛型约束，也用作元组和枚举的去糖抽象，就像数组概念为下标访问提供抽象一样。
-
-### 定义与实现
+泛型实参也是类型，因此可以继续携带可选、可变、数组、指针等后缀：
 
 ```c
-concept C { }
-
-// 为具体类型实现
-impl C for MyType { }
-
-// 为泛型参数实现
-impl<T> C for T { }
+Pair<Int?, UInt8[]> maybe_pair;
+Pair<Int!, Int[3]^> mutable_and_owner;
 ```
 
-### 方法约束
+## `@where`
+
+`@where(...)` 写在泛型声明之前，用来约束泛型参数：
 
 ```c
-concept Printable {
-  Int print() const;
+@where(T: Numeric)
+T add<T>(T left, T right) {
+    return left + right;
 }
 ```
 
-`impl` 中 `self` 的类型与概念目标类型一致：
+多个约束用逗号分隔：
 
 ```c
-impl Printable for Int {
-  Int print() const {
-    // self 的类型是 Int
-    write(self);
-    return 0;
-  }
-}
+@where(T: Hashable, U: Equatable)
+Pair<T, U> make_pair<T, U>(T left, U right);
 ```
 
-### 泛型约束
+同一个类型参数需要同时满足多个 trait 时，使用 `&`：
 
 ```c
-T do_something<T>(T x) where T: Printable {
-  x.print();
-  return x;
-}
+@where(T: Hashable & Equatable)
+UInt hash_key<T>(T value);
 ```
 
-`where T: Concept` 与 `T: Concept` 等价：
+## 类型相等约束
+
+`Name == Type` 表示泛型参数必须等于某个具体类型：
 
 ```c
-fn process<T: Printable>(T value) { }
+@where(T == UInt8)
+Int use_byte<T>(T value);
 ```
 
-### 多个约束
+相等约束使用 `==`，不是赋值符号 `=`。
+
+投影关联类型相等约束写成 `T.[Trait].Assoc == Type`：
 
 ```c
-fn complex_op<T>(T value) where T: Printable, T: Comparable {
-  if value > 0 {
-    value.print();
-  }
-}
+@where(T.[Iterable].Item == UInt8)
+Int count_bytes<T>(T value);
 ```
 
-## concept 作为枚举/联类型的抽象
+## 关联类型绑定
 
-concept 用作枚举和联类型的抽象，当不同的 enum variant 需要共享行为时，可以通过 concept + impl 统一接口：
+`trait` 约束可以带关联类型绑定：
 
 ```c
-enum Shape {
-  Circle(Int),
-  Square(Int),
-}
-
-concept Area {
-  Int area() const;
-}
-
-impl Area for Shape {
-  Int area() const {
-    // self 是 Shape
-    return switch self {
-      Shape::Circle(r) => r * 2,
-      Shape::Square(w) => w * w,
-    };
-  }
-}
-
-Shape::Circle(4).area();  // 8
+@where(T: Iterable<Item = UInt8>)
+Int count<T>(T value);
 ```
 
-## 当前限制
+这比把关联类型约束拆开更容易读，也让 `trait` 的要求集中在一个位置。
 
-- 泛型参数只能接受类型，不支持非类型参数
-- concept 参数必须为指定类型，不支持 `self` 推导
-- concept 不支持联合/交集，每个类型最多实现一次
+## 顶层可变泛型
+
+默认情况下，泛型参数不自动接受带顶层 `!` 的类型实参。需要要求顶层可变时，使用内建 `Mutable` 约束：
+
+```c
+@where(T: Mutable)
+struct Slot<T> {
+    T value;
+}
+
+Slot<Int!> slot = Slot<Int!> { value: 1 }
+```
+
+`Mutable` 只检查顶层 `!`。例如 `Int!` 满足，`Int` 不满足；`Int![3]` 的顶层是数组层，是否满足取决于数组层本身是否带 `!`。
+
+## 与 Errorable 组合
+
+泛型函数可以返回 `T@E`。`@E` 位于返回类型边界，错误类型本身不在 `@` 后追加 `?` 或 `!`：
+
+```c
+@where(T: Numeric)
+T@ParseErr parse_number<T>(UInt8[] text);
+```
+
+如果成功值需要可选或可变，把后缀写在 `@` 左侧：
+
+```c
+T?@ParseErr parse_optional<T>(UInt8[] text);
+```
+
+## 使用边界
+
+- 泛型参数只接受类型，不支持非类型参数。
+- 后置 `T id<T> @where(...)` 不支持，约束写在声明之前。
+- 关联类型投影约束使用 `T.[Trait].Name == Type` 这种写法。

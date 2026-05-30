@@ -1,121 +1,204 @@
 ---
-title: 内置类型与特性
-description: Jiang 语言内建的特性和类型操作，包括 Sized、字段反射、Hashable、Ord、Concat、Stringer、下标访问与 as 转换。
+title: Trait 与扩展
+description: Jiang 语言中的 trait 方法要求、关联类型、trait 继承、extend 和内建 trait。
+sidebar:
+  order: 14
 ---
 
-## 内置特性
+`trait` 描述一类类型必须提供的能力。它用于约束泛型和组织公共接口，不能直接写成普通变量、字段、参数或返回值类型。
 
-Jiang 提供一组编译器识别的概念，无需显式 impl，根据类型结构自动满足。
+## 定义 Trait
 
-### Sized
-
-提供类型的字节大小：
+空 trait 可以写成声明：
 
 ```c
-record User {
-  Int id, age;
+trait Numeric;
+```
+
+带方法要求的 trait 使用定义体：
+
+```c
+trait Equatable {
+    static Bool equal(Self& lhs, Self& rhs);
 }
 
-UInt size = User$.bytes; // 8
-```
-
-### Fields
-
-通过 `$.fields()` 字段反射访问编译期字段信息：
-
-```c
-struct Point {
-  Int x;
-  Int y;
-}
-
-_ fields = Point$.fields();
-```
-
-编译期反射遍历 fields 列表，字段以 record 形式提供信息。
-
-### Hashable
-
-可哈希特性，`hashU()` 返回 `UInt`：
-
-```c
-Int h = 123.hashU();
-```
-
-内置类型和 `struct`/`record` 自动满足 Hashable。
-
-### Ord
-
-可比较特性，支持 `==`、`<`、`>` 等运算：
-
-```c
-if 1 > 2 {
-  print("unreachable");
+trait Hashable: Equatable {
+    UInt64 hash();
 }
 ```
 
-### Concat
+非 `static` 方法要求会使用当前类型作为接收者；`static` 方法要求没有 `self`。
 
-拼接特性，支持 `else` 合并：
+## 在类型定义处实现
+
+类型可以在声明头部列出满足的 trait，并在类型体内提供对应方法：
 
 ```c
-Int x = 0;
-Int y = 0;
-if true {
-  x = 1;
-  y = 1;
-} else {
-  x = 2;
-  y = 2;
+trait HasValue {
+    Int value();
+}
+
+struct Box: HasValue {
+    Int inner;
+
+    Int value() {
+        return self.inner;
+    }
 }
 ```
 
-### Stringer
+仅仅“方法签名刚好匹配”不会自动满足 trait；类型需要显式声明它实现了哪个 trait。
 
-转换为字符串的特性：
+## `extend`
 
-```c
-_ display = 123.printable();
-print(42);  // 隐式调用 printable()
-```
-
-## 下标语法
-
-`T[K]` 通过 concept 去糖为下标访问。`self` 类型是概念目标类型：
+`extend` 可以在类型定义之后补普通方法，或补显式 trait 实现：
 
 ```c
-impl<T> SubscriptRead<Int, Value> for T {
-  Value get(Int index) const {
-    // 读写实现
-  }
+struct User {
+    Int id;
 }
 
-impl<T> SubscriptWrite<Int, Value> for T {
-  void set(Int index, Value value) {
-    // 写入实现
-  }
+extend User {
+    Int id_value() {
+        return self.id;
+    }
+}
+
+extend User: HasValue {
+    Int value() {
+        return self.id;
+    }
 }
 ```
 
-## 数组重复初始化
+当前 `extend` 不支持 `init` 或 `deinit`。`extend Type: Trait { ... }` 表示给类型补一个 trait 实现，里面需要提供该 trait 要求的方法。
 
-`[value; N]` 对每个元素执行值拷贝：
+## 关联类型
+
+Trait 可以声明关联类型：
 
 ```c
-Int[4] arr = [0; 4];  // [0, 0, 0, 0]
-Int[4] arr = ones;    // 从变量拷贝
+trait Iterable {
+    associated Item;
+    Item item();
+}
 ```
 
-## `as` 类型转换
-
-`as` 操作符适用于类型兼容场景：
+关联类型可以带约束：
 
 ```c
-Int x = 42;
-Float y = x as Float;
+trait HasItem {
+    associated Item: Hashable & Equatable;
+    Item item();
+}
 ```
 
-与 `as?` 组合实现安全的类型重新解释：
+实现带关联类型的 trait 时，需要绑定关联类型：
 
 ```c
-Int? z = x as? Int;
+struct Counter: Iterable {
+    associated Item = UInt8;
+
+    UInt8 item() {
+        return 42;
+    }
+}
+```
+
+`extend` 中也可以绑定：
+
+```c
+struct RangeCounter {}
+
+extend RangeCounter: Iterable {
+    associated Item = Int;
+
+    Int item() {
+        return 0;
+    }
+}
+```
+
+如果一个实现块涉及多个带同名关联类型的 trait，可以使用限定形式消歧：
+
+```c
+trait Left {
+    associated Item;
+    Item left();
+}
+
+trait Right {
+    associated Item;
+    Item right();
+}
+
+struct Pair: Left, Right {
+    associated Left.Item = UInt8;
+    associated Right.Item = Int;
+
+    UInt8 left() {
+        return 20;
+    }
+
+    Int right() {
+        return 22;
+    }
+}
+```
+
+## Trait 约束
+
+泛型约束使用 `@where(...)`：
+
+```c
+@where(T: Hashable & Equatable)
+UInt hash_key<T>(T value);
+```
+
+关联类型绑定可以写在 trait 约束中：
+
+```c
+@where(T: Iterable<Item = UInt8>)
+Int count<T>(T value);
+```
+
+也可以写相等约束：
+
+```c
+@where(T.[Iterable].Item == UInt8)
+Int count_bytes<T>(T value);
+```
+
+## 内建 Trait
+
+标准预导入模块提供一组常用 trait / 约束名，例如：
+
+- `Numeric`：数值类型约束。
+- `Mutable`：顶层 `!` 可变性约束。
+- `Hashable`、`Equatable`：哈希和相等比较。
+- `FromStringLiteral`：允许目标类型从字符串字面量初始化。
+- `SubscriptGet` / `SubscriptSet`：让用户类型支持 `value[index]` 和 `value[index] = new_value`。
+
+用户类型可以通过下面这组 trait 支持下标读写：
+
+```c
+public trait SubscriptGet {
+    associated Index: Equatable;
+    associated Value;
+
+    Value subscript_get(Index index);
+}
+
+public trait SubscriptSet: SubscriptGet {
+    () subscript_set(Index index, Value value);
+}
+```
+
+读取 `value[index]` 需要 `SubscriptGet`。写入 `value[index] = new_value` 需要类型显式满足 `SubscriptSet`。
+
+## 使用边界
+
+- Trait 方法要求用来约束类型必须提供哪些方法，不能把 trait 当作普通对象类型使用。
+- 子 trait 会继承父 trait 的方法要求和关联类型。
+- 继承链不能出现未知父 trait、继承环或不兼容的同名关联类型。
+- 关联类型约束建议写在 `@where(...)` 或 trait 约束中，保持泛型声明清晰。

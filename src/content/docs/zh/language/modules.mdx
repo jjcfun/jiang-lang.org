@@ -1,23 +1,26 @@
 ---
 title: 模块
-description: Jiang 模块、导入和可见性。
+description: Jiang 源文件模块、导入、别名、重新导出和可见性。
+sidebar:
+  order: 15
 ---
 
-Jiang 模块由源文件和导入关系组成。当前设计不会把导入模块的 API 默认摊平到当前文件，而是保留模块命名空间。
+Jiang 当前以源文件作为模块。导入关系连接源文件，导入模块的公开接口保留在模块命名空间下，
+不默认摊平到当前文件。
 
-## 导入模块
+## 文件导入
 
 ```c
 import "math.jiang";
 ```
 
-默认模块名来自文件名。导入 `math.jiang` 后，通过 `math.Name` 访问它的 public 声明。
+默认模块名来自文件名。导入 `math.jiang` 后，通过 `math.Name` 访问它的公开声明：
 
 ```c
 Int value = math.add(1, 2);
 ```
 
-## 使用别名导入
+## 导入别名
 
 如果文件名不是你想使用的模块名，可以显式指定别名：
 
@@ -27,9 +30,23 @@ import m = "utils/math.jiang";
 Int value = m.add(1, 2);
 ```
 
-模块别名按约定使用 `snake_case`。
+别名绑定目标模块命名空间，不会把目标模块里的声明摊平到当前文件。
 
-## Public API
+## 文件路径
+
+带引号的 `import` 是文件路径导入：
+
+```c
+import math = "utils/math.jiang";
+```
+
+文件路径相对当前源文件所在目录解析。路径要写完整；导入不会自动补 `.jiang`，也不会自动查找
+目录入口。
+
+带引号文件导入只用于当前 package 内部文件。导入另一个 package 时，应在 `package.ini`
+声明依赖，再使用不带引号的 package import。
+
+## 可见性
 
 需要被其他模块访问的声明使用 `public` 标记：
 
@@ -48,18 +65,37 @@ public Int distance(Point point) {
 
 ## 重新导出
 
-`public import` 会把模块导入当前文件使用，同时把这个模块命名空间作为当前模块 public API 的一部分重新导出：
+`public import` 会把模块导入当前文件使用，同时把这个模块命名空间作为当前模块公开接口的一部分
+重新导出：
 
 ```c
-public import "leaf.jiang";
+public import leaf = "leaf.jiang";
 ```
 
-这不会把 `leaf` 中的声明摊平成当前模块的顶层声明。外部代码仍然应该通过重新导出的模块命名空间访问。
-
-## Using 声明
-
-`using` 将模块的 public 声明引入当前作用域，减少命名空间重复：
+这不会把 `leaf` 中的声明摊平成当前模块的顶层声明：
 
 ```c
-using std.math;
+import middle = "middle.jiang";
+
+Int value = middle.leaf.answer();
+```
+
+## Alias
+
+`alias` 可以给类型起别名，也可以给已有符号起别名：
+
+```c
+alias Byte = UInt8;
+alias NameBytes = UInt8[];
+
+alias add = math.add;
+```
+
+如果右侧解析为已有 namespace、type、value 或 member symbol，alias 会绑定到同一个 name
+domain。如果右侧不能解析为已有 symbol，则按 type alias 处理，右侧必须是类型语法。
+
+`public alias` 可以把一个具体 public symbol 重新导出到当前模块公开接口：
+
+```c
+public alias answer = math.add;
 ```

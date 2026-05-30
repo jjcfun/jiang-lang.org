@@ -1,95 +1,186 @@
 ---
 title: Control Flow
-description: Control flow in Jiang including if-else, for-in, while, break, continue, goto, and defer.
+description: if, switch, while, for, guard, defer, break, and continue in Jiang.
+sidebar:
+  order: 4
 ---
 
-## if-else
+Jiang separates control-flow statements from expressions that produce values. Blocks, `if`, and `switch` can produce values; `return`, `throw`, `break`, and `continue` do not continue normally.
+
+## Blocks
 
 ```c
-if condition {
-  // ...
-} else if other_condition {
-  // ...
+Int value = {
+    Int base = 40;
+    base + 2
+}
+```
+
+A block's value comes from its final tail expression. Without a tail expression, the block value is `()`.
+
+## `if`
+
+An `if` condition is followed directly by a block. As a statement, `else` may be omitted:
+
+```c
+if value < 0 {
+    print("negative");
+}
+```
+
+As an expression, `if` must include `else` and both branches must produce compatible values:
+
+```c
+Int sign = if value < 0 {
+    -1
 } else {
-  // ...
+    1
 }
 ```
 
-if expressions can return values (both branches must produce compatible types):
+Statement-style branches can still include `else`:
 
 ```c
-Int x = if true { 1 } else { 0 };
+if value < 0 {
+    print("negative");
+} else {
+    print("non-negative");
+}
 ```
 
-## for-in
+## `switch`
 
-Ranges are exclusive on the right:
+`switch` matches patterns and can produce a value:
+
+```c
+enum Mode {
+    read,
+    write,
+}
+
+Mode mode = Mode.read;
+
+Int code = switch mode {
+    .read => 1,
+    .write => 2,
+}
+```
+
+Branches may use a block:
+
+```c
+Int code = switch mode {
+    .read => {
+        print("read");
+        1
+    },
+    .write => 2,
+}
+```
+
+## `while`
+
+```c
+Int! count = 0;
+while count < 5 {
+    count = count + 1;
+}
+```
+
+`break` exits the current loop and `continue` starts the next iteration:
+
+```c
+while count < 10 {
+    count = count + 1;
+
+    if count == 3 {
+        continue;
+    } else {
+        print(count);
+    }
+
+    if count == 8 {
+        break;
+    }
+}
+```
+
+## `for in`
+
+`for pattern in expr` iterates arrays, slices, and other iterable values:
+
+```c
+Int[_] values = [10, 20, 30];
+
+for item in values {
+    print(item);
+}
+```
+
+Tuple destructuring is a separate statement inside the loop:
+
+```c
+(Int, Int)[_] pairs = [(1, 2), (3, 4)];
+
+for pair in pairs {
+    (_ left, _ right) = pair;
+    print(left + right);
+}
+```
+
+Ranges use `start..end`:
 
 ```c
 for i in 0..10 {
-  print("i = %d", i);  // prints 0 through 9
+    print(i);
 }
 ```
 
-Iterate over elements:
+## `guard`
+
+`guard` is used for early exit while carrying successful bindings into the following scope:
 
 ```c
-Int[] ints = [1, 2, 3];
-for i in ints {
-  print("i = %d", i);
+() print_value(Int? maybe) {
+    guard maybe is some value else {
+        return ();
+    }
+
+    print(value);
+    return ();
 }
 ```
 
-Break with conditional:
+The `else` block must be non-empty and end in `return`, `break`, `continue`, or `throw`.
+
+## `defer`
+
+`defer` runs when the current block exits:
 
 ```c
-for i in 0..10 {
-  if i > 3 break;
+defer handle$.free();
+
+defer {
+    log("closing");
+    handle$.free();
 }
 ```
 
-- The loop variable `i` is immutable by default
-- There is no C-style `for` loop in Jiang
+Use `defer expr;` for a single operation or `defer { ... }` for several operations.
 
-## while
+## `try catch`
+
+`try expr catch (...) => fallback` handles a `T@E` result:
 
 ```c
-while condition {
-  // ...
+Int value = try parse(text) catch (err) => {
+    log_error(err);
+    0
 }
 ```
 
-## break & continue
-
-`break` exits a loop, `continue` skips to the next iteration, optionally with a label:
+Use `catch ()` when the error value is not needed:
 
 ```c
-outer: for i in 0..3 {
-  for j in 0..3 {
-    if i + j > 2 break outer;
-  }
-}
+Int value = try parse(text) catch () => 0;
 ```
-
-## goto
-
-```c
-readagain: {
-  goto readagain;
-}
-```
-
-## defer
-
-`defer` executes code when the current scope exits. Multiple defers run in LIFO order:
-
-```c
-{
-  defer print("this runs second");
-  defer print("this runs first");
-  print("normal execution");
-}
-// Output:
-//   normal execution
-//   this runs first
-//   this runs second

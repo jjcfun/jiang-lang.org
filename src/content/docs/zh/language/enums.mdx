@@ -1,120 +1,166 @@
 ---
-title: 枚举与模式匹配
-description: Jiang 语言中的枚举（Enum）、关联数据与模式匹配（if-case、switch）。
+title: 枚举、联合类型与模式匹配
+description: Jiang 语言中的 enum、带标签联合类型、可选值和变体模式匹配。
+sidebar:
+  order: 8
 ---
 
-Jiang 的 `enum` 支持关联数据，可以携带不同类型和数量的值。Enum variant 作为命名子类型，通过模式匹配按需解构。
+Jiang 把有限标签集合和带携带值的联合类型分开表达：
 
-## 基本定义
+- `enum` 表示有限命名成员集合。
+- `union` 表示安全的带标签联合类型，每个变体可以携带值。
+
+## 枚举
+
+`enum` 成员按命名值使用：
 
 ```c
-enum Foo {
-  A,
-  B,
-  C(Int, Int),
-  D { x: Int, y: Int },
+enum Mode {
+    read,
+    write,
+}
+
+Mode mode = Mode.read;
+Mode other = .write; // 目标类型已知时可省略类型名
+```
+
+成员可以指定整数值：
+
+```c
+enum Priority {
+    low = 1,
+    medium,
+    high,
 }
 ```
 
-variant 的关联值可以是 positional 或 named：
+`enum` 可以定义 `static` 方法和实例方法：
 
 ```c
-// 创建带 positional 值的 variant
-Foo my_variant = Foo::C(1, 2);
+enum Mode {
+    read,
+    write,
 
-// 创建带 named 值的 variant
-Foo my_other = Foo::D { x: 3, y: 4 };
+    static Int answer() {
+        return 42;
+    }
 
-// 带记录的枚举 variant 支持类型推断
-Foo my_record = Foo::D(y: 2, x: 0);
+    Int value() {
+        return self.value;
+    }
+}
+
+Int a = Mode.answer();
+Int b = Mode.read.value();
 ```
 
-## if-case 匹配
+## 联合类型
 
-匹配单个 variant：
+`union` 是带标签的安全联合类型。它不是 C 风格的无标签裸联合。
 
 ```c
-if result is Foo::C(x, y) {
-  print("x = %d y = %d", x, y);
+union Result<T, E> {
+    T ok;
+    E err;
+}
+
+Result<Int, ParseErr> a = Result.ok(42);
+Result<Int, ParseErr> b = .err(ParseErr.bad);
+```
+
+携带值可以是普通类型，例如 `struct`、`record`、元组、数组、切片、`Fn<...>`、`T^`、`T&`、`T[*]`、`T*`、可选类型，以及其他 `union` / `enum`。
+
+同类型多个变体可以合并声明：
+
+```c
+union Value {
+    Int int_value, code;
+    Double float_value;
+    UInt8[] text;
 }
 ```
 
-匹配时可直接绑定为可变：
+`union` 可以省略显式标签枚举，直接使用变体名区分不同情况；也可以复用已有 `enum` 作为标签：
 
 ```c
-if result is Foo::C(x, y!) {
-  y += 100;
-  print("x = %d y = %d", x, y);
+enum Kind {
+    int_value,
+    text,
+}
+
+union(Kind) TaggedValue {
+    Int int_value;
+    UInt8[] text;
 }
 ```
 
-## switch 匹配
+## `is` 匹配
+
+`is` 用于模式匹配。匹配 `union` 变体时可以解构携带值：
 
 ```c
-_ tag = switch result {
-  Foo::A => 0,
-  Foo::B => 1,
-  Foo::C(x, y) => x + y,
-  Foo::D(x, y) => x * y,
-};
-```
-
-switch 也可以使用块形式：
-
-```c
-switch result {
-  Foo::A => {
-    print("A");
-  }
-  Foo::B => {}
-  Foo::C(x, y) => {
-    print("%d + %d = %d", x, y, x + y);
-  }
-  Foo::D(y, x) => {}
+if value is .int_value(_ n) {
+    print(n);
+} else {
+    print(0);
 }
 ```
 
-### switch 必须是穷尽的
-
-编译器检查 switch 是否覆盖所有 variant：
+绑定可以显式写 `_`，也可以写 `_!` 创建可变绑定：
 
 ```c
-// 编译错误：缺少 variant Foo::D
-_ tag = switch result {
-  Foo::A => 0,
-  Foo::B => 1,
-  Foo::C(x, y) => x + y,
-};
-```
-
-可以使用 `default` 或 `_` 分支做兜底：
-
-```c
-_ tag = switch result {
-  Foo::A => 0,
-  _ => 1,
-};
-```
-
-## 带记录的枚举 variant
-
-```c
-enum Option {
-  Some(Int, Int),
-  None,
-}
-
-Option a = Option::Some(5, 2);
-
-// 匹配带记录的 variant
-if a is Option::Some(x, y) {
-  print("this is %d", x + y);
+if value is .int_value(_! n) {
+    n = n + 1;
 }
 ```
 
-存取枚举 variant 的原始枚举类型会自动推导为目标枚举类型：
+可选值使用专门的 `some` 模式：
 
 ```c
-// a 为 Some 类型，b 则是 Option 类型
-_ a = Option::Some(5, 2);
-Option b = Option::Some(5, 2);
+if maybe is some item {
+    print(item);
+} else {
+    print(0);
+}
+```
+
+## `switch` 匹配
+
+`switch` 按模式分支匹配。处理 `enum`、`union` 和可选值时，建议覆盖所有情况；需要兜底时使用 `else`。
+
+```c
+Int code = switch mode {
+    .read => 1,
+    .write => 2,
+}
+```
+
+处理 `union` 携带值：
+
+```c
+Int result = switch value {
+    .int_value(_ n) => n,
+    .code(_ code) => code,
+    .float_value(_) => 0,
+    .text(_ bytes) => bytes.length,
+}
+```
+
+处理可选值：
+
+```c
+Int value = switch maybe {
+    some item => item,
+    null => 0,
+}
+```
+
+## 模式规则
+
+当前 `is` 和 `switch` 分支根只接受：
+
+- 可选值模式：`some item`。
+- 变体模式：`.name(...)` 或 `Type.name(...)`。
+- 字面量模式：例如 `null`、整数、字符、布尔值。
+
+绑定和通配符只作为可选值或变体携带值的子模式使用。元组模式当前不作为 `is` / `switch` 的分支根；需要解构元组时，使用独立解构语句。
