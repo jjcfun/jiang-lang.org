@@ -42,7 +42,7 @@ UInt8[] read_source(UInt8[] file_path) {
 - `alias`：定义类型别名或已有符号别名。
 - 全局变量声明。
 - 函数声明或定义。
-- `struct`、`record`、`enum`、`union`、`trait`。
+- `struct`、`enum`、`union`、`trait`。
 - `extend`：给已有类型补方法或补 `trait` 实现。
 
 ```c
@@ -141,7 +141,7 @@ struct Point {
     Int y;
 }
 
-Point origin = Point { x: 0, y: 0 }
+Point origin = Point(x: 0, y: 0)
 ```
 
 ## 隐式操作层 `$`

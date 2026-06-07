@@ -34,6 +34,20 @@ enum Priority {
 }
 ```
 
+`enum` 的 discriminant 默认使用 `Int32`。需要读取整数值时，使用目标整数类型构造，
+例如 `Int(value)` 或 `UInt8(value)`；`enum` case 不再提供 `.value` 成员。
+
+需要固定存储表示时，可以写 `enum(UInt8)` 或其他整数类型：
+
+```c
+enum(UInt8) ByteTag {
+    block = 1,
+    item,
+}
+
+UInt8 tag = UInt8(ByteTag.block);
+```
+
 `enum` 可以定义 `static` 方法和实例方法：
 
 ```c
@@ -46,12 +60,12 @@ enum Mode {
     }
 
     Int value() {
-        return self.value;
+        return Int(self);
     }
 }
 
 Int a = Mode.answer();
-Int b = Mode.read.value();
+Int b = Int(Mode.read);
 ```
 
 ## 联合类型
@@ -68,7 +82,7 @@ Result<Int, ParseErr> a = Result.ok(42);
 Result<Int, ParseErr> b = .err(ParseErr.bad);
 ```
 
-携带值可以是普通类型，例如 `struct`、`record`、元组、数组、切片、`Fn<...>`、`T^`、`T&`、`T[*]`、`T*`、可选类型，以及其他 `union` / `enum`。
+携带值可以是普通类型，例如 `struct`、元组、数组、切片、`Fn<...>`、`T^`、`T&`、`T[*]`、`T*`、可选类型，以及其他 `union` / `enum`。
 
 同类型多个变体可以合并声明：
 

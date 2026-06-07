@@ -10,7 +10,7 @@ This chapter explains how resources move, when they are destroyed, and how refer
 
 ## Move and Destruction
 
-Plain `struct`, `record`, and `union` types are implicitly copyable by default. `T^` is a built-in
+Plain `struct` and `union` types are implicitly copyable by default. `T^` is a built-in
 resource type and cannot be implicitly copied. Nominal types that explicitly declare `Movable` also
 cannot be implicitly copied. `T&`, `T[*]`, `T*`, and `T[]` are non-owning views; fields with these
 types do not affect implicit copy. `!` is the mutability marker for the current type layer and does
@@ -56,7 +56,7 @@ struct Box: Movable {
     Int^ value;
 }
 
-Box a = Box { value: new Int(1) }
+Box a = Box(value: new Int(1))
 Box b = a; // error: Box is Movable.
 Box c = a$.move();
 ```
@@ -68,7 +68,7 @@ struct SliceView {
     UInt8[] data;
 }
 
-SliceView a = SliceView { data: "abc" }
+SliceView a = SliceView(data: "abc")
 SliceView b = a; // allowed: T[] does not own resources.
 ```
 
@@ -115,7 +115,11 @@ exclusive mutable borrows, and it does not provide data-race safety.
 
 ## Lifetime Annotations
 
-`@life(a > b)` expresses that `a` must outlive `b`:
+`@life(a > b)` expresses that `a` must outlive `b`. The rule prevents dangling references; it does
+not check shared/mutable aliasing and does not provide data-race safety.
+
+When a value stores `T&` or `T[]` fields, the referenced target must outlive the value that stores
+the field. Cross-function or stored-field relationships can be expressed with `@life(...)`:
 
 ```c
 @life(data > self)
@@ -128,6 +132,51 @@ struct Slice {
 Slice make_slice(Buffer& buffer);
 ```
 
+Return lifetimes have a default inference rule: if the returned reference can only come from one
+input source, that source is inferred to outlive `return`. The source can be a parameter or `self`:
+
+```c
+Int& first(Int& value) {
+    return value; // allowed: the only possible source is value.
+}
+
+struct Pair {
+    Int left;
+    Int right;
+
+    Int& choose(Bool use_left) {
+        if use_left {
+            return self.left$.ref();
+        }
+        return self.right$.ref(); // allowed: both branches come from self.
+    }
+}
+```
+
+If a returned reference can come from multiple input sources, all allowed sources must be written
+explicitly. Once explicit `@life(... > return)` exists, borrow check only accepts those sources:
+
+```c
+@life(left > return, right > return)
+Int& pick(Int& left, Int& right, Bool use_left) {
+    if use_left {
+        return left;
+    }
+    return right;
+}
+```
+
+Without the annotation, the same function fails:
+
+```c
+Int& bad_pick(Int& left, Int& right, Bool use_left) {
+    if use_left {
+        return left;
+    }
+    return right; // error: the source may be left or right.
+}
+```
+
 Positive example: a struct that stores an external slice can express that `data` must outlive
 `self`:
 
@@ -138,7 +187,7 @@ struct ByteView {
 }
 
 ByteView view(UInt8[] data) {
-    return ByteView { data: data }
+    return ByteView(data: data)
 }
 ```
 
@@ -152,11 +201,12 @@ struct ByteView {
 
 ByteView bad_view() {
     UInt8[_] local = "abc";
-    return ByteView { data: local[..] } // error: local does not outlive the return value.
+    return ByteView(data: local[..]) // error: local does not outlive the return value.
 }
 ```
 
-Use `@life(arg > return)` when a function returns a view borrowed from an argument:
+For public APIs, cross-function calls, or aggregate return values containing borrowed fields, prefer
+writing the return source explicitly:
 
 ```c
 @life(data > return)

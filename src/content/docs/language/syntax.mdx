@@ -42,7 +42,7 @@ A source file is a sequence of top-level items:
 - `alias`
 - global declarations
 - functions
-- `struct`, `record`, `enum`, `union`, `trait`
+- `struct`, `enum`, `union`, `trait`
 - `extend`
 
 ```c
@@ -109,7 +109,7 @@ Int value = if flag {
 Field literals are written with their type path:
 
 ```c
-Point origin = Point { x: 0, y: 0 }
+Point origin = Point(x: 0, y: 0)
 ```
 
 ## Implicit Operation Layer

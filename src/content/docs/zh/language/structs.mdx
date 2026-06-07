@@ -1,6 +1,6 @@
 ---
-title: 结构体与记录类型
-description: Jiang 语言中的 struct、record、init、deinit 和方法。
+title: 结构体
+description: Jiang 语言中的 struct、init、deinit、字段和方法。
 sidebar:
   order: 7
 ---
@@ -22,13 +22,40 @@ struct Offset {
 
 同类型多字段声明只是语法糖，`Int x, y;` 等价于分别声明 `Int x;` 和 `Int y;`。
 
-## 字段字面量初始化
+## 默认构造
 
-没有自定义 `init` 的 `struct` 可以使用字段字面量初始化：
+没有自定义 `init` 的 `struct` 可以使用编译器提供的默认构造。默认构造把字段名作为
+必填参数标签：
 
 ```c
-Point point = Point { x: 0, y: 0 }
-Point^ heap_point = new (Point { x: 100, y: 200 });
+Point point = Point(x: 0, y: 0);
+Point^ heap_point = new Point(x: 100, y: 200);
+```
+
+默认构造不接受位置参数：
+
+```c
+Point point = Point(0, 0); // 编译错误
+```
+
+字段可以声明默认值。带默认值的字段在默认构造调用中可以省略：
+
+```c
+struct Window {
+    Int width;
+    Int height = 600;
+    Bool visible = true;
+}
+
+Window window = Window(width: 800);
+```
+
+如果上下文已经提供 expected type，可以用 `.(...)` 省略类型名：
+
+```c
+Window make_window() {
+    return .(width: 1024, visible: false);
+}
 ```
 
 拥有所有权的指针不会在赋值、初始化或算术这类值上下文中自动解引用；但字段访问会自动穿过 `T^`，因此可以直接访问字段：
@@ -48,12 +75,12 @@ struct User {
     UInt8[]? nick_name;
 }
 
-User user = User { id: 123, age: 18 }
+User user = User(id: 123, age: 18)
 user.age = user.age + 1;
 // user.id = 200; // 编译错误：字段自身不可变
 ```
 
-可选字段可以默认初始化为 `null`。如果字段有默认值或是可选字段，构造时可以省略对应字段。
+如果字段有默认值，构造时可以省略对应字段。
 
 ## `init`
 
@@ -85,8 +112,9 @@ Point^ p3 = new Point(4, 5);
 规则：
 
 - `init` 隐式拥有 `self`，不声明返回类型。
-- 可定义多个 `init`，按参数数量和类型重载。
-- 只要类型定义了 `init`，就不再使用 `Point { ... }` 字段字面量构造。
+- 可定义多个 `init`，按参数数量、参数标签和类型重载。
+- 自定义 `init` 参数遵循普通函数参数规则，包括命名参数和参数默认值。
+- 只要类型定义了 `init`，就不再使用编译器提供的默认字段构造。
 - `init` 可以写可见性修饰，例如 `public init(...)`。
 - `init` 只能通过 `Type(...)` 或 `new Type(...)` 调用，不作为普通函数值暴露。
 
@@ -125,31 +153,11 @@ struct User {
 }
 
 Int a = User.zero();
-User u = User { id: 42 }
+User u = User(id: 42)
 Int b = u.value();
 ```
 
 实例方法体内有隐式 `self: Self&`。字段能否赋值仍只由字段类型自身是否带 `!` 决定，方法不需要额外的 `mutating` 标记。
-
-## 记录类型
-
-`record` 是偏数据记录的名义类型。它使用字段字面量初始化，字段支持默认值：
-
-```c
-record PointRecord {
-    Int x;
-    Int y = 2;
-}
-
-PointRecord p1 = PointRecord { x: 40 }
-PointRecord p2 = PointRecord { x: 1, y: 2 }
-```
-
-常用规则：
-
-- `record` 支持 `Type { field: value }`。
-- `record` 字段支持默认值和同类型多名字声明。
-- `record` 的定义体语法与 `struct` 共用，可以包含字段、方法、`init`、`deinit` 和关联类型实现。
 
 ## 局部声明
 

@@ -72,7 +72,7 @@ extern public Int read(Int fd, UInt8[*] buf, Int count);
 ```
 
 `T*` 不像 C 指针那样用于自由位置移动。需要按位置访问连续内存时使用 `T[*]`。`T[*]` 没有长度；
-如果 Jiang 代码需要保存长度视图，优先封装为 `T[]` 或 `{ ptr, len }` 风格的 `record` / `struct`。
+如果 Jiang 代码需要保存长度视图，优先封装为 `T[]` 或 `{ ptr, len }` 风格的 `struct`。
 
 ## 资源边界
 

@@ -32,6 +32,22 @@ enum Priority {
 }
 ```
 
+Enum discriminants use `Int32` by default. Convert an enum value with a target integer
+constructor such as `Int(value)` or `UInt8(value)`; enum cases do not expose a `.value`
+member.
+
+Use `enum(UInt8)` or another integer type when the stored representation must be
+fixed:
+
+```c
+enum(UInt8) ByteTag {
+    block = 1,
+    item,
+}
+
+UInt8 tag = UInt8(ByteTag.block);
+```
+
 Enums can define `static` and instance methods:
 
 ```c
@@ -44,12 +60,12 @@ enum Mode {
     }
 
     Int value() {
-        return self.value;
+        return Int(self);
     }
 }
 
 Int a = Mode.answer();
-Int b = Mode.read.value();
+Int b = Int(Mode.read);
 ```
 
 ## Unions

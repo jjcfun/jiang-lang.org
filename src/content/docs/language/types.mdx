@@ -22,6 +22,9 @@ Char ch = 'a';
 
 `Int` and `UInt` are pointer-sized integers. Use fixed-width types such as `Int32` or `UInt64` when ABI, file, or protocol layout needs an exact width.
 
+Enum discriminants are stored as `Int32` by default unless the enum declares another
+integer representation.
+
 `()` is the Unit type. It is a zero-size value and is also used for functions with no meaningful returned data.
 
 String literals are UTF-8 byte sequences:
@@ -107,7 +110,7 @@ struct User {
     Int! age;
 }
 
-User user = User { id: 1, age: 18 }
+User user = User(id: 1, age: 18)
 user.age = 19;
 // user.id = 2; // error
 ```
@@ -153,7 +156,7 @@ struct Box {
     Int value;
 }
 
-Box^ box = new (Box { value: 42 });
+Box^ box = new Box(value: 42);
 Int n = box.value;
 ```
 

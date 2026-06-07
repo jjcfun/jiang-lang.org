@@ -1,6 +1,6 @@
 ---
-title: Structs & Records
-description: Structs, records, init, deinit, fields, and methods in Jiang.
+title: Structs
+description: Structs, init, deinit, fields, and methods in Jiang.
 sidebar:
   order: 7
 ---
@@ -22,13 +22,41 @@ struct Offset {
 
 `Int x, y;` is shorthand for two fields of the same type.
 
-## Field Literals
+## Default Constructors
 
-Structs without custom `init` can use field literals:
+Structs without custom `init` can use the compiler-provided default constructor. The default
+constructor uses field names as required argument labels:
 
 ```c
-Point point = Point { x: 0, y: 0 }
-Point^ heap_point = new (Point { x: 100, y: 200 });
+Point point = Point(x: 0, y: 0);
+Point^ heap_point = new Point(x: 100, y: 200);
+```
+
+Positional arguments are not accepted for the default constructor:
+
+```c
+Point point = Point(0, 0); // error
+```
+
+Fields can have default values. A field with a default value can be omitted from the default
+constructor call:
+
+```c
+struct Window {
+    Int width;
+    Int height = 600;
+    Bool visible = true;
+}
+
+Window window = Window(width: 800);
+```
+
+When an expected type is available, the type name can be omitted with `.(...)`:
+
+```c
+Window make_window() {
+    return .(width: 1024, visible: false);
+}
 ```
 
 Owning pointers do not auto-dereference in assignment, initialization, or arithmetic value contexts. Field access can pass through `T^`:
@@ -48,14 +76,14 @@ struct User {
     UInt8[]? nick_name;
 }
 
-User user = User { id: 123, age: 18 }
+User user = User(id: 123, age: 18)
 user.age = user.age + 1;
 // user.id = 200; // error
 ```
 
 ## `init`
 
-`init` is a constructor entry in a struct or record body:
+`init` is a constructor entry in a struct body:
 
 ```c
 struct Point {
@@ -80,7 +108,9 @@ Point p2 = Point(3);
 Point^ p3 = new Point(4, 5);
 ```
 
-Use `init(...)` for ordinary constructors. Jiang also reserves additional `init` forms for named or fallible construction.
+Use `init(...)` for ordinary custom constructors. Custom `init` parameters follow normal function
+argument rules, including named arguments and defaults. Once a struct declares any custom `init`, the
+compiler-provided field constructor is not used.
 
 ## `deinit`
 
@@ -115,25 +145,9 @@ struct User {
 }
 
 Int a = User.zero();
-User u = User { id: 42 }
+User u = User(id: 42)
 Int b = u.value();
 ```
-
-## Records
-
-`record` is written like a lightweight data type with named fields:
-
-```c
-record PointRecord {
-    Int x;
-    Int y = 2;
-}
-
-PointRecord p1 = PointRecord { x: 40 }
-PointRecord p2 = PointRecord { x: 1, y: 2 }
-```
-
-Record fields can have default values and same-type multi-field declarations.
 
 ## Local Declarations
 

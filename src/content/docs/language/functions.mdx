@@ -172,7 +172,7 @@ struct User {
     Int id;
 
     static User zero() {
-        return User { id: 0 }
+        return User(id: 0)
     }
 
     Int value() {
@@ -180,7 +180,7 @@ struct User {
     }
 }
 
-User user = User { id: 42 }
+User user = User(id: 42)
 Int a = user.value();
 User z = User.zero();
 ```
