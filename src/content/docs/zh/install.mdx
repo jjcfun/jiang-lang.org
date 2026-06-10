@@ -1,55 +1,85 @@
 ---
 title: 安装
-description: 从源码构建 Jiang 编译器。
+description: 安装 Jiang 编译器。
 ---
 
-Jiang 目前还没有发布稳定的预构建版本。现在推荐从源码构建编译器来体验语言。
+Jiang 0.2.0 提供 macOS arm64 预构建编译器包。现阶段推荐用 release 包体验语言。
 
 ## 环境要求
 
-- C/C++ 构建工具链。
-- CMake。
-- LLVM 21.1.x。
+- macOS arm64。
+- Homebrew `llvm@21` 提供的 LLVM 21.1.x。
 - 宿主系统中可用的 `cc`，用于最终链接可执行文件。
 
-仓库会在 CMake 配置阶段检查 LLVM 版本。如果 `llvm-config --version` 不是 `21.1.*`，配置会直接失败。
+release 包不内置 `libLLVM.dylib`，运行时使用本机安装的 LLVM 21。
 
-## 克隆仓库
+## 安装 release
+
+从 [0.2.0 GitHub release](https://github.com/jjcfun/jiang/releases/tag/0.2.0) 下载 `jiang-0.2.0-macos-arm64.zip`，然后解压。
+
+先安装 LLVM：
+
+```bash
+bash ./script/install_llvm_macos.sh
+```
+
+如果本机没有 Homebrew，脚本会打印 Homebrew 官方安装命令并退出，不会继续修改系统。
+
+安装 Jiang：
+
+```bash
+./install.sh
+```
+
+默认安装到：
+
+```text
+~/.jiang/versions/0.2.0
+~/.jiang/bin/jiangc
+```
+
+如果需要，把 Jiang 加入 shell 的 PATH：
+
+```bash
+export PATH="$HOME/.jiang/bin:$PATH"
+```
+
+## 验证
+
+检查编译器和 LLVM 运行时：
+
+```bash
+jiangc --version
+```
+
+第一行应该是：
+
+```text
+jiang 0.2.0
+```
+
+## 从源码构建
+
+源码构建主要用于编译器开发。先克隆仓库：
 
 ```bash
 git clone https://github.com/jjcfun/jiang.git
 cd jiang
 ```
 
-## 配置和构建
-
-推荐显式指定 LLVM 安装路径：
+安装 LLVM：
 
 ```bash
-cmake -S . -B build -DJIANG_LLVM_ROOT=/opt/homebrew/opt/llvm@21
-cmake --build build
+bash ./script/install_llvm_macos.sh
 ```
 
-也可以指定 `llvm-config`：
+构建稳定编译器候选产物：
 
 ```bash
-LLVM_CONFIG=/opt/homebrew/opt/llvm@21/bin/llvm-config cmake -S . -B build
-cmake --build build
+VERIFY=full bash ./script/build_stable.sh
 ```
 
-构建成功后，编译器位于：
-
-```bash
-./build/jiangc
-```
-
-## 验证
-
-使用同一套 LLVM 工具链运行测试：
-
-```bash
-LLVM_CONFIG=/opt/homebrew/opt/llvm@21/bin/llvm-config bash ./script/test.sh
-```
+源码构建需要 `~/.jiang/stage1/bin/jiangc` 位置存在 Stage1 bootstrap 编译器，或者通过 `STAGE1_BIN=/path/to/jiangc` 显式指定。
 
 ## 下一步
 

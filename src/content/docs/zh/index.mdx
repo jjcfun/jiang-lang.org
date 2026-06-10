@@ -15,7 +15,7 @@ hero:
 
 import { Icon } from '@astrojs/starlight/components';
 
-Jiang 是一门正在开发中的系统编程语言。当前重点是稳定清晰的核心语言、直接的内存与布局控制能力，以及继续完善已经初步自举的编译器。
+Jiang 是一门正在开发中的系统编程语言。当前重点是稳定清晰的核心语言、直接的内存与布局控制能力，以及已经可以通过 0.2.0 macOS arm64 release 安装的自举编译器。
 
 这份文档优先作为教程和使用指南来写。它会说明当前已经形成的语言规则，也会在仍处于快速演进中的部分保持谨慎。
 
@@ -28,7 +28,7 @@ Jiang 目前仍处于 0.2 版本阶段，现阶段看上去或许平平无奇。
   <a class="jiang-start-card" href="/zh/install/">
     <span class="jiang-start-icon"><Icon name="download" /></span>
     <span class="jiang-start-title">安装</span>
-    <span class="jiang-start-description">从源码构建编译器，并准备 LLVM 工具链。</span>
+    <span class="jiang-start-description">安装 release 编译器，并准备 LLVM 工具链。</span>
   </a>
   <a class="jiang-start-card" href="/zh/getting-started/">
     <span class="jiang-start-icon"><Icon name="rocket" /></span>
@@ -49,9 +49,9 @@ Jiang 目前仍处于 0.2 版本阶段，现阶段看上去或许平平无奇。
 
 ## 项目状态
 
-Jiang 语言编译器已经初步完成自举：Stage1 原型编译器仍作为引导工具存在，Stage2 编译器由 Jiang
-代码生成，并已经可以继续编译当前编译器代码。接下来的重点是补齐语言测试、稳定 package/模块边界、
-完善后端和运行时能力，并逐步减少对引导阶段的依赖。
+Jiang 语言编译器已经完成初步稳定自举：release 编译器由 Jiang Stage2 代码库生成，并通过 smoke
+和语言测试验证。接下来的重点是扩充语言测试、完善 release 打包体验、改进 package/模块易用性，
+以及继续补齐后端和运行时能力。
 
 现阶段可以把官网文档视为持续更新的语言指南，而不是完全冻结的规范。相对稳定的内容包括命名风格、
 类型写法、分层可变性、数组、指针、可选类型、导入规则、package 规则和当前编译器命令行工作流。

@@ -1,55 +1,85 @@
 ---
 title: Installation
-description: Build the Jiang compiler from source.
+description: Install the Jiang compiler.
 ---
 
-Jiang does not yet publish stable prebuilt releases. The recommended way to try it today is to build the compiler from source.
+Jiang 0.2.0 provides a prebuilt macOS arm64 compiler package. This is the recommended way to try the language today.
 
 ## Requirements
 
-- A C/C++ build toolchain.
-- CMake.
-- LLVM 21.1.x.
+- macOS on arm64.
+- LLVM 21.1.x from Homebrew `llvm@21`.
 - A host C compiler available as `cc` for final executable linking.
 
-The repository checks the LLVM version during configuration. If `llvm-config --version` is not `21.1.*`, configuration fails early.
+The release package does not bundle `libLLVM.dylib`; it uses the local LLVM 21 installation at runtime.
 
-## Clone
+## Install a Release
+
+Download `jiang-0.2.0-macos-arm64.zip` from the [0.2.0 GitHub release](https://github.com/jjcfun/jiang/releases/tag/0.2.0), then unpack it.
+
+Install LLVM first:
+
+```bash
+bash ./script/install_llvm_macos.sh
+```
+
+If Homebrew is missing, the script prints the Homebrew install command and exits without changing the system.
+
+Install Jiang:
+
+```bash
+./install.sh
+```
+
+By default this installs:
+
+```text
+~/.jiang/versions/0.2.0
+~/.jiang/bin/jiangc
+```
+
+Add Jiang to your shell path if needed:
+
+```bash
+export PATH="$HOME/.jiang/bin:$PATH"
+```
+
+## Verify
+
+Check the compiler and LLVM runtime:
+
+```bash
+jiangc --version
+```
+
+The first line should be:
+
+```text
+jiang 0.2.0
+```
+
+## Build From Source
+
+Source builds are mainly for compiler development. Clone the repository:
 
 ```bash
 git clone https://github.com/jjcfun/jiang.git
 cd jiang
 ```
 
-## Configure and Build
-
-Prefer passing the LLVM installation explicitly:
+Install LLVM:
 
 ```bash
-cmake -S . -B build -DJIANG_LLVM_ROOT=/opt/homebrew/opt/llvm@21
-cmake --build build
+bash ./script/install_llvm_macos.sh
 ```
 
-Or point CMake at `llvm-config`:
+Build a stable compiler candidate:
 
 ```bash
-LLVM_CONFIG=/opt/homebrew/opt/llvm@21/bin/llvm-config cmake -S . -B build
-cmake --build build
+VERIFY=full bash ./script/build_stable.sh
 ```
 
-After a successful build, the compiler is available at:
-
-```bash
-./build/jiangc
-```
-
-## Verify
-
-Run the sample test suite with the same LLVM toolchain:
-
-```bash
-LLVM_CONFIG=/opt/homebrew/opt/llvm@21/bin/llvm-config bash ./script/test.sh
-```
+This source build expects a Stage1 bootstrap compiler at `~/.jiang/stage1/bin/jiangc`, or an explicit `STAGE1_BIN=/path/to/jiangc`.
 
 ## Next Step
 

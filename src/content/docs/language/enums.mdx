@@ -122,6 +122,30 @@ if value is .int_value(_! n) {
 }
 ```
 
+Use `_&` to borrow a union payload instead of binding it by value:
+
+```c
+union Node {
+    (Int, Int) pair;
+    () empty;
+}
+
+Int read_ref(Int& value) {
+    value$.get()
+}
+
+Int first(Node node) {
+    if node is .pair(_& left, _) {
+        return read_ref(left);
+    }
+    return 0;
+}
+```
+
+This matters when the payload is large, non-copyable, or should be inspected without moving it.
+`_&!` is also allowed when the payload reference binding itself must be reassignable; the `!` applies
+to the binding, not to the payload source.
+
 Optional values use `some`:
 
 ```c
@@ -149,6 +173,15 @@ Int result = switch value {
     .code(_ code) => code,
     .float_value(_) => 0,
     .text(_ bytes) => bytes.length,
+}
+```
+
+Borrowed union payloads use the same `_&` sub-pattern:
+
+```c
+Int result = switch node {
+    .pair(_& left, _) => read_ref(left),
+    .empty => 0,
 }
 ```
 

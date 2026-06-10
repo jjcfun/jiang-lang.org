@@ -15,12 +15,14 @@ Use a fixed `package.ini` file:
 ```ini
 [package]
 name = app
+version = 0.2.0
 root = src/main.jiang
 ```
 
 Fields:
 
 - `name`: package name; defaults to the directory name.
+- `version`: package version; optional. The compiler accepts ASCII letters, digits, `.`, `_`, `+`, and `-`.
 - `root`: entry source file; defaults to `<name>.jiang`.
 
 When the compiler input is a directory, it reads `package.ini` and compiles the source file named by
@@ -33,6 +35,7 @@ Declare local source dependencies in `[dependencies]`:
 ```ini
 [package]
 name = app
+version = 0.2.0
 root = src/main.jiang
 
 [dependencies]

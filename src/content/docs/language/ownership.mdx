@@ -16,6 +16,9 @@ cannot be implicitly copied. `T&`, `T[*]`, `T*`, and `T[]` are non-owning views;
 types do not affect implicit copy. `!` is the mutability marker for the current type layer and does
 not change ownership classification.
 
+`T?` follows the ownership classification of its payload type. `Int?` is implicitly copyable, while
+`Int^?` contains an owned payload, so it is `Movable` and must be transferred with `$.move()`.
+
 Explicit move uses `value$.move()`:
 
 ```c
@@ -74,6 +77,10 @@ SliceView b = a; // allowed: T[] does not own resources.
 
 Resource-owning types should describe cleanup with `deinit` and avoid implicit copy unless they define their own copy behavior.
 
+Destruction only runs for `Movable` types. Dropping `T^` first drops the pointee and then frees the
+heap storage. Dropping `T?` is conditional: `some` drops the payload, while `none` has no payload to
+drop. Non-owning views such as `T&`, `T*`, `T[*]`, and `T[]` do not free their targets.
+
 ## Reference Rules
 
 References do not own their target. A reference must not outlive the value it points to:
@@ -82,6 +89,30 @@ References do not own their target. A reference must not outlive the value it po
 Int value = 10;
 Int& ref = value$.ref();
 Int copied = ref$.get();
+```
+
+For local bindings and patterns, `_&` is shorthand for a borrowed binding with inferred pointee
+type:
+
+```c
+Int value = 10;
+_& ref = value; // same lifetime rule as value$.ref()
+```
+
+The same binding mode works inside optional and union payload patterns. It borrows the payload
+instead of copying or moving it:
+
+```c
+Int read_ref(Int& value) {
+    value$.get()
+}
+
+Int read_optional(Int? value) {
+    if value is some _& item {
+        return read_ref(item);
+    }
+    return 0;
+}
 ```
 
 Returning a reference to a local variable is not allowed:

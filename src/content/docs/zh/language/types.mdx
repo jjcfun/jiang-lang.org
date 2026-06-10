@@ -93,6 +93,32 @@ _ owner = make_value(); // owner: Int^
 Int copied = make_value()$.get();
 ```
 
+使用 `_&` 可以从 place expression 推导出借用引用绑定：
+
+```c
+Int value = 1;
+_& borrowed = value; // borrowed: Int&
+Int copied = borrowed$.get();
+```
+
+`_&` 是 binding mode，不是普通类型占位符。它会主动借用右侧表达式，并推导被引用的类型。
+右侧必须是可以被借用的 place；如果表达式本身已经是引用，应该使用 `_`，而不是 `_&`：
+
+```c
+Int& existing = value$.ref();
+_ same_ref = existing;  // same_ref: Int&
+// _& nested = existing; // 错误：`_&` 不会对已有引用再次借用。
+```
+
+如果绑定本身需要重新赋值，使用 `_&!`。这里的 `!` 只作用于绑定最外层，不要求被借用的源值可写：
+
+```c
+Int first = 1;
+Int second = 2;
+_&! current = first;
+current = second$.ref();
+```
+
 推导只决定最外层绑定。数组元素、元组元素、`union` 携带值或结构体字段如果需要可变性，要在对应类型位置显式写出 `!`。
 
 ## 分层可变性

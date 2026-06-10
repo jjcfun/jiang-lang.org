@@ -15,6 +15,9 @@ Jiang 使用 `T^` 表达拥有所有权的值，使用 `T&` / `T[]` 表达不拥
 都是 non-owning view，字段中包含这些类型不影响 implicit copy。`!` 只是当前类型层级的可变性标记，
 不改变所有权分类。
 
+`T?` 的所有权分类跟随内部类型。`Int?` 可以像普通值一样隐式 copy；`Int^?` 包含拥有
+所有权的 payload，因此是 `Movable`，不能隐式 copy，转移时也必须写 `$.move()`。
+
 拥有所有权的值只能有一个当前所有者。把 `T^` 赋给另一个变量时，必须显式写 `$.move()`：
 
 ```c
@@ -81,8 +84,9 @@ SliceView b = a; // 允许：T[] 不拥有资源，不影响 implicit copy。
 
 析构规则：
 
-- 局部变量离开作用域时，如果变量类型有 `deinit`，会自动调用该 `deinit`。
+- 只有 `Movable` 类型会自动 drop。
 - `T^` 离开作用域时会析构指向的 `T`，并释放堆存储。
+- `T?` 的自动析构由内部类型决定：`some` 会析构 payload，`none` 不做 payload 析构。
 - `struct` 的 `T^` 字段会自动析构。
 - `T&`、`T[*]`、`T*` 和 `T[]` 字段不会自动释放。
 - 如果 `struct` 有自定义 `deinit`，先执行自定义 `deinit`，再自动析构拥有所有权的字段。
@@ -95,6 +99,29 @@ SliceView b = a; // 允许：T[] 不拥有资源，不影响 implicit copy。
 Int value = 10;
 Int& ref = value$.ref();
 Int copied = ref$.get();
+```
+
+在局部绑定和 pattern 中，`_&` 是一种推导借用绑定的简写：
+
+```c
+Int value = 10;
+_& ref = value; // 生命周期规则等同于 value$.ref()
+```
+
+同一个 binding mode 也可以用于 optional 和 union 的 payload pattern。它借用 payload，
+不会隐式 copy 或 move payload：
+
+```c
+Int read_ref(Int& value) {
+    value$.get()
+}
+
+Int read_optional(Int? value) {
+    if value is some _& item {
+        return read_ref(item);
+    }
+    return 0;
+}
 ```
 
 返回局部变量引用是不允许的，因为函数返回后局部变量已经不存在：

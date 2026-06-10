@@ -5,22 +5,39 @@ description: Jiang 编译器命令行接口。
 
 `jiangc` 用于编译 Jiang 源文件。当前编译器可以生成 LLVM IR、目标文件，也可以通过宿主 C 编译器链接出可执行文件。
 
+## 版本和帮助
+
+```bash
+jiangc --version
+jiangc --help
+```
+
+`--version` 会打印 Jiang 编译器版本、宿主 target 和 LLVM 版本。
+
+## 只检查
+
+```bash
+jiangc --check tests/samples/minimal.jiang
+```
+
+这个模式会完成解析、名字解析和类型检查，但不会生成 LLVM IR、目标文件或可执行文件。
+
 ## 生成 LLVM IR
 
 ```bash
-./build/jiangc --emit-llvm tests/samples/minimal.jiang
+jiangc --emit-llvm tests/samples/minimal.jiang
 ```
 
 默认情况下，LLVM IR 会输出到标准输出。使用 `-o` 可以写入文件：
 
 ```bash
-./build/jiangc --emit-llvm tests/samples/minimal.jiang -o minimal.ll
+jiangc --emit-llvm tests/samples/minimal.jiang -o minimal.ll
 ```
 
 ## 生成目标文件
 
 ```bash
-./build/jiangc --emit-obj tests/samples/minimal.jiang -o minimal.o
+jiangc --emit-obj tests/samples/minimal.jiang -o minimal.o
 ```
 
 这个模式会停在目标文件生成阶段，不会继续链接可执行文件。
@@ -30,7 +47,7 @@ description: Jiang 编译器命令行接口。
 不指定 `--emit-*` 时，`jiangc` 会生成临时目标文件，并调用宿主 `cc` 链接可执行文件：
 
 ```bash
-./build/jiangc tests/samples/minimal.jiang -o minimal
+jiangc tests/samples/minimal.jiang -o minimal
 ```
 
 然后运行：
@@ -38,6 +55,36 @@ description: Jiang 编译器命令行接口。
 ```bash
 ./minimal
 echo $?
+```
+
+## Debug 和 Release 模式
+
+`jiangc` 默认使用 debug 模式：
+
+```bash
+jiangc --mode debug main.jiang -o main
+```
+
+release 模式会启用 LLVM 优化；当输入是 package 目录时，release 模式会按 package 组织目标文件：
+
+```bash
+jiangc --mode release . -o app
+```
+
+如果输入是单个源文件，release 模式仍然直接编译这个源文件。
+
+## 链接器选项
+
+使用 `--linker` 指定最终链接程序：
+
+```bash
+jiangc --linker /usr/bin/cc main.jiang -o main
+```
+
+使用可重复的 `--link-arg` 传递额外链接参数：
+
+```bash
+jiangc main.jiang -o main --link-arg -lm
 ```
 
 ## 运行时边界
