@@ -15,7 +15,8 @@ rules are covered in [Ownership, Borrowing & Lifetimes](/language/ownership/).
 - `T&`: non-owning reference.
 - `T*`: single-object raw pointer for FFI / ABI / low-level code.
 - `T[*]`: many raw pointer, indexed by element.
-- `T[]`: slice reference with runtime length.
+- `T[]`: unsized array pointee.
+- `T[]&`: borrowed slice reference with runtime length.
 
 Only `T^` expresses language-level ownership.
 Ownership transfer, automatic destruction, and lifetime constraints are covered separately.
@@ -111,5 +112,5 @@ bytes[1] = 42;
 ```
 
 Unlike C, `T*` is a single-object raw pointer and is not the type used for free pointer arithmetic.
-Use `T[*]` when code needs position-based access into contiguous memory. Use `T[]` for a
+Use `T[*]` when code needs position-based access into contiguous memory. Use `T[]&` for a borrowed
 length-bearing view.

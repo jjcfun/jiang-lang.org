@@ -28,7 +28,7 @@ struct Pair<A, B> {
     B second;
 }
 
-Pair<Int, UInt8[]> pair = Pair<Int, UInt8[]> {
+Pair<Int, UInt8[]&> pair = Pair<Int, UInt8[]&> {
     first: 1,
     second: "one",
 }
@@ -37,7 +37,7 @@ Pair<Int, UInt8[]> pair = Pair<Int, UInt8[]> {
 泛型实参也是类型，因此可以继续携带可选、可变、数组、指针等后缀：
 
 ```c
-Pair<Int?, UInt8[]> maybe_pair;
+Pair<Int?, UInt8[]&> maybe_pair;
 Pair<Int!, Int[3]^> mutable_and_owner;
 ```
 
@@ -116,13 +116,13 @@ Slot<Int!> slot = Slot<Int!> { value: 1 }
 
 ```c
 @where(T: Numeric)
-T@ParseErr parse_number<T>(UInt8[] text);
+T@ParseErr parse_number<T>(UInt8[]& text);
 ```
 
 如果成功值需要可选或可变，把后缀写在 `@` 左侧：
 
 ```c
-T?@ParseErr parse_optional<T>(UInt8[] text);
+T?@ParseErr parse_optional<T>(UInt8[]& text);
 ```
 
 ## 使用边界

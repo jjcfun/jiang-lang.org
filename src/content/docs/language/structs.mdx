@@ -73,7 +73,7 @@ A field is writable only when the field type itself is mutable:
 struct User {
     Int id;
     Int! age;
-    UInt8[]? nick_name;
+    UInt8[]&? nick_name;
 }
 
 User user = User(id: 123, age: 18)

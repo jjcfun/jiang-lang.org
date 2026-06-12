@@ -73,13 +73,14 @@ cd jiang
 bash ./script/install_llvm_macos.sh
 ```
 
-构建稳定编译器候选产物：
+使用已安装的 bootstrap 编译器构建下一代编译器：
 
 ```bash
-VERIFY=full bash ./script/build_stable.sh
+VERIFY=full bash ./script/build_next.sh
 ```
 
-源码构建需要 `~/.jiang/stage1/bin/jiangc` 位置存在 Stage1 bootstrap 编译器，或者通过 `STAGE1_BIN=/path/to/jiangc` 显式指定。
+0.3 开发分支需要 `PATH` 中存在 Jiang 0.2.2 版本的 `jiangc`，也可以通过
+`BOOTSTRAP_BIN=/path/to/jiangc` 显式指定。
 
 ## 下一步
 

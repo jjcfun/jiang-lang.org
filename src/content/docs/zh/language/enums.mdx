@@ -90,7 +90,7 @@ Result<Int, ParseErr> b = .err(ParseErr.bad);
 union Value {
     Int int_value, code;
     Double float_value;
-    UInt8[] text;
+    UInt8[]& text;
 }
 ```
 
@@ -104,7 +104,7 @@ enum Kind {
 
 union(Kind) TaggedValue {
     Int int_value;
-    UInt8[] text;
+    UInt8[]& text;
 }
 ```
 

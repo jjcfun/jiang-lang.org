@@ -73,13 +73,14 @@ Install LLVM:
 bash ./script/install_llvm_macos.sh
 ```
 
-Build a stable compiler candidate:
+Build the next compiler with the installed bootstrap compiler:
 
 ```bash
-VERIFY=full bash ./script/build_stable.sh
+VERIFY=full bash ./script/build_next.sh
 ```
 
-This source build expects a Stage1 bootstrap compiler at `~/.jiang/stage1/bin/jiangc`, or an explicit `STAGE1_BIN=/path/to/jiangc`.
+The 0.3 development branch expects a Jiang 0.2.2 compiler on `PATH` as `jiangc`, or an explicit
+`BOOTSTRAP_BIN=/path/to/jiangc`.
 
 ## Next Step
 

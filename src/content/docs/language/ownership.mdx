@@ -5,14 +5,14 @@ sidebar:
   order: 12
 ---
 
-Jiang uses `T^` for owned values and `T&` / `T[]` for non-owning borrowed views.
+Jiang uses `T^` for owned values and `T&` / `T[]&` for non-owning borrowed views.
 This chapter explains how resources move, when they are destroyed, and how references avoid dangling.
 
 ## Move and Destruction
 
 Plain `struct` and `union` types are implicitly copyable by default. `T^` is a built-in
 resource type and cannot be implicitly copied. Nominal types that explicitly declare `Movable` also
-cannot be implicitly copied. `T&`, `T[*]`, `T*`, and `T[]` are non-owning views; fields with these
+cannot be implicitly copied. `T&`, `T[*]`, `T*`, and `T[]&` are non-owning views; fields with these
 types do not affect implicit copy. `!` is the mutability marker for the current type layer and does
 not change ownership classification.
 
@@ -68,18 +68,18 @@ Non-owning view fields do not make a type `Movable`:
 
 ```c
 struct SliceView {
-    UInt8[] data;
+    UInt8[]& data;
 }
 
 SliceView a = SliceView(data: "abc")
-SliceView b = a; // allowed: T[] does not own resources.
+SliceView b = a; // allowed: T[]& does not own resources.
 ```
 
 Resource-owning types should describe cleanup with `deinit` and avoid implicit copy unless they define their own copy behavior.
 
 Destruction only runs for `Movable` types. Dropping `T^` first drops the pointee and then frees the
 heap storage. Dropping `T?` is conditional: `some` drops the payload, while `none` has no payload to
-drop. Non-owning views such as `T&`, `T*`, `T[*]`, and `T[]` do not free their targets.
+drop. Non-owning views such as `T&`, `T*`, `T[*]`, and `T[]&` do not free their targets.
 
 ## Reference Rules
 
@@ -149,13 +149,13 @@ exclusive mutable borrows, and it does not provide data-race safety.
 `@life(a > b)` expresses that `a` must outlive `b`. The rule prevents dangling references; it does
 not check shared/mutable aliasing and does not provide data-race safety.
 
-When a value stores `T&` or `T[]` fields, the referenced target must outlive the value that stores
+When a value stores `T&` or `T[]&` fields, the referenced target must outlive the value that stores
 the field. Cross-function or stored-field relationships can be expressed with `@life(...)`:
 
 ```c
 @life(data > self)
 struct Slice {
-    UInt8[] data;
+    UInt8[]& data;
     Int len;
 }
 
@@ -214,10 +214,10 @@ Positive example: a struct that stores an external slice can express that `data`
 ```c
 @life(data > self)
 struct ByteView {
-    UInt8[] data;
+    UInt8[]& data;
 }
 
-ByteView view(UInt8[] data) {
+ByteView view(UInt8[]& data) {
     return ByteView(data: data)
 }
 ```
@@ -227,7 +227,7 @@ Negative example: storing a slice of a local array in a returned value would dan
 ```c
 @life(data > self)
 struct ByteView {
-    UInt8[] data;
+    UInt8[]& data;
 }
 
 ByteView bad_view() {
@@ -241,7 +241,7 @@ writing the return source explicitly:
 
 ```c
 @life(data > return)
-UInt8[] first_two(UInt8[] data) {
+UInt8[]& first_two(UInt8[]& data) {
     return data[0..2];
 }
 ```

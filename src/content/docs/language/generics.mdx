@@ -26,7 +26,7 @@ struct Pair<A, B> {
     B second;
 }
 
-Pair<Int, UInt8[]> pair = Pair<Int, UInt8[]> {
+Pair<Int, UInt8[]&> pair = Pair<Int, UInt8[]&> {
     first: 1,
     second: "one",
 }
@@ -35,7 +35,7 @@ Pair<Int, UInt8[]> pair = Pair<Int, UInt8[]> {
 Type arguments may include suffixes:
 
 ```c
-Pair<Int?, UInt8[]> maybe_pair;
+Pair<Int?, UInt8[]&> maybe_pair;
 Pair<Int!, Int[3]^> mutable_and_owner;
 ```
 
@@ -108,13 +108,13 @@ Generic functions can return `T@E` in result position:
 
 ```c
 @where(T: Numeric)
-T@ParseErr parse_number<T>(UInt8[] text);
+T@ParseErr parse_number<T>(UInt8[]& text);
 ```
 
 If the success value is optional, put `?` on the left side of `@`:
 
 ```c
-T?@ParseErr parse_optional<T>(UInt8[] text);
+T?@ParseErr parse_optional<T>(UInt8[]& text);
 ```
 
 ## Grammar Boundaries

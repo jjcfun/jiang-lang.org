@@ -11,8 +11,8 @@ Use `extern` declarations to call external symbols such as C library functions o
 
 ```c
 extern {
-    public Int puts(UInt8[*] text);
-    public Int open(UInt8[*] path, Int options);
+    public Int puts(UInt8[*:0] text);
+    public Int open(UInt8[*:0] path, Int options);
     public Int errno;
 }
 ```
@@ -20,24 +20,25 @@ extern {
 Single declarations can use top-level modifiers:
 
 ```c
-extern public Int puts(UInt8[*] text);
+extern public Int puts(UInt8[*:0] text);
 public extern Int errno;
 ```
 
 ## C Strings
 
-C-style string pointers use `UInt8[*]`. A string literal in a `UInt8[*]` context can be emitted as null-terminated read-only data:
+C-style string pointers use sentinel many pointers such as `UInt8[*:0]`. A string literal in that
+context can be emitted as null-terminated read-only data:
 
 ```c
-extern public Int puts(UInt8[*] text);
+extern public Int puts(UInt8[*:0] text);
 
 puts("hello from Jiang");
 ```
 
-When an API needs a length, use a slice or an explicit length parameter:
+When a C API needs a pointer plus a length, model the pointer and length explicitly:
 
 ```c
-extern public Int write(Int fd, UInt8[] buf, Int count);
+extern public Int write(Int fd, UInt8[*] buf, Int count);
 ```
 
 ## Raw Pointers
@@ -67,8 +68,8 @@ extern public Int read(Int fd, UInt8[*] buf, Int count);
 ```
 
 `T*` is not used for free position movement like a C pointer. Use `T[*]` for position-based access
-into contiguous memory. `T[*]` has no length. Wrap it with a length field or use `T[]` when Jiang code
-needs a length-bearing view.
+into contiguous memory. `T[*]` has no length. Wrap it with a length field or use `T[]&` when Jiang
+code needs a borrowed length-bearing view.
 
 ## Resource Boundaries
 

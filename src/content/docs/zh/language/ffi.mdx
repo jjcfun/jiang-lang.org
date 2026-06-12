@@ -13,8 +13,8 @@ sidebar:
 
 ```c
 extern {
-    public Int puts(UInt8[*] text);
-    public Int open(UInt8[*] path, Int options);
+    public Int puts(UInt8[*:0] text);
+    public Int open(UInt8[*:0] path, Int options);
     public Int errno;
 }
 ```
@@ -22,7 +22,7 @@ extern {
 也可以写单条声明：
 
 ```c
-extern public Int puts(UInt8[*] text);
+extern public Int puts(UInt8[*:0] text);
 public extern Int errno;
 ```
 
@@ -30,18 +30,19 @@ public extern Int errno;
 
 ## C 字符串
 
-传给 C 风格接口的字符串指针当前使用 `UInt8[*]` 表示。字符串字面量在 `UInt8[*]` 上下文中可以生成以 `\0` 结尾的只读全局数据：
+C 风格字符串指针使用 `UInt8[*:0]` 这类带 sentinel 的多元素裸指针表示。字符串字面量在
+`UInt8[*:0]` 上下文中可以生成以 `\0` 结尾的只读全局数据：
 
 ```c
-extern public Int puts(UInt8[*] text);
+extern public Int puts(UInt8[*:0] text);
 
 puts("hello from Jiang");
 ```
 
-如果接口需要长度，使用 `UInt8[]` 切片或显式长度参数：
+如果 C API 需要指针加长度，直接建模成指针参数和长度参数：
 
 ```c
-extern public Int write(Int fd, UInt8[] buf, Int count);
+extern public Int write(Int fd, UInt8[*] buf, Int count);
 ```
 
 ## 单对象裸指针
@@ -72,7 +73,7 @@ extern public Int read(Int fd, UInt8[*] buf, Int count);
 ```
 
 `T*` 不像 C 指针那样用于自由位置移动。需要按位置访问连续内存时使用 `T[*]`。`T[*]` 没有长度；
-如果 Jiang 代码需要保存长度视图，优先封装为 `T[]` 或 `{ ptr, len }` 风格的 `struct`。
+如果 Jiang 代码需要保存长度视图，优先封装为 `T[]&` 或 `{ ptr, len }` 风格的 `struct`。
 
 ## 资源边界
 

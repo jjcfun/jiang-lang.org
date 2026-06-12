@@ -23,11 +23,11 @@ enum TokenKind {
 }
 
 struct SourceFile {
-    UInt8[] file_path;
+    UInt8[]& file_path;
     Int start_offset;
 }
 
-UInt8[] read_source(UInt8[] file_path) {
+UInt8[]& read_source(UInt8[]& file_path) {
     return file_path;
 }
 ```

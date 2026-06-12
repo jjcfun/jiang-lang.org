@@ -69,11 +69,12 @@ Int?[2]?[3] nullable_rows = [[1, null], null, [5, 6]];
 
 ## Slices
 
-`T[]` is a runtime-length view over contiguous storage. It does not own the storage.
+`T[]` names an unsized array pointee. Use `T[]&` for a borrowed runtime-length view over contiguous
+storage. The borrowed slice does not own the storage.
 
 ```c
 Int[_] values = [1, 2, 3];
-Int[] view = values[..];
+Int[]& view = values[..];
 
 print(view.length);
 ```
@@ -96,4 +97,5 @@ UInt8 first = data[0];
 ```
 
 `T*` is a single-object raw pointer and is not used for free position movement. Use `T[*]` for
-position-based contiguous-memory access, and use `T[]` when Jiang code needs a length-bearing view.
+position-based contiguous-memory access, and use `T[]&` when Jiang code needs a borrowed
+length-bearing view.

@@ -27,11 +27,13 @@ integer representation.
 
 `()` is the Unit type. It is a zero-size value and is also used for functions with no meaningful returned data.
 
-String literals are UTF-8 byte sequences:
+String literals are UTF-8 byte sequences. Their default borrowed view type is `UInt8[:0]&`, so the
+compiler can expose null-terminated data for C-style boundaries while keeping the slice length
+separate from the sentinel byte:
 
 ```c
 UInt8[_] bytes = "jiang";
-UInt8[] view = "jiang";
+UInt8[:0]& view = "jiang";
 ```
 
 ## Type Suffixes
@@ -53,9 +55,13 @@ Common suffix forms:
 | `T^` | owning heap pointer |
 | `T&` | non-owning reference |
 | `T*` | single-object raw pointer |
-| `T[]` | slice reference |
+| `T[]` | unsized array pointee |
+| `T[]&` | borrowed slice reference |
+| `T[:S]` | sentinel-terminated unsized array pointee |
 | `T[*]` | many raw pointer |
+| `T[*:S]` | sentinel-terminated many raw pointer |
 | `T[N]` | fixed-size array |
+| `T[N:S]` | sentinel-terminated fixed-size array |
 | `T@E` | errorable function return type |
 
 Within one layer, `?` must come before `!`: write `Int?!`, not `Int!?`, `Int??`, or `Int!!`.
@@ -158,11 +164,11 @@ Nested arrays use repeated suffixes:
 Int[2][3] matrix = [[1, 2], [3, 4], [5, 6]];
 ```
 
-`T[]` is a slice reference with runtime length:
+`T[]` is an unsized array pointee. Use `T[]&` for a borrowed slice reference with runtime length:
 
 ```c
 Int[_] values = [1, 2, 3];
-Int[] view = values[..];
+Int[]& view = values[..];
 ```
 
 ## Pointers and References
