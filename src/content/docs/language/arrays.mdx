@@ -79,6 +79,14 @@ Int[]& view = values[..];
 print(view.length);
 ```
 
+Sentinel slices use `T[:S]&`. A string literal naturally has type `UInt8[:0]&`; use `text.slice()`
+or `text$.as(UInt8[]&)` when a non-literal sentinel slice must be viewed as a plain `UInt8[]&`:
+
+```c
+UInt8[:0]& text = "hello";
+UInt8[]& bytes = text.slice();
+```
+
 Indexing a slice can produce an element reference:
 
 ```c

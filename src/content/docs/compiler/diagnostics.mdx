@@ -49,14 +49,15 @@ Float result = Float(two) + f;
 
 ## Mutability
 
-Mutability is part of the type. A binding must be mutable before it can be reassigned:
+`!` marks the mutability of one layer. On the outermost layer of a binding declaration, it marks the
+binding slot, so the binding must use outer `!` before it can be reassigned:
 
 ```c
 Int! count = 0;
 count = count + 1;
 ```
 
-For arrays, the element layer and outer array layer are separate:
+For arrays, the element layer and outer binding slot are separate:
 
 ```c
 Int![3] values = [1, 2, 3];

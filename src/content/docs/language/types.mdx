@@ -36,6 +36,15 @@ UInt8[_] bytes = "jiang";
 UInt8[:0]& view = "jiang";
 ```
 
+String literals can still be assigned directly where the expected type is a plain `UInt8[]&`.
+For non-literal sentinel slices, convert explicitly with `slice()` or a cast to `UInt8[]&`:
+
+```c
+UInt8[:0]& c_view = "jiang";
+UInt8[]& plain = c_view.slice();
+UInt8[]& forced = c_view$.as(UInt8[]&);
+```
+
 ## Type Suffixes
 
 Suffixes farther to the right wrap a wider layer:
@@ -50,7 +59,7 @@ Common suffix forms:
 
 | Syntax | Meaning |
 | --- | --- |
-| `T!` | the current type layer is mutable |
+| `T!` | the current layer is mutable |
 | `T?` | optional layer |
 | `T^` | owning heap pointer |
 | `T&` | non-owning reference |
@@ -68,7 +77,9 @@ Within one layer, `?` must come before `!`: write `Int?!`, not `Int!?`, `Int??`,
 
 ## Type Inference
 
-Use `_` to infer the type from the initializer:
+Use `_` as a placeholder for the right-hand side type. In a local binding, the compiler first
+computes the initializer's natural type, ignores any outer mutability carried by the source binding,
+and then applies the binding suffixes written after `_`:
 
 ```c
 _ answer = 42;
@@ -76,20 +87,38 @@ _ name = "Jiang";
 _ values = [1, 2, 3];
 ```
 
-Inference creates an immutable binding by default. Use `_!` for a mutable outer binding:
+The suffixes after `_` belong to the new binding, not to the right-hand side:
+
+| Binding pattern | Meaning |
+| --- | --- |
+| `_ name` | bind a new immutable value with the RHS type |
+| `_! name` | bind a new mutable value with the RHS type |
+| `_& name` | borrow the RHS place and bind an immutable `T&` |
+| `_&! name` | borrow the RHS place and bind a mutable reference slot containing `T&` |
+
+Use `_!` when the new binding itself must be reassignable:
 
 ```c
 _! count = 0;
 count = count + 1;
 ```
 
-Inference preserves the expression's natural type:
+Inference preserves the expression's natural ownership/reference shape:
 
 ```c
 Int^ make_value();
 
 _ owner = make_value();  // owner: Int^
 Int copied = make_value()$.get();
+```
+
+The right-hand side binding's outer mutability is intentionally ignored. `_` describes the type of
+the value being bound; `!` after `_` describes whether the new binding is mutable:
+
+```c
+Int! source = 1;
+_ copied = source;     // immutable binding, value type Int
+_! mutable = source;   // mutable binding, value type Int
 ```
 
 Use `_&` to infer a borrowed reference binding from a place expression:
@@ -100,9 +129,9 @@ _& borrowed = value;  // borrowed: Int&
 Int copied = borrowed$.get();
 ```
 
-`_&` is a binding mode, not a plain type placeholder. It actively borrows the right-hand side and
-infers the referenced type. The source must be a place that can be borrowed; if the expression is
-already a reference, use `_` instead of `_&`:
+`_&` is a binding mode. It actively borrows the right-hand side place and infers the referenced
+type. The source must be a place that can be borrowed; if the expression is already a reference, use
+`_` instead of `_&`:
 
 ```c
 Int& existing = value$.ref();
@@ -110,8 +139,8 @@ _ same_ref = existing;   // same_ref: Int&
 // _& nested = existing; // error: `_&` does not borrow an existing reference again.
 ```
 
-Use `_&!` when the binding itself must be reassignable. The `!` applies to the binding's outer
-layer; it does not require the borrowed source to be mutable:
+Use `_&!` when the reference binding itself must be reassignable. The `!` applies to the binding's
+outer layer; it does not require the borrowed source to be mutable:
 
 ```c
 Int first = 1;
@@ -120,21 +149,37 @@ _&! current = first;
 current = second$.ref();
 ```
 
-## Layered Mutability
-
-`!` applies to the current type layer:
+The same `_` binding patterns are used inside destructuring and payload patterns:
 
 ```c
-Bool! flag = true;
+(_& left, _! right) = pair;
+
+if maybe is some _& item {
+    use(item);
+}
+```
+
+## Layered Mutability
+
+`!` marks the mutability of the current layer. In a binding declaration, the outermost `!` marks the
+binding slot itself, not the value type stored in that slot. Inside a compound type, `!` is part of
+that nested value type:
+
+```c
+Bool! flag = true;     // mutable binding slot containing Bool
 flag = false;
 
-Int[3]! values = [1, 2, 3];
+Int[3]! values = [1, 2, 3]; // mutable binding slot containing Int[3]
 values = [4, 5, 6];
 
-Int![3]! mutable_items = [1, 2, 3];
+Int![3]! mutable_items = [1, 2, 3]; // mutable binding slot containing Int![3]
 mutable_items[0] = 10;
 mutable_items = [4, 5, 6];
 ```
+
+For example, `Int! value` declares a mutable binding whose stored value type is `Int`; `Int![]`
+uses `!` one layer deeper, so the array element type is mutable. `Int[]! value` is a mutable binding
+whose stored value type is `Int[]`.
 
 For aggregate values, a member is writable only when that member's own type is mutable.
 
@@ -170,6 +215,10 @@ Int[2][3] matrix = [[1, 2], [3, 4], [5, 6]];
 Int[_] values = [1, 2, 3];
 Int[]& view = values[..];
 ```
+
+Sentinel slice views such as `T[:S]&` carry an additional type-level sentinel guarantee. A
+non-literal sentinel slice does not implicitly lose that guarantee when assigned to `T[]&`; write
+`value.slice()` or `value$.as(T[]&)` to request a plain slice view.
 
 ## Pointers and References
 

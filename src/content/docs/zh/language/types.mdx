@@ -36,6 +36,15 @@ UInt8[_] bytes = "jiang";
 UInt8[:0]& view = "jiang";
 ```
 
+字符串字面量在 expected type 是普通 `UInt8[]&` 的位置仍可以直接赋值。对于非字面量的
+sentinel slice，需要用 `slice()` 或强制转换到 `UInt8[]&` 显式转换：
+
+```c
+UInt8[:0]& c_view = "jiang";
+UInt8[]& plain = c_view.slice();
+UInt8[]& forced = c_view$.as(UInt8[]&);
+```
+
 ## 类型后缀
 
 类型后缀越靠右，包裹范围越大：
@@ -56,7 +65,7 @@ Int?[2]?[3] nullable_rows;
 
 | 语法 | 含义 |
 | --- | --- |
-| `T!` | 当前类型层级可变 |
+| `T!` | 当前层级可变 |
 | `T?` | 可选类型层 |
 | `T^` | 拥有所有权的堆指针 |
 | `T&` | 不拥有所有权的引用 |
@@ -74,7 +83,8 @@ Int?[2]?[3] nullable_rows;
 
 ## 类型推导
 
-使用 `_` 让初始化器决定类型：
+`_` 是右侧表达式类型的占位符。局部绑定会先计算初始化表达式的自然类型，忽略来源绑定携带的
+最外层可变性，然后应用 `_` 后面写出的绑定后缀：
 
 ```c
 _ answer = 42;
@@ -82,20 +92,37 @@ _ name = "Jiang";
 _ values = [1, 2, 3];
 ```
 
-类型推导默认得到不可变绑定。需要让推导结果的最外层可变时写 `_!`：
+`_` 后面的后缀属于新绑定，不属于右侧表达式：
+
+| 绑定 pattern | 含义 |
+| --- | --- |
+| `_ name` | 使用 RHS 类型创建不可变值绑定 |
+| `_! name` | 使用 RHS 类型创建可变值绑定 |
+| `_& name` | 借用 RHS place，创建不可变 `T&` 绑定 |
+| `_&! name` | 借用 RHS place，创建可变引用槽位，槽位中存放 `T&` |
+
+如果新绑定本身需要重新赋值，使用 `_!`：
 
 ```c
 _! count = 0;
 count = count + 1;
 ```
 
-类型推导会保留表达式的自然类型，不会为了推导局部变量自动解引用 `T^` 或 `T&`：
+类型推导会保留表达式的自然所有权和引用形态，不会为了推导局部变量自动解引用 `T^` 或 `T&`：
 
 ```c
 Int^ make_value();
 
 _ owner = make_value(); // owner: Int^
 Int copied = make_value()$.get();
+```
+
+右侧绑定最外层的可变性会被刻意忽略。`_` 描述被绑定值的类型；`_` 后面的 `!` 描述新绑定是否可变：
+
+```c
+Int! source = 1;
+_ copied = source;   // 不可变绑定，值类型是 Int
+_! mutable = source; // 可变绑定，值类型是 Int
 ```
 
 使用 `_&` 可以从 place expression 推导出借用引用绑定：
@@ -106,8 +133,8 @@ _& borrowed = value; // borrowed: Int&
 Int copied = borrowed$.get();
 ```
 
-`_&` 是 binding mode，不是普通类型占位符。它会主动借用右侧表达式，并推导被引用的类型。
-右侧必须是可以被借用的 place；如果表达式本身已经是引用，应该使用 `_`，而不是 `_&`：
+`_&` 是 binding mode。它会主动借用右侧 place，并推导被引用的类型。右侧必须是可以被借用的
+place；如果表达式本身已经是引用，应该使用 `_`，而不是 `_&`：
 
 ```c
 Int& existing = value$.ref();
@@ -115,7 +142,7 @@ _ same_ref = existing;  // same_ref: Int&
 // _& nested = existing; // 错误：`_&` 不会对已有引用再次借用。
 ```
 
-如果绑定本身需要重新赋值，使用 `_&!`。这里的 `!` 只作用于绑定最外层，不要求被借用的源值可写：
+如果引用绑定本身需要重新赋值，使用 `_&!`。这里的 `!` 只作用于绑定最外层，不要求被借用的源值可写：
 
 ```c
 Int first = 1;
@@ -124,23 +151,37 @@ _&! current = first;
 current = second$.ref();
 ```
 
+同一组 `_` 绑定 pattern 也用于解构和 payload pattern：
+
+```c
+(_& left, _! right) = pair;
+
+if maybe is some _& item {
+    use(item);
+}
+```
+
 推导只决定最外层绑定。数组元素、元组元素、`union` 携带值或结构体字段如果需要可变性，要在对应类型位置显式写出 `!`。
 
 ## 分层可变性
 
-`!` 表示当前类型层级可变：
+`!` 标记当前层级可变。在绑定声明里，最外层的 `!` 标记绑定槽位本身，不属于槽位中存放的值类型。
+进入复合类型内部后，`!` 才属于对应的嵌套值类型：
 
 ```c
-Bool! flag = true;
+Bool! flag = true; // 可变绑定槽位，槽位中存放 Bool
 flag = false;
 
-Int[3]! values = [1, 2, 3];
+Int[3]! values = [1, 2, 3]; // 可变绑定槽位，槽位中存放 Int[3]
 values = [4, 5, 6];
 
-Int![3]! mutable_items = [1, 2, 3];
+Int![3]! mutable_items = [1, 2, 3]; // 可变绑定槽位，槽位中存放 Int![3]
 mutable_items[0] = 10;
 mutable_items = [4, 5, 6];
 ```
+
+例如，`Int! value` 声明的是“可变绑定，值类型为 `Int`”；`Int![]` 中的 `!` 位于数组元素层级，
+因此数组元素类型可变。`Int[]! value` 则是“可变绑定，值类型为 `Int[]`”。
 
 对于聚合值，成员是否可变由成员自己的类型决定。外层绑定可变，不代表所有字段或元素自动可变。
 
@@ -178,6 +219,10 @@ Int[2][3] matrix = [[1, 2], [3, 4], [5, 6]];
 Int[_] values = [1, 2, 3];
 Int[]& view = values[..];
 ```
+
+`T[:S]&` 这类 sentinel slice view 额外携带类型层面的 sentinel 保证。非字面量 sentinel slice
+不会在赋值给 `T[]&` 时隐式丢掉这个保证；需要普通切片视图时，写成 `value.slice()`
+或 `value$.as(T[]&)`。
 
 ## 指针和引用
 

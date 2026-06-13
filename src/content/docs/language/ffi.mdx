@@ -35,6 +35,17 @@ extern public Int puts(UInt8[*:0] text);
 puts("hello from Jiang");
 ```
 
+Borrowed sentinel string views use `UInt8[:0]&`. Use `$.ptr()` when a C API needs the sentinel
+many pointer. Use `view.slice()` or `view$.as(UInt8[]&)` when Jiang code needs to treat a
+non-literal sentinel view as a plain byte slice:
+
+```c
+UInt8[:0]& view = "hello";
+puts(view$.ptr());
+
+UInt8[]& bytes = view.slice();
+```
+
 When a C API needs a pointer plus a length, model the pointer and length explicitly:
 
 ```c

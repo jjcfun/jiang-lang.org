@@ -124,6 +124,43 @@ Int& bad_ref() {
 }
 ```
 
+Global variables can also be borrowed, but a global borrow does not get a special static lifetime.
+It is still an ordinary borrow that must stay within the current call stack:
+
+```c
+Int global_value = 10;
+
+Int read_ref(Int& value) {
+    value$.get()
+}
+
+Int read_global() {
+    return read_ref(global_value$.ref()); // OK: consumed by this call.
+}
+
+Int& bad_global_ref() {
+    return global_value$.ref(); // error: global borrows do not escape as static references.
+}
+```
+
+Use `public` when a global value should be accessed from another module. Do not return a global
+borrow just to make the value reachable.
+
+When an API seems to need a static lifetime, prefer naming the global value directly or exposing a
+function that takes a fresh local borrow at each call site:
+
+```c
+public Int global_limit = 10;
+
+Int current_limit() {
+    global_limit
+}
+
+Int read_limit_ref() {
+    return read_ref(global_limit$.ref());
+}
+```
+
 Return the value itself when you want a value:
 
 ```c

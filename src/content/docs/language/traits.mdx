@@ -29,6 +29,59 @@ trait Hashable: Equatable {
 
 Non-`static` required methods use the current type as the receiver. `static` required methods do not have `self`.
 
+## Dynamic Trait Values (Planned)
+
+Dynamic trait values are planned but not implemented yet. The intended design gives every trait
+three compiler-provided companion types:
+
+```c
+Writer.Any writer;
+Writer.VTable vtable;
+Writer.Receiver receiver;
+```
+
+`Any`, `VTable`, and `Receiver` are reserved companion type names on traits; they are not user-defined
+associated types. `Writer.Any` is a borrowed dynamic view of any value whose concrete type implements
+`Writer`. The planned construction is a checked trait operation on the trait:
+
+```c
+Writer.Any writer = Writer$.any(file);
+```
+
+The construction requires `typeof(file): Writer`; it is not an unchecked cast and it does not move
+`file`. `Writer.VTable` is a lightweight handle to the method table for one concrete implementation:
+
+```c
+Writer.VTable file_vtable = Writer$.vtable(File);
+```
+
+`Writer.Receiver` is the erased receiver used by instance-method slots:
+
+```c
+Writer.Receiver receiver = Writer$.receiver(file);
+file_vtable.write(receiver, 123);
+```
+
+`Writer.Any` conceptually stores a `Writer.Receiver` plus the matching `Writer.VTable`. Calls through
+`Writer.Any` dispatch through that table:
+
+```c
+() write_one(Writer.Any writer) {
+    writer.write(123);
+}
+```
+
+Passing a trait method pointer uses the unbound vtable slot form. Receiver methods include the
+erased receiver as their first parameter, while static methods keep their declared parameter list:
+
+```c
+Fn<(), Writer.Receiver, Int> write_slot = writer.vtable.write;
+write_slot(writer.receiver, 123);
+
+Fn<Int> default_size = writer.vtable.default_buffer_size;
+Int size = default_size();
+```
+
 ## Implementing in a Type Body
 
 Types can list traits in their declaration and provide matching methods:

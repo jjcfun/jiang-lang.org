@@ -39,6 +39,17 @@ extern public Int puts(UInt8[*:0] text);
 puts("hello from Jiang");
 ```
 
+借用的 sentinel 字符串视图使用 `UInt8[:0]&`。C API 需要 sentinel 多元素指针时使用
+`$.ptr()`；Jiang 代码需要把非字面量 sentinel 视图当作普通字节切片时，显式写
+`view.slice()` 或 `view$.as(UInt8[]&)`：
+
+```c
+UInt8[:0]& view = "hello";
+puts(view$.ptr());
+
+UInt8[]& bytes = view.slice();
+```
+
 如果 C API 需要指针加长度，直接建模成指针参数和长度参数：
 
 ```c

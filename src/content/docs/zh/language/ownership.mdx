@@ -133,6 +133,42 @@ Int& bad_ref() {
 }
 ```
 
+全局变量也可以被借用，但全局借用不会得到特殊的 static 生命周期。它仍然是普通借用，
+必须停留在当前调用栈内：
+
+```c
+Int global_value = 10;
+
+Int read_ref(Int& value) {
+    value$.get()
+}
+
+Int read_global() {
+    return read_ref(global_value$.ref()); // 允许：在这次调用中消费。
+}
+
+Int& bad_global_ref() {
+    return global_value$.ref(); // 错误：全局借用不能作为 static 引用逃逸。
+}
+```
+
+如果全局值需要被其他模块访问，使用 `public`。不要为了暴露全局值而返回它的借用。
+
+如果某个 API 看起来需要 static 生命周期，优先直接使用全局变量名，或者提供函数在每次调用时
+临时取得局部借用：
+
+```c
+public Int global_limit = 10;
+
+Int current_limit() {
+    global_limit
+}
+
+Int read_limit_ref() {
+    return read_ref(global_limit$.ref());
+}
+```
+
 如果要返回一个值，直接返回值本身：
 
 ```c

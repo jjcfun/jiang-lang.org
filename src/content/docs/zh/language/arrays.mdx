@@ -91,6 +91,15 @@ Int[]& y = x[..];
 print("y.length = %d", y.length);  // 输出：y.length = 3
 ```
 
+sentinel slice 写成 `T[:S]&`。字符串字面量的自然类型是 `UInt8[:0]&`；如果非字面量
+sentinel slice 需要作为普通 `UInt8[]&` 使用，需要显式写 `text.slice()` 或
+`text$.as(UInt8[]&)`：
+
+```c
+UInt8[:0]& text = "hello";
+UInt8[]& bytes = text.slice();
+```
+
 切片下标访问返回元素引用：
 
 ```c

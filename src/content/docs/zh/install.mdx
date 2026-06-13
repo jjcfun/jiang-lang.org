@@ -3,7 +3,7 @@ title: 安装
 description: 安装 Jiang 编译器。
 ---
 
-Jiang 0.2.0 提供 macOS arm64 预构建编译器包。现阶段推荐用 release 包体验语言。
+Jiang 0.2.2 提供 macOS arm64 预构建编译器包。现阶段推荐用 release 包体验语言。
 
 ## 环境要求
 
@@ -15,7 +15,7 @@ release 包不内置 `libLLVM.dylib`，运行时使用本机安装的 LLVM 21。
 
 ## 安装 release
 
-从 [0.2.0 GitHub release](https://github.com/jjcfun/jiang/releases/tag/0.2.0) 下载 `jiang-0.2.0-macos-arm64.zip`，然后解压。
+从 [0.2.2 GitHub release](https://github.com/jjcfun/jiang/releases/tag/0.2.2) 下载 `jiang-0.2.2-macos-arm64.zip`，然后解压。
 
 先安装 LLVM：
 
@@ -34,7 +34,7 @@ bash ./script/install_llvm_macos.sh
 默认安装到：
 
 ```text
-~/.jiang/versions/0.2.0
+~/.jiang/versions/0.2.2
 ~/.jiang/bin/jiangc
 ```
 
@@ -55,7 +55,7 @@ jiangc --version
 第一行应该是：
 
 ```text
-jiang 0.2.0
+jiang 0.2.2
 ```
 
 ## 从源码构建
