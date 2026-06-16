@@ -1,0 +1,104 @@
+---
+title: Const and Comptime
+description: Compile-time constants, public const values, build.target, and platform-specific source selection.
+sidebar:
+  order: 16
+---
+
+Use `const` for values that should be known before the program runs: fixed sizes, feature flags,
+target facts, and reusable configuration. Use `comptime { ... }` at the top level when a module needs
+to choose imports or declarations based on compile-time information, such as the target operating
+system.
+
+## Const Declarations
+
+Write a constant with an explicit type:
+
+```c
+const Int page_size = 4096;
+const Bool tracing_enabled = false;
+```
+
+A const initializer can use literals, other const declarations, enum cases, tuple/array/struct
+literals, default struct constructors, field access, unary and binary operators, `if`, block tail
+expressions, ordinary Jiang function calls, custom `init`, and generic function or struct
+constructor calls when every value involved is known at compile time.
+
+Const initializers cannot depend on runtime values and cannot perform runtime side effects such as
+I/O.
+
+## Public Const
+
+`public const` makes a compile-time value available to other modules. This is useful for shared
+configuration and target descriptions:
+
+```c
+public enum Os {
+    macos,
+    linux,
+    unsupported,
+}
+
+public struct TargetInfo {
+    public Os os;
+    public Bool link_libc;
+}
+
+public const TargetInfo target = TargetInfo(os: .macos, link_libc: true);
+```
+
+Importers access the value through the module namespace:
+
+```c
+import cfg = "config.jiang";
+
+Bool uses_libc() {
+    cfg.target.link_libc
+}
+```
+
+Importers use the value like any other public module member. A public const may be a scalar, enum
+case, tuple, array, or struct value, and fields on a public const struct can be read directly.
+
+## build.target
+
+The `build` package provides compile-time facts about the current build target:
+
+```c
+import build;
+
+const Bool native_libc = build.target.link_libc;
+```
+
+`build.target` has fields such as `os`, `arch`, `abi`, and `link_libc`. Use it in constants,
+ordinary expressions, or `comptime` conditions when code needs to adapt to the selected target.
+
+## Comptime Blocks
+
+`comptime { ... }` currently works at the top level of a source file. A common use is selecting the
+right implementation module for the current target:
+
+```c
+import build;
+
+comptime {
+    if (build.target.os == .macos) {
+        import provider = "os/macos.jiang";
+    } else if (build.target.os == .linux && build.target.link_libc) {
+        import provider = "os/linux_libc.jiang";
+    } else {
+        import provider = "os/unsupported.jiang";
+    }
+}
+```
+
+Only the selected branch is used by the program. The full block still has to be valid Jiang syntax,
+so syntax errors inside an unselected branch are still reported.
+
+The condition must evaluate to a compile-time `Bool`. The selected code uses normal Jiang syntax;
+there is no separate `#if` language.
+
+## Current Limits
+
+Const generic parameters, string interpolation, and formatting traits are not part of 0.3.1. They
+are planned for a later release.

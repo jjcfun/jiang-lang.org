@@ -60,8 +60,8 @@ operation layer, then resolves the following operation.
 | `value$.free()` | frees an object allocated by the default heap allocator |
 | `value$.as(Type)` | low-level cast |
 
-These operations are not ordinary method calls. The compiler recognizes them and lowers them to their
-corresponding low-level HIR/MIR semantics.
+These operations are not ordinary methods. They are built-in operations for references, ownership,
+raw pointers, allocation, and low-level casts.
 
 ## Explicit Dereference
 

@@ -1,0 +1,98 @@
+---
+title: Const 和 Comptime
+description: 编译期常量、public const 值、build.target 和平台相关源码选择。
+sidebar:
+  order: 16
+---
+
+需要在程序运行前就确定的值，可以写成 `const`：固定尺寸、功能开关、target facts、共享配置等都
+适合用它表达。顶层 `comptime { ... }` 用于根据编译期信息选择 import 或声明，例如根据目标 OS
+选择不同的 provider。
+
+## Const 声明
+
+`const` 总是写显式类型：
+
+```c
+const Int page_size = 4096;
+const Bool tracing_enabled = false;
+```
+
+const initializer 当前支持字面量、其他 `const`、枚举 case、tuple/array/struct 字面量、默认
+struct constructor、字段访问、一元和二元表达式、`if`、block 尾表达式、普通 Jiang 函数调用、
+自定义 `init`，以及所有参与值都能在编译期确定时的泛型函数或泛型 struct constructor 调用。
+
+const initializer 不能依赖运行时值，也不能执行 I/O 这类运行时副作用。
+
+## Public Const
+
+`public const` 会让其他模块也能访问这个编译期值。它适合用来共享配置和 target 描述：
+
+```c
+public enum Os {
+    macos,
+    linux,
+    unsupported,
+}
+
+public struct TargetInfo {
+    public Os os;
+    public Bool link_libc;
+}
+
+public const TargetInfo target = TargetInfo(os: .macos, link_libc: true);
+```
+
+导入方通过模块命名空间访问：
+
+```c
+import cfg = "config.jiang";
+
+Bool uses_libc() {
+    cfg.target.link_libc
+}
+```
+
+导入方像访问其他 public 成员一样使用它。public const 可以是标量、枚举 case、tuple、array 或
+struct 值；如果它是 struct，也可以直接读取字段。
+
+## build.target
+
+`build` package 提供当前构建目标的编译期信息：
+
+```c
+import build;
+
+const Bool native_libc = build.target.link_libc;
+```
+
+`build.target` 包含 `os`、`arch`、`abi` 和 `link_libc` 等字段。需要让代码随目标平台变化时，
+可以在常量、普通表达式或 `comptime` 条件里使用这些字段。
+
+## Comptime Block
+
+`comptime { ... }` 当前只能写在源文件顶层。常见用法是为当前 target 选择对应实现模块：
+
+```c
+import build;
+
+comptime {
+    if (build.target.os == .macos) {
+        import provider = "os/macos.jiang";
+    } else if (build.target.os == .linux && build.target.link_libc) {
+        import provider = "os/linux_libc.jiang";
+    } else {
+        import provider = "os/unsupported.jiang";
+    }
+}
+```
+
+只有被选中的分支会被程序使用。整个 block 仍然必须是合法 Jiang 语法，因此未选中分支里的语法
+错误仍会报告。
+
+condition 必须能在编译期求值为 `Bool`。被选中代码使用普通 Jiang 语法；语言里没有单独的
+`#if` 小语言。
+
+## 当前边界
+
+const generic 参数、字符串插值、format trait 不属于 0.3.1，计划放到后续版本。

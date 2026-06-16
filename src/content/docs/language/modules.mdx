@@ -61,9 +61,20 @@ public struct Point {
 public Int distance(Point point) {
     return point.x + point.y;
 }
+
+public const Int default_limit = 1024;
 ```
 
 Declarations without `public` are module-local.
+
+`public const` is also part of the module API. Consumers can read scalar constants and fields on
+const structs through the module namespace:
+
+```c
+import cfg = "config.jiang";
+
+Int value = cfg.default_limit;
+```
 
 ## Re-exports
 

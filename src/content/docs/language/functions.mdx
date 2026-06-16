@@ -55,9 +55,8 @@ Positional arguments cannot appear after named arguments:
 Int bad = scale(value: 21, 2); // error: positional argument after a named argument.
 ```
 
-Type checking rewrites call arguments into the function signature order and fills missing defaulted
-parameters. MIR lowering consumes that normalized argument list and does not redo overload or default
-argument matching.
+Named arguments are matched by parameter name, so they may appear in a different order from the
+function declaration. Omitted default parameters are filled before the call runs.
 
 ## Defaults and Overloads
 

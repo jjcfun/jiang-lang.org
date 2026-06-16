@@ -40,16 +40,20 @@ A source file is a sequence of top-level items:
 
 - `import`
 - `alias`
+- `const`
 - global declarations
 - functions
 - `struct`, `enum`, `union`, `trait`
 - `extend`
+- `comptime` blocks
 
 ```c
 import math = "utils/math.jiang";
 
 alias Byte = UInt8;
 alias answer = math.answer;
+
+public const Int default_limit = 1024;
 
 public struct Pair {
     Int left;
@@ -62,6 +66,9 @@ public Int add(Int left, Int right) {
 ```
 
 `public` marks a declaration as visible outside the module.
+
+`public const` exports a compile-time value through the module interface. `comptime { ... }` is a
+top-level compile-time block for source selection; see [Const and Comptime](/language/const-and-comptime/).
 
 ## Statements
 

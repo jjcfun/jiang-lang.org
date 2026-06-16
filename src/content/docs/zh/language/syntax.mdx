@@ -40,16 +40,20 @@ UInt8[]& read_source(UInt8[]& file_path) {
 
 - `import`：导入模块。
 - `alias`：定义类型别名或已有符号别名。
+- `const`：定义编译期常量。
 - 全局变量声明。
 - 函数声明或定义。
 - `struct`、`enum`、`union`、`trait`。
 - `extend`：给已有类型补方法或补 `trait` 实现。
+- `comptime` block：在编译期选择顶层源码。
 
 ```c
 import math = "utils/math.jiang";
 
 alias Byte = UInt8;
 alias answer = math.answer;
+
+public const Int default_limit = 1024;
 
 public struct Pair {
     Int left;
@@ -62,6 +66,9 @@ public Int add(Int left, Int right) {
 ```
 
 `public` 标记声明对其他模块可见。没有 `public` 的声明默认只在当前模块内可见。
+
+`public const` 会把编译期值导出到模块接口。`comptime { ... }` 是顶层编译期 block，用于源码选择；
+详见 [Const 和 Comptime](/zh/language/const-and-comptime/)。
 
 ## 声明
 

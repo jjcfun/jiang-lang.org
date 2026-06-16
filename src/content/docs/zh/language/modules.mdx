@@ -59,9 +59,20 @@ public struct Point {
 public Int distance(Point point) {
     return point.x + point.y;
 }
+
+public const Int default_limit = 1024;
 ```
 
 没有 `public` 的声明只在当前模块内部可见。
+
+`public const` 也是模块 API 的一部分。使用方可以通过模块命名空间读取标量常量和 const struct
+字段：
+
+```c
+import cfg = "config.jiang";
+
+Int value = cfg.default_limit;
+```
 
 ## 重新导出
 
