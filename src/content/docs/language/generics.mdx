@@ -5,7 +5,9 @@ sidebar:
   order: 13
 ---
 
-Generics let one declaration work with multiple types. Generic parameters are written after the declaration name.
+Generics let one declaration work with multiple types. Generic parameters are written after the
+declaration name. Type parameters use a name such as `T`; const generic parameters use
+`const Type Name`.
 
 ## Generic Functions
 
@@ -38,6 +40,22 @@ Type arguments may include suffixes:
 Pair<Int?, UInt8[]&> maybe_pair;
 Pair<Int!, Int[3]^> mutable_and_owner;
 ```
+
+## Const Generic Parameters
+
+Const generic parameters are compile-time values:
+
+```c
+struct StaticCount<const Int N> {
+    Int value;
+}
+
+Int const_value<const Int N>() {
+    N
+}
+```
+
+Const generic names are value-level names. They can be used in expressions, but not as type names.
 
 ## `@where`
 
@@ -73,10 +91,28 @@ Generic parameter equality:
 Int use_byte<T>(T value);
 ```
 
+Use `!=` to reject a concrete type shape:
+
+```c
+@where(T != Box<_>)
+struct PlainSlot<T> {
+    T value;
+}
+```
+
+Negative trait bounds use `!` before the trait name:
+
+```c
+@where(T: !Mutable)
+struct ImmutableOnly<T> {
+    T value;
+}
+```
+
 Projected associated type equality uses `T.[Trait].Assoc == Type`:
 
 ```c
-@where(T.[Iterable].Item == UInt8)
+@where(T.[Sequence].Element == UInt8)
 Int count_bytes<T>(T value);
 ```
 
@@ -85,7 +121,7 @@ Int count_bytes<T>(T value);
 Trait bounds can bind associated types:
 
 ```c
-@where(T: Iterable<Item = UInt8>)
+@where(T: Sequence<Element = UInt8>)
 Int count<T>(T value);
 ```
 
@@ -119,6 +155,7 @@ T?@ParseErr parse_optional<T>(UInt8[]& text);
 
 ## Grammar Boundaries
 
-- Generic parameters accept types, not non-type parameters.
+- Generic type parameters accept types. Const generic parameters accept compile-time values with an
+  explicit type, such as `const Int N`.
 - `@where(...)` is written before the declaration, not after it.
 - Associated type projection constraints use the `T.[Trait].Name == Type` form.

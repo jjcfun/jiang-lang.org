@@ -98,7 +98,23 @@ so syntax errors inside an unselected branch are still reported.
 The condition must evaluate to a compile-time `Bool`. The selected code uses normal Jiang syntax;
 there is no separate `#if` language.
 
+## Const Generic Parameters
+
+Const generic parameters let a declaration receive a compile-time value:
+
+```c
+struct StaticCount<const Int N> {
+    Int value;
+}
+
+Int const_value<const Int N>() {
+    N
+}
+```
+
+The parameter name is a value-level name. It can appear in expressions where a compile-time value is
+required; it is not a type name.
+
 ## Current Limits
 
-Const generic parameters, string interpolation, and formatting traits are not part of 0.3.1. They
-are planned for a later release.
+String interpolation and formatting traits are planned for a later release.

@@ -5,13 +5,15 @@ sidebar:
   order: 9
 ---
 
-可选类型是语言内建类型层，使用 `T?` 表示。它不是普通泛型类型。
+可选类型使用 `T?` 表示。`T?` 是 `Option<T>` 的简写，因此在更需要显式表达时也可以写
+`Option<T>`。
 
 ## 基本用法
 
 ```c
 Int? a1 = 123;
-_ a2 = a1;           // a2 为 Int? 类型
+Option<Int> a2 = 123;
+_ same = a1;         // same 为 Int? 类型
 
 Bar? b1 = Bar(x: 1, y: 2)
 _ b2 = b1?.x;        // b2 为 Int? 类型

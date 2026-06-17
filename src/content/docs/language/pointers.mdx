@@ -5,20 +5,20 @@ sidebar:
   order: 10
 ---
 
-Jiang has explicit syntax for owning heap pointers, non-owning references, raw pointers, many raw
+Jiang has explicit syntax for owning pointers, non-owning references, raw pointers, many raw
 pointers, and slices. This page explains the type forms and basic operations. Resource movement and lifetime
 rules are covered in [Ownership, Borrowing & Lifetimes](/language/ownership/).
 
 ## Pointer Forms
 
-- `T^`: owning heap pointer.
-- `T&`: non-owning reference.
-- `T*`: single-object raw pointer for FFI / ABI / low-level code.
-- `T[*]`: many raw pointer, indexed by element.
+- `T^`: short form of `Box<T>`, an owning pointer.
+- `T&`: short form of `Reference<T>`, a non-owning reference.
+- `T*`: short form of `RawPointer<T>`, a single-object raw pointer for FFI / ABI / low-level code.
+- `T[*]`: short form of `ManyPointer<T>`, indexed by element.
 - `T[]`: unsized array pointee.
 - `T[]&`: borrowed slice reference with runtime length.
 
-Only `T^` expresses language-level ownership.
+Only `T^` / `Box<T>` expresses language-level ownership.
 Ownership transfer, automatic destruction, and lifetime constraints are covered separately.
 
 ## Creating Pointers and References

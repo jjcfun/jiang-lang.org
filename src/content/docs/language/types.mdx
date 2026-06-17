@@ -60,18 +60,18 @@ Common suffix forms:
 | Syntax | Meaning |
 | --- | --- |
 | `T!` | the current layer is mutable |
-| `T?` | optional layer |
-| `T^` | owning heap pointer |
-| `T&` | non-owning reference |
-| `T*` | single-object raw pointer |
+| `T?` | short form of `Option<T>` |
+| `T^` | short form of `Box<T>` |
+| `T&` | short form of `Reference<T>` |
+| `T*` | short form of `RawPointer<T>` |
 | `T[]` | unsized array pointee |
 | `T[]&` | borrowed slice reference |
 | `T[:S]` | sentinel-terminated unsized array pointee |
-| `T[*]` | many raw pointer |
+| `T[*]` | short form of `ManyPointer<T>` |
 | `T[*:S]` | sentinel-terminated many raw pointer |
 | `T[N]` | fixed-size array |
 | `T[N:S]` | sentinel-terminated fixed-size array |
-| `T@E` | errorable function return type |
+| `T@E` | short form of `Result<T, E>` in return position |
 
 Within one layer, `?` must come before `!`: write `Int?!`, not `Int!?`, `Int??`, or `Int!!`.
 
@@ -245,10 +245,11 @@ Int n = box.value;
 
 ## Optional
 
-`T?` means the value may be `null`:
+`T?` means the value may be `null`. It is equivalent to `Option<T>`:
 
 ```c
 Int? maybe = 42;
+Option<Int> explicit = 42;
 Int? none = null;
 ```
 
@@ -267,7 +268,7 @@ if maybe is some payload {
 
 ## Errorable Returns
 
-`T@E` is used in function and method return position:
+`T@E` is used in function and method return position. It is equivalent to `Result<T, E>` there:
 
 ```c
 enum Err {

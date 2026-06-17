@@ -5,7 +5,8 @@ sidebar:
   order: 13
 ---
 
-泛型让同一份代码适用于不同类型。泛型参数写在声明名之后。
+泛型让同一份代码适用于不同类型。泛型参数写在声明名之后。类型泛型参数写普通名字，
+编译期泛型参数写成 `const Type Name`。
 
 ## 泛型函数
 
@@ -40,6 +41,22 @@ Pair<Int, UInt8[]&> pair = Pair<Int, UInt8[]&> {
 Pair<Int?, UInt8[]&> maybe_pair;
 Pair<Int!, Int[3]^> mutable_and_owner;
 ```
+
+## 编译期泛型参数
+
+编译期泛型参数是编译期值：
+
+```c
+struct StaticCount<const Int N> {
+    Int value;
+}
+
+Int const_value<const Int N>() {
+    N
+}
+```
+
+编译期泛型名字属于值层，可以在表达式中使用；它不是类型名。
 
 ## `@where`
 
@@ -77,10 +94,28 @@ Int use_byte<T>(T value);
 
 相等约束使用 `==`，不是赋值符号 `=`。
 
+`!=` 用来排除某种具体类型形状：
+
+```c
+@where(T != Box<_>)
+struct PlainSlot<T> {
+    T value;
+}
+```
+
+在 `trait` 名前写 `!` 表示“不能满足这个 trait”的约束：
+
+```c
+@where(T: !Mutable)
+struct ImmutableOnly<T> {
+    T value;
+}
+```
+
 投影关联类型相等约束写成 `T.[Trait].Assoc == Type`：
 
 ```c
-@where(T.[Iterable].Item == UInt8)
+@where(T.[Sequence].Element == UInt8)
 Int count_bytes<T>(T value);
 ```
 
@@ -89,7 +124,7 @@ Int count_bytes<T>(T value);
 `trait` 约束可以带关联类型绑定：
 
 ```c
-@where(T: Iterable<Item = UInt8>)
+@where(T: Sequence<Element = UInt8>)
 Int count<T>(T value);
 ```
 
@@ -110,7 +145,7 @@ Slot<Int!> slot = Slot<Int!> { value: 1 }
 
 `Mutable` 只检查顶层 `!`。例如 `Int!` 满足，`Int` 不满足；`Int![3]` 的顶层是数组层，是否满足取决于数组层本身是否带 `!`。
 
-## 与 Errorable 组合
+## 与可错返回组合
 
 泛型函数可以返回 `T@E`。`@E` 位于返回类型边界，错误类型本身不在 `@` 后追加 `?` 或 `!`：
 
@@ -127,6 +162,6 @@ T?@ParseErr parse_optional<T>(UInt8[]& text);
 
 ## 使用边界
 
-- 泛型参数只接受类型，不支持非类型参数。
+- 类型泛型参数接受类型；const 泛型参数接受带显式类型的编译期值，例如 `const Int N`。
 - 后置 `T id<T> @where(...)` 不支持，约束写在声明之前。
 - 关联类型投影约束使用 `T.[Trait].Name == Type` 这种写法。

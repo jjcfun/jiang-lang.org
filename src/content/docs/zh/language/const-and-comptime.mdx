@@ -93,6 +93,22 @@ comptime {
 condition 必须能在编译期求值为 `Bool`。被选中代码使用普通 Jiang 语法；语言里没有单独的
 `#if` 小语言。
 
+## 编译期泛型参数
+
+编译期泛型参数让声明接收一个编译期值：
+
+```c
+struct StaticCount<const Int N> {
+    Int value;
+}
+
+Int const_value<const Int N>() {
+    N
+}
+```
+
+参数名属于值层，可以出现在需要编译期值的表达式里；它不是类型名。
+
 ## 当前边界
 
-const generic 参数、字符串插值、format trait 不属于 0.3.1，计划放到后续版本。
+字符串插值和格式化 trait 仍计划放到后续版本。

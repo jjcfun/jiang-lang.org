@@ -81,7 +81,7 @@ Int?[3]^ maybe_items = new [1, null, 3];
 
 ## 切片
 
-`T[]` 表示 unsized array pointee。需要一段连续元素的运行时长度借用视图时，写成 `T[]&`。
+`T[]` 表示不定长数组指向类型。需要一段连续元素的运行时长度借用视图时，写成 `T[]&`。
 借用切片可以读取 `length`，但不拥有底层存储。
 
 ```c
@@ -91,8 +91,8 @@ Int[]& y = x[..];
 print("y.length = %d", y.length);  // 输出：y.length = 3
 ```
 
-sentinel slice 写成 `T[:S]&`。字符串字面量的自然类型是 `UInt8[:0]&`；如果非字面量
-sentinel slice 需要作为普通 `UInt8[]&` 使用，需要显式写 `text.slice()` 或
+哨兵切片写成 `T[:S]&`。字符串字面量的自然类型是 `UInt8[:0]&`；如果非字面量
+哨兵切片需要作为普通 `UInt8[]&` 使用，需要显式写 `text.slice()` 或
 `text$.as(UInt8[]&)`：
 
 ```c
