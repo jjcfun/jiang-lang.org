@@ -93,6 +93,10 @@ Indexing a slice can produce an element reference:
 _ item_ref = view[1]$.ref();
 ```
 
+`T[]&` is a borrowed view and does not own the underlying storage. `Vector<T>.slice()` returns such a
+borrowed view. Use `Vector<T>.into_array()` when the vector should be consumed and its initialized
+items should become an owned `T[]^`; the original vector is moved and cannot be used afterward.
+
 ## Many Raw Pointers
 
 `T[*]` is a raw pointer form for contiguous elements without a length:
