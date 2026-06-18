@@ -128,7 +128,7 @@ if value is .int_value(_! n) {
 }
 ```
 
-使用 `ref T name` 可以借用 `union` payload，而不是按值绑定 payload：
+使用 `ref T name` 可以借用联合承载值，而不是按值绑定承载值：
 
 ```c
 union Node {
@@ -148,9 +148,9 @@ Int first(Node node) {
 }
 ```
 
-当 payload 较大、不可 copy，或者只想检查而不想 move payload 时，应使用 `ref` 绑定。
-`ref Int! value` 也可以用于 payload pattern，表示这个引用绑定本身可重新赋值；`!` 作用在绑定上，
-不要求 payload 来源可写。
+当承载值较大、不可复制，或者只想检查而不想转移承载值时，应使用 `ref` 绑定。
+`ref Int! value` 也可以用于承载值模式，表示这个引用绑定本身可重新赋值；`!` 作用在绑定上，
+不要求承载值来源可写。
 
 可选值使用 `.some(...)` / `.none` 模式：
 
@@ -184,7 +184,7 @@ Int result = switch value {
 }
 ```
 
-借用 `union` payload 时使用同样的 `ref` 子模式：
+借用联合承载值时使用同样的 `ref` 子模式：
 
 ```c
 Int result = switch node {

@@ -3,7 +3,7 @@ title: 安装
 description: 安装 Jiang 编译器。
 ---
 
-Jiang 0.2.2 提供 macOS arm64 预构建编译器包。现阶段推荐用 release 包体验语言。
+Jiang 0.3.3 提供 macOS arm64 预构建编译器包。现阶段推荐用发布包体验语言。
 
 ## 环境要求
 
@@ -11,11 +11,11 @@ Jiang 0.2.2 提供 macOS arm64 预构建编译器包。现阶段推荐用 releas
 - Homebrew `llvm@21` 提供的 LLVM 21.1.x。
 - 宿主系统中可用的 `cc`，用于最终链接可执行文件。
 
-release 包不内置 `libLLVM.dylib`，运行时使用本机安装的 LLVM 21。
+发布包不内置 `libLLVM.dylib`，运行时使用本机安装的 LLVM 21。
 
-## 安装 release
+## 安装发布包
 
-从 [0.2.2 GitHub release](https://github.com/jjcfun/jiang/releases/tag/0.2.2) 下载 `jiang-0.2.2-macos-arm64.zip`，然后解压。
+从 [0.3.3 GitHub 发布页](https://github.com/jjcfun/jiang/releases/tag/0.3.3) 下载 `jiang-0.3.3-macos-arm64.zip`，然后解压。
 
 先安装 LLVM：
 
@@ -34,7 +34,7 @@ bash ./script/install_llvm_macos.sh
 默认安装到：
 
 ```text
-~/.jiang/versions/0.2.2
+~/.jiang/versions/0.3.3
 ~/.jiang/bin/jiangc
 ```
 
@@ -55,7 +55,7 @@ jiangc --version
 第一行应该是：
 
 ```text
-jiang 0.2.2
+jiang 0.3.3
 ```
 
 ## 从源码构建
@@ -73,13 +73,13 @@ cd jiang
 bash ./script/install_llvm_macos.sh
 ```
 
-使用已安装的 bootstrap 编译器构建下一代编译器：
+使用已安装的自举编译器构建下一代编译器：
 
 ```bash
 VERIFY=full bash ./script/build_next.sh
 ```
 
-0.3 开发分支需要 `PATH` 中存在 Jiang 0.2.2 版本的 `jiangc`，也可以通过
+0.4 开发分支需要 `PATH` 中存在 Jiang 0.3.3 版本的 `jiangc`，也可以通过
 `BOOTSTRAP_BIN=/path/to/jiangc` 显式指定。
 
 ## 下一步

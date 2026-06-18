@@ -1,11 +1,11 @@
 ---
-title: FFI 与外部函数接口
+title: 外部函数接口
 description: Jiang 语言中的 extern 声明、C 互操作、单对象裸指针、多元素裸指针和 ABI 边界。
 sidebar:
   order: 17
 ---
 
-`extern` 声明用于调用外部符号，例如 C 库函数或系统接口。使用 FFI 时，要自己确认参数类型、内存布局和资源释放方式与外部接口一致。
+`extern` 声明用于调用外部符号，例如 C 库函数或系统接口。使用外部函数接口时，要自己确认参数类型、内存布局和资源释放方式与外部接口一致。
 
 ## 外部声明块
 
@@ -39,7 +39,7 @@ extern public Int puts(UInt8[*:0] text);
 puts("hello from Jiang");
 ```
 
-借用的 sentinel 字符串视图使用 `UInt8[:0]&`。C API 需要 sentinel 多元素指针时使用
+借用的哨兵字符串视图使用 `UInt8[:0]&`。C 接口需要哨兵多元素指针时使用
 `$.ptr()`；Jiang 代码需要把非字面量 sentinel 视图当作普通字节切片时，显式写
 `view.slice()` 或 `view$.as(UInt8[]&)`：
 
@@ -50,7 +50,7 @@ puts(view$.ptr());
 UInt8[]& bytes = view.slice();
 ```
 
-如果 C API 需要指针加长度，直接建模成指针参数和长度参数：
+如果 C 接口需要指针加长度，直接建模成指针参数和长度参数：
 
 ```c
 extern public Int write(Int fd, UInt8[*] buf, Int count);
@@ -58,7 +58,7 @@ extern public Int write(Int fd, UInt8[*] buf, Int count);
 
 ## 单对象裸指针
 
-`T*` 是单对象裸指针，主要用于 FFI / ABI / 低层能力场景。它不表达所有权，不参与自动析构，
+`T*` 是单对象裸指针，主要用于外部函数边界、二进制接口和低层能力场景。它不表达所有权，不参与自动析构，
 也不默认自动解引用。
 
 ```c
@@ -93,7 +93,7 @@ extern public Int read(Int fd, UInt8[*] buf, Int count);
 - 哪个字段拥有资源。
 - 哪个字段只是视图或引用。
 - `deinit` 如何释放资源。
-- 是否禁止隐式 copy。
+- 是否禁止隐式复制。
 
 ```c
 struct CBuffer {

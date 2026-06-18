@@ -8,15 +8,15 @@ sidebar:
 Jiang 使用 `T^` 表达拥有所有权的值，使用 `T&` / `T[]&` 表达不拥有资源的借用视图。
 这一章集中说明资源如何移动、何时析构，以及引用如何避免悬垂。
 
-## Copy、move 和析构
+## 复制、转移和析构
 
-普通 `struct` 和 `union` 默认可以隐式 copy。`T^` 是内建资源类型，不能隐式 copy；
-显式声明 `Movable` 的 nominal type 也不能隐式 copy。`T&`、`T[*]`、`T*` 和 `T[]&`
-都是 non-owning view，字段中包含这些类型不影响 implicit copy。`!` 只是当前类型层级的可变性标记，
+普通 `struct` 和 `union` 默认可以隐式复制。`T^` 是内建资源类型，不能隐式复制；
+显式声明 `Movable` 的命名类型也不能隐式复制。`T&`、`T[*]`、`T*` 和 `T[]&`
+都是非拥有视图，字段中包含这些类型不影响隐式复制。`!` 只是当前类型层级的可变性标记，
 不改变所有权分类。
 
-`T?` 的所有权分类跟随内部类型。`Int?` 可以像普通值一样隐式 copy；`Int^?` 包含拥有
-所有权的 payload，因此是 `Movable`，不能隐式 copy，转移时也必须写 `$.move()`。
+`T?` 的所有权分类跟随内部类型。`Int?` 可以像普通值一样隐式复制；`Int^?` 包含拥有
+所有权的承载值，因此是 `Movable`，不能隐式复制，转移时也必须写 `$.move()`。
 
 拥有所有权的值只能有一个当前所有者。把 `T^` 赋给另一个变量时，必须显式写 `$.move()`：
 
@@ -31,27 +31,27 @@ Int value = b$.get();
 
 ```c
 Int^ a = new Int(42);
-Int^ b = a; // 错误：T^ 不能隐式 copy，也不能通过普通赋值隐式 move。
+Int^ b = a; // 错误：T^ 不能隐式复制，也不能通过普通赋值隐式转移。
 ```
 
-显式 move 使用 `value$.move()`：
+显式转移使用 `value$.move()`：
 
 ```c
 Buffer^ a = new Buffer();
 Buffer^ b = a$.move();
 
-// a 已经失效，后续不能读取、写入、调用方法或再次 move。
+// a 已经失效，后续不能读取、写入、调用方法或再次转移。
 ```
 
-move 之后继续使用源变量会报错：
+转移之后继续使用源变量会报错：
 
 ```c
 Int^ a = new Int(1);
 Int^ b = a$.move();
-Int value = a$.get(); // 错误：a 已经被 move。
+Int value = a$.get(); // 错误：a 已经被转移。
 ```
 
-普通值仍然可以 copy：
+普通值仍然可以复制：
 
 ```c
 Int a = 1;
@@ -59,7 +59,7 @@ Int b = a;
 Int c = a + b;
 ```
 
-直接或间接包含 `Movable` 字段的 nominal type 必须显式声明 `Movable`，并且不能隐式 copy：
+直接或间接包含 `Movable` 字段的命名类型必须显式声明 `Movable`，并且不能隐式复制：
 
 ```c
 struct Box: Movable {
@@ -67,11 +67,11 @@ struct Box: Movable {
 }
 
 Box a = Box(value: new Int(1))
-Box b = a; // 错误：Box 是 Movable，不能隐式 copy。
+Box b = a; // 错误：Box 是 Movable，不能隐式复制。
 Box c = a$.move();
 ```
 
-non-owning view 字段不会让类型变成 `Movable`：
+非拥有视图字段不会让类型变成 `Movable`：
 
 ```c
 struct SliceView {
@@ -79,14 +79,14 @@ struct SliceView {
 }
 
 SliceView a = SliceView(data: "abc")
-SliceView b = a; // 允许：T[]& 不拥有资源，不影响 implicit copy。
+SliceView b = a; // 允许：T[]& 不拥有资源，不影响隐式复制。
 ```
 
 析构规则：
 
-- 只有 `Movable` 类型会自动 drop。
+- 只有 `Movable` 类型会自动析构。
 - `T^` 离开作用域时会析构指向的 `T`，并释放堆存储。
-- `T?` 的自动析构由内部类型决定：`some` 会析构 payload，`none` 不做 payload 析构。
+- `T?` 的自动析构由内部类型决定：`some` 会析构承载值，`none` 不做承载值析构。
 - `struct` 的 `T^` 字段会自动析构。
 - `T&`、`T[*]`、`T*` 和 `T[]&` 字段不会自动释放。
 - 如果 `struct` 有自定义 `deinit`，先执行自定义 `deinit`，再自动析构拥有所有权的字段。
@@ -108,8 +108,8 @@ Int value = 10;
 _& ref = value; // 生命周期规则等同于 value$.ref()
 ```
 
-在 optional 和 union 的 payload pattern 中，使用 `ref T name` 借用 payload，
-不会隐式 copy 或 move payload。`ref` 后面需要写出类型，也可以写 `_` 类型占位：
+在可选值和联合的承载值模式中，使用 `ref T name` 借用承载值，
+不会隐式复制或转移承载值。`ref` 后面需要写出类型，也可以写 `_` 类型占位：
 
 ```c
 Int read_ref(Int& value) {
@@ -154,7 +154,7 @@ Int& bad_global_ref() {
 
 如果全局值需要被其他模块访问，使用 `public`。不要为了暴露全局值而返回它的借用。
 
-如果某个 API 看起来需要 static 生命周期，优先直接使用全局变量名，或者提供函数在每次调用时
+如果某个接口看起来需要静态生命周期，优先直接使用全局变量名，或者提供函数在每次调用时
 临时取得局部借用：
 
 ```c
@@ -279,7 +279,7 @@ ByteView bad_view() {
 }
 ```
 
-公共 API、跨函数调用、返回含引用字段的聚合值，仍建议显式写出返回来源关系：
+公开接口、跨函数调用、返回含引用字段的聚合值，仍建议显式写出返回来源关系：
 
 ```c
 @life(data > return)

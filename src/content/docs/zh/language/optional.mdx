@@ -5,7 +5,7 @@ sidebar:
   order: 9
 ---
 
-可选类型使用 `T?` 表示。`T?` 是 `Option<T>` 的简写，因此在更需要显式表达时也可以写
+可选类型使用 `T?` 表示。`T?` 是 `Option<T>` 的短写，因此在更需要显式表达时也可以写
 `Option<T>`。
 
 ## 基本用法
@@ -43,7 +43,7 @@ if a1 is .some(Int! x) {
   // x 为可变绑定
 }
 
-// 借用 payload，不移动其中的值
+// 借用承载值，不移动其中的值
 if a1 is .some(ref Int x) {
   // x 类型为 Int&
 }
@@ -83,7 +83,7 @@ Int other = maybe ?? default_value();
 
 ## 强制解包
 
-`maybe$.some()` 用于强制解包可选值。它属于隐式操作层；普通代码优先使用 `.some(...)` pattern、`guard` 或 `??`。
+`maybe$.some()` 用于强制解包可选值。它属于隐式操作层；普通代码优先使用 `.some(...)` 模式、`guard` 或 `??`。
 
 ```c
 Int value = maybe$.some();

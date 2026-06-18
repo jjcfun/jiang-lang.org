@@ -43,8 +43,8 @@ import math = "utils/math.jiang";
 文件路径相对当前源文件所在目录解析。路径要写完整；导入不会自动补 `.jiang`，也不会自动查找
 目录入口。
 
-带引号文件导入只用于当前 package 内部文件。导入另一个 package 时，应在 `package.ini`
-声明依赖，再使用不带引号的 package import。
+带引号文件导入只用于当前包内部文件。导入另一个包时，应在 `package.ini`
+声明依赖，再使用不带引号的包导入。
 
 ## 可见性
 
@@ -65,7 +65,7 @@ public const Int default_limit = 1024;
 
 没有 `public` 的声明只在当前模块内部可见。
 
-`public const` 也是模块 API 的一部分。使用方可以通过模块命名空间读取标量常量和 const struct
+`public const` 也是模块公开接口的一部分。使用方可以通过模块命名空间读取标量常量和 const struct
 字段：
 
 ```c

@@ -47,7 +47,7 @@ checked 操作：
 Writer.Any writer = Writer$.any(file);
 ```
 
-这个构造要求 `typeof(file): Writer`；它不是 unchecked cast，也不会 move `file`。
+这个构造要求 `typeof(file): Writer`；它不是未经检查的强制转换，也不会转移 `file`。
 `Writer.VTable` 是指向某个具体类型实现该 trait 时使用的方法表的轻量 handle：
 
 ```c

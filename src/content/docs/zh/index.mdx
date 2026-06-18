@@ -15,12 +15,12 @@ hero:
 
 import { Icon } from '@astrojs/starlight/components';
 
-Jiang 是一门正在开发中的系统编程语言。当前重点是稳定清晰的核心语言、直接的内存与布局控制能力，以及已经可以通过 0.2.2 macOS arm64 release 安装的自举编译器。
+Jiang 是一门正在开发中的系统编程语言。当前重点是稳定清晰的核心语言、直接的内存与布局控制能力，以及已经可以通过 0.3.3 macOS arm64 发布包安装的自举编译器。
 
 这份文档优先作为教程和使用指南来写。它会说明当前已经形成的语言规则，也会在仍处于快速演进中的部分保持谨慎。
 
-Jiang 目前仍处于 0.2 版本阶段，现阶段看上去或许平平无奇。这里先卖个关子：0.4 版本会引入一个
-杀手级特性，它会是这门语言真正拉开差异的起点。
+Jiang 目前已经进入 0.4 开发分支。0.3 系列主要完成自举、所有权、泛型、标准库雏形和目标代码生成基础；
+0.4 会继续推进更完整的语言能力和标准库形状。
 
 ## 从这里开始
 
@@ -28,7 +28,7 @@ Jiang 目前仍处于 0.2 版本阶段，现阶段看上去或许平平无奇。
   <a class="jiang-start-card" href="/zh/install/">
     <span class="jiang-start-icon"><Icon name="download" /></span>
     <span class="jiang-start-title">安装</span>
-    <span class="jiang-start-description">安装 release 编译器，并准备 LLVM 工具链。</span>
+    <span class="jiang-start-description">安装发布版编译器，并准备 LLVM 工具链。</span>
   </a>
   <a class="jiang-start-card" href="/zh/getting-started/">
     <span class="jiang-start-icon"><Icon name="rocket" /></span>
@@ -43,15 +43,14 @@ Jiang 目前仍处于 0.2 版本阶段，现阶段看上去或许平平无奇。
   <a class="jiang-start-card" href="/zh/compiler/cli/">
     <span class="jiang-start-icon"><Icon name="laptop" /></span>
     <span class="jiang-start-title">编译器 CLI</span>
-    <span class="jiang-start-description">使用 <code>jiangc</code> 生成 LLVM IR、目标文件或可执行文件。</span>
+    <span class="jiang-start-description">使用 <code>jiangc</code> 生成 LLVM 中间表示、目标文件或可执行文件。</span>
   </a>
 </div>
 
 ## 项目状态
 
-Jiang 语言编译器已经完成初步稳定自举：release 编译器由 Jiang Stage2 代码库生成，并通过 smoke
-和语言测试验证。接下来的重点是扩充语言测试、完善 release 打包体验、改进 package/模块易用性，
-以及继续补齐后端和运行时能力。
+Jiang 语言编译器已经完成初步稳定自举：发布版编译器由 Jiang 源码生成，并通过冒烟测试和语言测试验证。
+接下来的重点是扩充语言测试、完善发布包体验、改进包和模块的易用性，以及继续补齐后端和运行时能力。
 
 现阶段可以把官网文档视为持续更新的语言指南，而不是完全冻结的规范。相对稳定的内容包括命名风格、
-类型写法、分层可变性、数组、指针、可选类型、导入规则、package 规则和当前编译器命令行工作流。
+类型写法、分层可变性、数组、指针、可选类型、导入规则、包规则和当前编译器命令行工作流。
