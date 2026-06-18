@@ -123,34 +123,8 @@ extend User: HasValue {
 }
 ```
 
-当前 `extend` 不支持 `init` 或 `deinit`。`extend Type: Trait { ... }` 表示给类型补一个 trait 实现，里面需要提供该 trait 要求的方法。
-
-`extend` 可以带泛型和 `@where`：
-
-```c
-@where(T == Int)
-extend Holder<T> {
-    public static Int only_int() {
-        7
-    }
-}
-```
-
-如果扩展需要被导入方使用，写成 `public extend`。通过 `public import` 重新导出模块时，目标模块的
-公开扩展也会继续向下游可见。
-
-内建类型后缀也参与同一套扩展查找。例如 `UInt8[]^` 会按 `Box<UInt8[]>` 查找静态方法：
-
-```c
-@where(T == UInt8[])
-extend Box<T> {
-    public static Int byte_array_marker() {
-        1
-    }
-}
-
-Int marker = UInt8[]^.byte_array_marker();
-```
+`extend Type: Trait { ... }` 表示给类型补一个 trait 实现，里面需要提供该 trait 要求的方法。
+泛型扩展、`@where` 类型形状匹配、跨模块可见性和 `public extend` 见[扩展](/zh/language/extensions/)。
 
 ## 关联类型
 

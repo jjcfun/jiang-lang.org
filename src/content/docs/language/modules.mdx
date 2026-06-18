@@ -2,7 +2,7 @@
 title: Modules
 description: Jiang source-file modules, imports, aliases, re-exports, and visibility.
 sidebar:
-  order: 15
+  order: 16
 ---
 
 Jiang currently uses source files as modules. Imports connect source files, and imported APIs stay
@@ -66,6 +66,10 @@ public const Int default_limit = 1024;
 ```
 
 Declarations without `public` are module-local.
+
+Extensions follow the same import visibility rule. An extension in another module does not become
+active just because the target type is visible; the consumer must import the module that defines the
+extension. Extensions meant for other modules should be written as `public extend`.
 
 `public const` is also part of the module API. Consumers can read scalar constants and fields on
 const structs through the module namespace:

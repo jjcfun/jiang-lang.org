@@ -122,35 +122,9 @@ extend User: HasValue {
 }
 ```
 
-`extend` members follow `member_decl`; `init` and `deinit` are not member declarations.
-
-Extensions can be generic:
-
-```c
-@where(T == Int)
-extend Holder<T> {
-    public static Int only_int() {
-        7
-    }
-}
-```
-
-Use `public extend` when an extension should be available to modules that import this module.
-`public import` re-exports public extensions along with the imported module API.
-
-Built-in type suffixes participate in the same extension lookup. For example, `UInt8[]^` looks for
-static members on `Box<UInt8[]>`:
-
-```c
-@where(T == UInt8[])
-extend Box<T> {
-    public static Int byte_array_marker() {
-        1
-    }
-}
-
-Int marker = UInt8[]^.byte_array_marker();
-```
+`extend Type: Trait { ... }` provides that trait's required methods for the type. Generic
+extensions, `@where` type-shape matching, module visibility, and `public extend` are covered in
+[Extensions](/language/extensions/).
 
 ## Associated Types
 

@@ -100,6 +100,30 @@ struct PlainSlot<T> {
 }
 ```
 
+`_` inside a type shape is an anonymous placeholder. It does not introduce a generic name; it only
+means that any type argument is accepted in that position. For example, `Box<_>` matches every
+`Box<T>`, and `Vector<_>` matches a `Vector` with any element type:
+
+```c
+@where(T == Vector<_>)
+Int vector_only<T>(T value);
+
+@where(T != Option<_>)
+struct NonOptional<T> {
+    T value;
+}
+```
+
+Use `:` for trait bounds. Use `==` or `!=` for concrete type-shape matching:
+
+```c
+@where(T: Sequence<Element = UInt8>)
+Int count_bytes<T>(T value);
+
+@where(T == Box<_>)
+Int box_only<T>(T value);
+```
+
 Negative trait bounds use `!` before the trait name:
 
 ```c

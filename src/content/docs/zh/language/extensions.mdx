@@ -1,0 +1,173 @@
+---
+title: 扩展
+description: Jiang 中 extend 的普通方法、trait 实现、泛型约束和跨模块可见性。
+sidebar:
+  order: 15
+---
+
+`extend` 用来在类型定义之后补充方法，或给已有类型补充 trait 实现。它适合把类型的核心定义和一组可选能力分开组织。
+
+## 补充方法
+
+```c
+struct User {
+    public Int id;
+}
+
+extend User {
+    public Int id_value() {
+        self.id
+    }
+}
+
+Int value = user.id_value();
+```
+
+扩展成员仍然遵守普通成员可见性。需要让其他模块调用的方法要写 `public`。
+
+当前 `extend` 不支持 `init` 或 `deinit`。
+
+## 补充 Trait 实现
+
+`extend Type: Trait { ... }` 表示给类型补一个 trait 实现：
+
+```c
+trait HasValue {
+    Int value();
+}
+
+struct User {
+    public Int id;
+}
+
+extend User: HasValue {
+    public Int value() {
+        self.id
+    }
+}
+```
+
+仅仅“方法签名刚好匹配”不会自动满足 trait；类型需要在类型定义处或 `extend Type: Trait` 中显式声明。
+
+## 泛型扩展
+
+扩展可以带泛型参数：
+
+```c
+struct Holder<T> {
+    public T value;
+}
+
+extend Holder<T> {
+    public T get() {
+        self.value
+    }
+}
+```
+
+也可以用 `@where` 限制扩展只对某些类型实参生效：
+
+```c
+@where(T == Int)
+extend Holder<T> {
+    public static Int only_int() {
+        7
+    }
+}
+
+Int value = Holder<Int>.only_int();
+```
+
+## 类型形状匹配
+
+`@where` 可以按具体类型形状匹配。`_` 是匿名占位，表示该位置可以是任意类型实参：
+
+```c
+@where(T == Box<_>)
+extend Holder<T> {
+    public Bool stores_box() {
+        true
+    }
+}
+
+@where(T != Option<_>)
+extend Holder<T> {
+    public Bool stores_non_optional() {
+        true
+    }
+}
+```
+
+`:` 用于 trait 约束；具体类型形状匹配使用 `==` 或 `!=`：
+
+```c
+@where(T: Sequence<Element = UInt8>)
+Int count_bytes<T>(T value);
+
+@where(T == Box<_>)
+Int box_only<T>(T value);
+```
+
+扩展目标本身也可以使用匿名占位：
+
+```c
+extend Reference<_> {
+    public Bool is_reference() {
+        true
+    }
+}
+
+extend Box<Slice<_>> {
+    public Bool is_owned_slice() {
+        true
+    }
+}
+```
+
+这些规范类型名和类型后缀是同一套类型。例如 `UInt8[]^` 会按 `Box<Slice<UInt8>>` 查找静态方法。
+
+## 跨模块可见性
+
+扩展支持跨模块使用，但不会全局自动生效。使用方必须导入定义该扩展的模块，成员查找才会看到它。
+
+```c
+// holder_ext.jiang
+public struct Holder<T> {
+    public T value;
+}
+
+@where(T == Int)
+public extend Holder<T> {
+    public static Int only_int() {
+        11
+    }
+}
+```
+
+```c
+// main.jiang
+import ext = "holder_ext.jiang";
+
+alias ImportedHolder = ext.Holder;
+
+Int value = ImportedHolder<Int>.only_int();
+```
+
+如果扩展需要被导入方使用，写成 `public extend`。没有 `public` 的扩展只在定义它的模块内部可见。
+
+`public import` 可以把另一个模块里的公开扩展继续重新导出：
+
+```c
+// mid.jiang
+public import leaf = "holder_ext.jiang";
+```
+
+```c
+// app.jiang
+import mid = "mid.jiang";
+
+alias Holder = mid.leaf.Holder;
+
+Int value = Holder<Int>.only_int();
+```
+

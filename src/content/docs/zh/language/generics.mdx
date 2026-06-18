@@ -103,6 +103,29 @@ struct PlainSlot<T> {
 }
 ```
 
+`_` 在类型形状里表示匿名占位。它不引入可引用的泛型名字，只表示“这里可以是任意类型实参”。
+例如 `Box<_>` 匹配所有 `Box<T>`，`Vector<_>` 匹配所有元素类型的 `Vector`：
+
+```c
+@where(T == Vector<_>)
+Int vector_only<T>(T value);
+
+@where(T != Option<_>)
+struct NonOptional<T> {
+    T value;
+}
+```
+
+`:` 用于 trait 约束；具体类型形状匹配使用 `==` 或 `!=`：
+
+```c
+@where(T: Sequence<Element = UInt8>)
+Int count_bytes<T>(T value);
+
+@where(T == Box<_>)
+Int box_only<T>(T value);
+```
+
 在 `trait` 名前写 `!` 表示“不能满足这个 trait”的约束：
 
 ```c

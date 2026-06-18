@@ -1,0 +1,180 @@
+---
+title: Extensions
+description: Jiang extend methods, trait implementations, generic constraints, and module visibility.
+sidebar:
+  order: 15
+---
+
+`extend` adds methods to a type after its declaration, or adds an explicit trait implementation for
+an existing type. Use extensions to keep a type's core definition separate from optional behavior.
+
+## Adding Methods
+
+```c
+struct User {
+    public Int id;
+}
+
+extend User {
+    public Int id_value() {
+        self.id
+    }
+}
+
+Int value = user.id_value();
+```
+
+Extension members follow ordinary member visibility. Write `public` on methods that other modules
+should call.
+
+`extend` does not currently support `init` or `deinit`.
+
+## Adding Trait Implementations
+
+`extend Type: Trait { ... }` adds a trait implementation:
+
+```c
+trait HasValue {
+    Int value();
+}
+
+struct User {
+    public Int id;
+}
+
+extend User: HasValue {
+    public Int value() {
+        self.id
+    }
+}
+```
+
+A type does not satisfy a trait just because it happens to have methods with matching signatures.
+The implementation must be declared on the type or in `extend Type: Trait`.
+
+## Generic Extensions
+
+Extensions can be generic:
+
+```c
+struct Holder<T> {
+    public T value;
+}
+
+extend Holder<T> {
+    public T get() {
+        self.value
+    }
+}
+```
+
+Use `@where` to make an extension available only for selected type arguments:
+
+```c
+@where(T == Int)
+extend Holder<T> {
+    public static Int only_int() {
+        7
+    }
+}
+
+Int value = Holder<Int>.only_int();
+```
+
+## Type-Shape Matching
+
+`@where` can match concrete type shapes. `_` is an anonymous placeholder, accepting any type
+argument in that position:
+
+```c
+@where(T == Box<_>)
+extend Holder<T> {
+    public Bool stores_box() {
+        true
+    }
+}
+
+@where(T != Option<_>)
+extend Holder<T> {
+    public Bool stores_non_optional() {
+        true
+    }
+}
+```
+
+Use `:` for trait bounds. Use `==` or `!=` for concrete type-shape matching:
+
+```c
+@where(T: Sequence<Element = UInt8>)
+Int count_bytes<T>(T value);
+
+@where(T == Box<_>)
+Int box_only<T>(T value);
+```
+
+The extension target itself can also use anonymous placeholders:
+
+```c
+extend Reference<_> {
+    public Bool is_reference() {
+        true
+    }
+}
+
+extend Box<Slice<_>> {
+    public Bool is_owned_slice() {
+        true
+    }
+}
+```
+
+Canonical type names and suffix syntax use the same type model. For example, `UInt8[]^` looks up
+static members as `Box<Slice<UInt8>>`.
+
+## Module Visibility
+
+Extensions can be used across module boundaries, but they are not globally active. A file must
+import the module that defines the extension before extension members participate in lookup.
+
+```c
+// holder_ext.jiang
+public struct Holder<T> {
+    public T value;
+}
+
+@where(T == Int)
+public extend Holder<T> {
+    public static Int only_int() {
+        11
+    }
+}
+```
+
+```c
+// main.jiang
+import ext = "holder_ext.jiang";
+
+alias ImportedHolder = ext.Holder;
+
+Int value = ImportedHolder<Int>.only_int();
+```
+
+Use `public extend` when an extension should be available to modules that import it. An extension
+without `public` is only visible inside the module that defines it.
+
+`public import` can re-export public extensions from another module:
+
+```c
+// mid.jiang
+public import leaf = "holder_ext.jiang";
+```
+
+```c
+// app.jiang
+import mid = "mid.jiang";
+
+alias Holder = mid.leaf.Holder;
+
+Int value = Holder<Int>.only_int();
+```
+

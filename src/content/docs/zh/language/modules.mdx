@@ -2,7 +2,7 @@
 title: 模块
 description: Jiang 源文件模块、导入、别名、重新导出和可见性。
 sidebar:
-  order: 15
+  order: 16
 ---
 
 Jiang 当前以源文件作为模块。导入关系连接源文件，导入模块的公开接口保留在模块命名空间下，
@@ -64,6 +64,9 @@ public const Int default_limit = 1024;
 ```
 
 没有 `public` 的声明只在当前模块内部可见。
+
+扩展也遵守同样的导入可见性。跨模块扩展不会因为目标类型可见就自动生效；使用方必须导入定义该
+扩展的模块，成员查找才会看到它。需要给其他模块使用的扩展应写成 `public extend`。
 
 `public const` 也是模块公开接口的一部分。使用方可以通过模块命名空间读取标量常量和 const struct
 字段：
