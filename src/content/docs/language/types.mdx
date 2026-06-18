@@ -149,12 +149,13 @@ _&! current = first;
 current = second$.ref();
 ```
 
-The same `_` binding patterns are used inside destructuring and payload patterns:
+The same `_` binding patterns are used inside destructuring. Use `ref T name` when borrowing a
+payload pattern:
 
 ```c
 (_& left, _! right) = pair;
 
-if maybe is some _& item {
+if maybe is .some(ref Int item) {
     use(item);
 }
 ```
@@ -253,13 +254,13 @@ Option<Int> explicit = 42;
 Int? none = null;
 ```
 
-Use optional chaining, `??`, or `is some`:
+Use optional chaining, `??`, or `.some(...)`:
 
 ```c
 _ field = user?.name;
 Int value = maybe ?? 0;
 
-if maybe is some payload {
+if maybe is .some(payload) {
     return payload;
 } else {
     return 0;

@@ -151,12 +151,12 @@ _&! current = first;
 current = second$.ref();
 ```
 
-同一组 `_` 绑定 pattern 也用于解构和 payload pattern：
+同一组 `_` 绑定 pattern 也用于解构。payload pattern 中需要借用时，使用 `ref T name`：
 
 ```c
 (_& left, _! right) = pair;
 
-if maybe is some _& item {
+if maybe is .some(ref Int item) {
     use(item);
 }
 ```
@@ -276,10 +276,10 @@ _ field = user?.name;
 Int value = maybe ?? 0;
 ```
 
-`is some` 用于解包：
+`.some(...)` 用于解包：
 
 ```c
-if maybe is some value {
+if maybe is .some(value) {
     return value;
 } else {
     return 0;

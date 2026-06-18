@@ -122,7 +122,7 @@ if value is .int_value(_! n) {
 }
 ```
 
-Use `_&` to borrow a union payload instead of binding it by value:
+Use `ref T name` to borrow a union payload instead of binding it by value:
 
 ```c
 union Node {
@@ -135,7 +135,7 @@ Int read_ref(Int& value) {
 }
 
 Int first(Node node) {
-    if node is .pair(_& left, _) {
+    if node is .pair(ref Int left, _) {
         return read_ref(left);
     }
     return 0;
@@ -143,13 +143,13 @@ Int first(Node node) {
 ```
 
 This matters when the payload is large, non-copyable, or should be inspected without moving it.
-`_&!` is also allowed when the payload reference binding itself must be reassignable; the `!` applies
-to the binding, not to the payload source.
+`ref Int! value` is also allowed when the payload reference binding itself must be reassignable; the
+`!` applies to the binding, not to the payload source.
 
-Optional values use `some`:
+Optional values use `.some(...)` and `.none`:
 
 ```c
-if maybe is some payload {
+if maybe is .some(payload) {
     print(payload);
 } else {
     print(0);
@@ -176,11 +176,11 @@ Int result = switch value {
 }
 ```
 
-Borrowed union payloads use the same `_&` sub-pattern:
+Borrowed union payloads use the same `ref` sub-pattern:
 
 ```c
 Int result = switch node {
-    .pair(_& left, _) => read_ref(left),
+    .pair(ref Int left, _) => read_ref(left),
     .empty => 0,
 }
 ```
@@ -189,8 +189,8 @@ Optional values:
 
 ```c
 Int value = switch maybe {
-    some payload => payload,
-    null => 0,
+    .some(payload) => payload,
+    .none => 0,
 }
 ```
 
@@ -198,7 +198,7 @@ Int value = switch maybe {
 
 `is` and `switch` branch roots accept:
 
-- optional patterns: `some payload`
+- optional patterns: `.some(payload)` and `.none`
 - variant patterns: `.name(...)` or `Type.name(...)`
 - literal patterns such as `null`, numbers, chars, and booleans
 

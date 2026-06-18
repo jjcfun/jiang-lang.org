@@ -142,7 +142,7 @@ for i in 0..10 {
 
 ```c
 () print_value(Int? maybe) {
-    guard maybe is some value else {
+    guard maybe is .some(value) else {
         return ();
     }
 

@@ -91,16 +91,15 @@ Int& ref = value$.ref();
 Int copied = ref$.get();
 ```
 
-For local bindings and patterns, `_&` is shorthand for a borrowed binding with inferred pointee
-type:
+For local bindings, `_&` is shorthand for a borrowed binding with inferred pointee type:
 
 ```c
 Int value = 10;
 _& ref = value; // same lifetime rule as value$.ref()
 ```
 
-The same binding mode works inside optional and union payload patterns. It borrows the payload
-instead of copying or moving it:
+Inside optional and union payload patterns, use `ref T name` to borrow the payload instead of
+copying or moving it. The type after `ref` is required; it may also be `_` as a type placeholder:
 
 ```c
 Int read_ref(Int& value) {
@@ -108,7 +107,7 @@ Int read_ref(Int& value) {
 }
 
 Int read_optional(Int? value) {
-    if value is some _& item {
+    if value is .some(ref Int item) {
         return read_ref(item);
     }
     return 0;

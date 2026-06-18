@@ -29,25 +29,25 @@ _ value = user?.profile?.name;
 
 ## Conditional Unwrapping
 
-Use `is some`:
+Use `.some(...)` to unwrap a present value and `.none` to match an empty optional:
 
 ```c
-if maybe is some value {
+if maybe is .some(value) {
     print(value);
 } else {
     print(0);
 }
 ```
 
-Explicit inferred and mutable bindings:
+Mutable and borrowed payload bindings:
 
 ```c
-if maybe is some _ value {
-    print(value);
+if maybe is .some(Int! value) {
+    value = value + 1;
 }
 
-if maybe is some _! value {
-    value = value + 1;
+if maybe is .some(ref Int value) {
+    print(value$.get());
 }
 ```
 
@@ -66,7 +66,7 @@ The left side must be optional. Use `guard` for early-exit control flow.
 
 ```c
 () print_value(Int? maybe) {
-    guard maybe is some value else {
+    guard maybe is .some(value) else {
         return ();
     }
 
@@ -85,4 +85,4 @@ The `else` block must be non-empty and end in `return`, `break`, `continue`, or 
 Int value = maybe$.some();
 ```
 
-Ordinary code should prefer `is some`, `guard`, or `??`.
+Ordinary code should prefer `.some(...)` patterns, `guard`, or `??`.

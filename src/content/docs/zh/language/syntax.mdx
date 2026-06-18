@@ -174,20 +174,20 @@ Int raw = (left + right)$.as(Int);
 
 ## 模式检查入口
 
-`is` 用于模式匹配。可选值可以使用 `some` 解包：
+`is` 用于模式匹配。可选值使用 `.some(...)` 解包：
 
 ```c
-if maybe is some value {
+if maybe is .some(value) {
     return value;
 } else {
     return 0;
 }
 ```
 
-如果解包后的绑定本身需要可变，使用 `some _!`：
+如果解包后的绑定本身需要可变，显式写出 payload 类型和 `!`：
 
 ```c
-if maybe is some _! value {
+if maybe is .some(Int! value) {
     value = value + 1;
 }
 ```

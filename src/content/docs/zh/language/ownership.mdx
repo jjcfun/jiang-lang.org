@@ -101,15 +101,15 @@ Int& ref = value$.ref();
 Int copied = ref$.get();
 ```
 
-在局部绑定和 pattern 中，`_&` 是一种推导借用绑定的简写：
+在局部绑定中，`_&` 是一种推导借用绑定的简写：
 
 ```c
 Int value = 10;
 _& ref = value; // 生命周期规则等同于 value$.ref()
 ```
 
-同一个 binding mode 也可以用于 optional 和 union 的 payload pattern。它借用 payload，
-不会隐式 copy 或 move payload：
+在 optional 和 union 的 payload pattern 中，使用 `ref T name` 借用 payload，
+不会隐式 copy 或 move payload。`ref` 后面需要写出类型，也可以写 `_` 类型占位：
 
 ```c
 Int read_ref(Int& value) {
@@ -117,7 +117,7 @@ Int read_ref(Int& value) {
 }
 
 Int read_optional(Int? value) {
-    if value is some _& item {
+    if value is .some(ref Int item) {
         return read_ref(item);
     }
     return 0;

@@ -29,23 +29,23 @@ _ foo = x?.y?.z;
 
 ## 条件解包
 
-使用 `is some` 模式匹配解包可选值：
+使用 `.some(...)` 模式匹配解包可选值，用 `.none` 匹配空值：
 
 ```c
-if a1 is some x {
+if a1 is .some(x) {
   // x 类型为 Int，值不为 null
 } else {
   // x 为 null
 }
 
-// 显式写出推导类型
-if a1 is some _ x {
-  // 等价于 some x
+// 可变绑定
+if a1 is .some(Int! x) {
+  // x 为可变绑定
 }
 
-// 可变绑定
-if a1 is some _! x {
-  // x 为可变绑定
+// 借用 payload，不移动其中的值
+if a1 is .some(ref Int x) {
+  // x 类型为 Int&
 }
 ```
 
@@ -70,7 +70,7 @@ Int other = maybe ?? default_value();
 
 ```c
 () print_value(Int? maybe) {
-    guard maybe is some value else {
+    guard maybe is .some(value) else {
         return ();
     }
 
@@ -83,7 +83,7 @@ Int other = maybe ?? default_value();
 
 ## 强制解包
 
-`maybe$.some()` 用于强制解包可选值。它属于隐式操作层；普通代码优先使用 `is some`、`guard` 或 `??`。
+`maybe$.some()` 用于强制解包可选值。它属于隐式操作层；普通代码优先使用 `.some(...)` pattern、`guard` 或 `??`。
 
 ```c
 Int value = maybe$.some();

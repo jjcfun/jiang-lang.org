@@ -155,7 +155,7 @@ Int value = maybe$.some();
 | --- | --- |
 | `optional$.some()` | force-unwraps an optional and returns its `T` value |
 
-Prefer `is some`, `guard`, or `??` in ordinary code:
+Prefer `.some(...)` patterns, `guard`, or `??` in ordinary code:
 
 ```c
 Int value = maybe ?? 0;

@@ -143,20 +143,20 @@ integer addresses, FFI, and similar code.
 
 ## Patterns
 
-`is` performs pattern matching. Optional values use the `some` pattern:
+`is` performs pattern matching. Optional values use `.some(...)`:
 
 ```c
-if maybe is some value {
+if maybe is .some(value) {
     return value;
 } else {
     return 0;
 }
 ```
 
-Mutable inferred bindings use `_!`:
+Mutable payload bindings write the payload type explicitly:
 
 ```c
-if maybe is some _! value {
+if maybe is .some(Int! value) {
     value = value + 1;
 }
 ```

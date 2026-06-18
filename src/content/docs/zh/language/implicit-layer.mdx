@@ -147,7 +147,7 @@ Int value = maybe$.some();
 | --- | --- |
 | `optional$.some()` | 强制解包 optional，取得其中的 `T` 值 |
 
-日常代码优先使用 `is some`、`guard` 或 `??`：
+日常代码优先使用 `.some(...)` pattern、`guard` 或 `??`：
 
 ```c
 Int value = maybe ?? 0;

@@ -128,7 +128,7 @@ if value is .int_value(_! n) {
 }
 ```
 
-使用 `_&` 可以借用 `union` payload，而不是按值绑定 payload：
+使用 `ref T name` 可以借用 `union` payload，而不是按值绑定 payload：
 
 ```c
 union Node {
@@ -141,21 +141,21 @@ Int read_ref(Int& value) {
 }
 
 Int first(Node node) {
-    if node is .pair(_& left, _) {
+    if node is .pair(ref Int left, _) {
         return read_ref(left);
     }
     return 0;
 }
 ```
 
-当 payload 较大、不可 copy，或者只想检查而不想 move payload 时，应使用 `_&`。
-`_&!` 也可以用于 payload pattern，表示这个引用绑定本身可重新赋值；`!` 作用在绑定上，
+当 payload 较大、不可 copy，或者只想检查而不想 move payload 时，应使用 `ref` 绑定。
+`ref Int! value` 也可以用于 payload pattern，表示这个引用绑定本身可重新赋值；`!` 作用在绑定上，
 不要求 payload 来源可写。
 
-可选值使用专门的 `some` 模式：
+可选值使用 `.some(...)` / `.none` 模式：
 
 ```c
-if maybe is some item {
+if maybe is .some(item) {
     print(item);
 } else {
     print(0);
@@ -184,11 +184,11 @@ Int result = switch value {
 }
 ```
 
-借用 `union` payload 时使用同样的 `_&` 子模式：
+借用 `union` payload 时使用同样的 `ref` 子模式：
 
 ```c
 Int result = switch node {
-    .pair(_& left, _) => read_ref(left),
+    .pair(ref Int left, _) => read_ref(left),
     .empty => 0,
 }
 ```
@@ -197,8 +197,8 @@ Int result = switch node {
 
 ```c
 Int value = switch maybe {
-    some item => item,
-    null => 0,
+    .some(item) => item,
+    .none => 0,
 }
 ```
 
@@ -206,7 +206,7 @@ Int value = switch maybe {
 
 当前 `is` 和 `switch` 分支根只接受：
 
-- 可选值模式：`some item`。
+- 可选值模式：`.some(item)` / `.none`。
 - 变体模式：`.name(...)` 或 `Type.name(...)`。
 - 字面量模式：例如 `null`、整数、字符、布尔值。
 
