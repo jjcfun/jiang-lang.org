@@ -57,21 +57,27 @@ Int?[2]?[3] nullable_rows;
 
 Common suffix forms:
 
-| Syntax | Meaning |
-| --- | --- |
-| `T!` | the current layer is mutable |
-| `T?` | short form of `Option<T>` |
-| `T^` | short form of `Box<T>` |
-| `T&` | short form of `Reference<T>` |
-| `T*` | short form of `RawPointer<T>` |
-| `T[]` | unsized array pointee |
-| `T[]&` | borrowed slice reference |
-| `T[:S]` | sentinel-terminated unsized array pointee |
-| `T[*]` | short form of `ManyPointer<T>` |
-| `T[*:S]` | sentinel-terminated many raw pointer |
-| `T[N]` | fixed-size array |
-| `T[N:S]` | sentinel-terminated fixed-size array |
-| `T@E` | short form of `Result<T, E>` in return position |
+| Surface syntax | Canonical type name | Meaning |
+| --- | --- | --- |
+| `T!` | `T` with a mutability marker | current layer is mutable |
+| `T?` | `Option<T>` | optional value |
+| `T^` | `Box<T>` | owning pointer |
+| `T&` | `Reference<T>` | non-owning reference |
+| `T*` | `RawPointer<T>` | single-object raw pointer |
+| `T[*]` | `ManyPointer<T>` | many raw pointer indexed by element |
+| `T[*:S]` | `SentinelPointer<T, S>` | many raw pointer with a sentinel value |
+| `T[N]` | `Array<T, N>` | fixed-size array |
+| `T[N:S]` | `SentinelArray<T, N, S>` | fixed-size array with a sentinel value |
+| `T[]` | `Slice<T>` | slice pointee type |
+| `T[]&` | `Reference<Slice<T>>` | borrowed slice reference with runtime length |
+| `T[:S]` | `SentinelSlice<T, S>` | sentinel slice pointee type |
+| `T[:S]&` | `Reference<SentinelSlice<T, S>>` | borrowed sentinel slice reference |
+| `T@E` | `Result<T, E>` | errorable return in return position |
+
+These surface forms are syntax sugar for the canonical names. The compiler still gives `T?`,
+`T^`, `T&`, `T[]&`, and `T@E` their built-in meaning even if user code declares a type with the
+same name as one of the canonical types. Most code should use the short forms; the canonical names
+are useful when describing type relationships or writing `extend` and `@where`.
 
 Within one layer, `?` must come before `!`: write `Int?!`, not `Int!?`, `Int??`, or `Int!!`.
 
@@ -210,16 +216,18 @@ Nested arrays use repeated suffixes:
 Int[2][3] matrix = [[1, 2], [3, 4], [5, 6]];
 ```
 
-`T[]` is an unsized array pointee. Use `T[]&` for a borrowed slice reference with runtime length:
+`T[]` is the short form of `Slice<T>`, the pointee type for a runtime-length slice. Use `T[]&`,
+which is `Reference<Slice<T>>`, for a borrowed slice reference:
 
 ```c
 Int[_] values = [1, 2, 3];
 Int[]& view = values[..];
 ```
 
-Sentinel slice views such as `T[:S]&` carry an additional type-level sentinel guarantee. A
-non-literal sentinel slice does not implicitly lose that guarantee when assigned to `T[]&`; write
-`value.slice()` or `value$.as(T[]&)` to request a plain slice view.
+`T[:S]` is the short form of `SentinelSlice<T, S>`. Sentinel slice views such as `T[:S]&` carry an
+additional type-level sentinel guarantee. A non-literal sentinel slice does not implicitly lose that
+guarantee when assigned to `T[]&`; write `value.slice()` or `value$.as(T[]&)` to request a plain
+slice view.
 
 ## Pointers and References
 

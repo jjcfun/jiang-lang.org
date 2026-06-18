@@ -15,10 +15,14 @@ rules are covered in [Ownership, Borrowing & Lifetimes](/language/ownership/).
 - `T&`: short form of `Reference<T>`, a non-owning reference.
 - `T*`: short form of `RawPointer<T>`, a single-object raw pointer for FFI / ABI / low-level code.
 - `T[*]`: short form of `ManyPointer<T>`, indexed by element.
-- `T[]`: unsized array pointee.
-- `T[]&`: borrowed slice reference with runtime length.
+- `T[*:S]`: short form of `SentinelPointer<T, S>`, a many raw pointer with a sentinel value.
+- `T[]`: short form of `Slice<T>`, the pointee type for a runtime-length slice.
+- `T[]&`: short form of `Reference<Slice<T>>`, a borrowed slice reference with runtime length.
+- `T[:S]&`: short form of `Reference<SentinelSlice<T, S>>`, a borrowed sentinel slice reference.
 
 Only `T^` / `Box<T>` expresses language-level ownership.
+These suffix forms are syntax sugar for their canonical type names; the short forms are the normal
+way to write application code.
 Ownership transfer, automatic destruction, and lifetime constraints are covered separately.
 
 ## Creating Pointers and References

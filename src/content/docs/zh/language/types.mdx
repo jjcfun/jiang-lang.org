@@ -74,9 +74,9 @@ Int?[2]?[3] nullable_rows;
 | `T[*:S]` | `SentinelPointer<T, S>` | 带哨兵值的多元素裸指针 |
 | `T[N]` | `Array<T, N>` | 定长数组 |
 | `T[N:S]` | `SentinelArray<T, N, S>` | 带哨兵值的定长数组 |
-| `T[]` | `Slice<T>` | 不定长数组指向类型 |
+| `T[]` | `Slice<T>` | 切片目标类型 |
 | `T[]&` | `Reference<Slice<T>>` | 借用切片引用 |
-| `T[:S]` | `SentinelSlice<T, S>` | 带哨兵值的不定长数组指向类型 |
+| `T[:S]` | `SentinelSlice<T, S>` | 带哨兵值的切片目标类型 |
 | `T[:S]&` | `Reference<SentinelSlice<T, S>>` | 借用哨兵切片引用 |
 | `T@E` | `Result<T, E>` | 返回类型位置的可错返回 |
 
@@ -218,7 +218,7 @@ Int[_] inferred = [1, 2, 3];
 Int[2][3] matrix = [[1, 2], [3, 4], [5, 6]];
 ```
 
-`T[]` 是 `Slice<T>` 的短写，表示不定长数组指向类型。需要运行时长度的借用切片引用时，使用 `T[]&`，
+`T[]` 是 `Slice<T>` 的短写，表示切片目标类型。需要运行时长度的借用切片引用时，使用 `T[]&`，
 也就是 `Reference<Slice<T>>`：
 
 ```c
