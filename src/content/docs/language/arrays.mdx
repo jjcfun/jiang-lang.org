@@ -69,8 +69,9 @@ Int?[2]?[3] nullable_rows = [[1, null], null, [5, 6]];
 
 ## Slices
 
-`T[]` names an unsized array pointee. Use `T[]&` for a borrowed runtime-length view over contiguous
-storage. The borrowed slice does not own the storage.
+`T[]` is the short form of `Slice<T>`, an unsized array type whose length is known at runtime.
+Bare `T[]` is not a normal by-value type. Use `T[]&` for a borrowed runtime-length view over
+contiguous storage. The borrowed slice does not own the storage.
 
 ```c
 Int[_] values = [1, 2, 3];
@@ -94,8 +95,9 @@ _ item_ref = view[1]$.ref();
 ```
 
 `T[]&` is a borrowed view and does not own the underlying storage. `Vector<T>.slice()` returns such a
-borrowed view. Use `Vector<T>.into_array()` when the vector should be consumed and its initialized
-items should become an owned `T[]^`; the original vector is moved and cannot be used afterward.
+borrowed view. `T[]^`, which is `Box<Slice<T>>`, is the owned unsized array handle. Use
+`Vector<T>.into_array()` when the vector should be consumed and its initialized items should become
+an owned `T[]^`; the original vector is moved and cannot be used afterward.
 
 ## Many Raw Pointers
 

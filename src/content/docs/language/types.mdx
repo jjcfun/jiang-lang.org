@@ -68,9 +68,9 @@ Common suffix forms:
 | `T[*:S]` | `SentinelPointer<T, S>` | many raw pointer with a sentinel value |
 | `T[N]` | `Array<T, N>` | fixed-size array |
 | `T[N:S]` | `SentinelArray<T, N, S>` | fixed-size array with a sentinel value |
-| `T[]` | `Slice<T>` | slice pointee type |
+| `T[]` | `Slice<T>` | unsized array type |
 | `T[]&` | `Reference<Slice<T>>` | borrowed slice reference with runtime length |
-| `T[:S]` | `SentinelSlice<T, S>` | sentinel slice pointee type |
+| `T[:S]` | `SentinelSlice<T, S>` | sentinel unsized array type |
 | `T[:S]&` | `Reference<SentinelSlice<T, S>>` | borrowed sentinel slice reference |
 | `T@E` | `Result<T, E>` | errorable return in return position |
 
@@ -216,18 +216,22 @@ Nested arrays use repeated suffixes:
 Int[2][3] matrix = [[1, 2], [3, 4], [5, 6]];
 ```
 
-`T[]` is the short form of `Slice<T>`, the pointee type for a runtime-length slice. Use `T[]&`,
-which is `Reference<Slice<T>>`, for a borrowed slice reference:
+`T[]` is the short form of `Slice<T>`, an unsized array type whose length is known at runtime.
+Bare `T[]` is not a normal by-value type. Use `T[]&`, which is `Reference<Slice<T>>`, for a
+borrowed slice reference:
 
 ```c
 Int[_] values = [1, 2, 3];
 Int[]& view = values[..];
 ```
 
-`T[:S]` is the short form of `SentinelSlice<T, S>`. Sentinel slice views such as `T[:S]&` carry an
-additional type-level sentinel guarantee. A non-literal sentinel slice does not implicitly lose that
-guarantee when assigned to `T[]&`; write `value.slice()` or `value$.as(T[]&)` to request a plain
-slice view.
+`T[]^`, which is `Box<Slice<T>>`, is the owned handle for an unsized array. It owns the initialized
+buffer, drops the elements, and frees the allocation.
+
+`T[:S]` is the short form of `SentinelSlice<T, S>`, a sentinel unsized array type. Sentinel slice
+views such as `T[:S]&` carry an additional type-level sentinel guarantee. A non-literal sentinel
+slice does not implicitly lose that guarantee when assigned to `T[]&`; write `value.slice()` or
+`value$.as(T[]&)` to request a plain slice view.
 
 ## Pointers and References
 

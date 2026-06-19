@@ -74,9 +74,9 @@ Int?[2]?[3] nullable_rows;
 | `T[*:S]` | `SentinelPointer<T, S>` | 带哨兵值的多元素裸指针 |
 | `T[N]` | `Array<T, N>` | 定长数组 |
 | `T[N:S]` | `SentinelArray<T, N, S>` | 带哨兵值的定长数组 |
-| `T[]` | `Slice<T>` | 切片目标类型 |
+| `T[]` | `Slice<T>` | 不定长数组类型 |
 | `T[]&` | `Reference<Slice<T>>` | 借用切片引用 |
-| `T[:S]` | `SentinelSlice<T, S>` | 带哨兵值的切片目标类型 |
+| `T[:S]` | `SentinelSlice<T, S>` | 带哨兵值的不定长数组类型 |
 | `T[:S]&` | `Reference<SentinelSlice<T, S>>` | 借用哨兵切片引用 |
 | `T@E` | `Result<T, E>` | 返回类型位置的可错返回 |
 
@@ -218,15 +218,18 @@ Int[_] inferred = [1, 2, 3];
 Int[2][3] matrix = [[1, 2], [3, 4], [5, 6]];
 ```
 
-`T[]` 是 `Slice<T>` 的短写，表示切片目标类型。需要运行时长度的借用切片引用时，使用 `T[]&`，
-也就是 `Reference<Slice<T>>`：
+`T[]` 是 `Slice<T>` 的短写，表示长度在运行时确定的不定长数组类型。裸 `T[]` 不能作为普通值
+单独存放或传递。需要运行时长度的借用切片引用时，使用 `T[]&`，也就是 `Reference<Slice<T>>`：
 
 ```c
 Int[_] values = [1, 2, 3];
 Int[]& view = values[..];
 ```
 
-`T[:S]` 是 `SentinelSlice<T, S>` 的短写。`T[:S]&` 这类带哨兵值的切片视图额外携带类型层面的哨兵值保证。非字面量哨兵切片
+`T[]^` 是 `Box<Slice<T>>` 的短写，是拥有所有权的不定长数组 handle；它拥有已初始化 buffer，
+drop 时会析构元素并释放 allocation。
+
+`T[:S]` 是 `SentinelSlice<T, S>` 的短写，表示带哨兵值的不定长数组类型。`T[:S]&` 这类带哨兵值的切片视图额外携带类型层面的哨兵值保证。非字面量哨兵切片
 不会在赋值给 `T[]&` 时隐式丢掉这个保证；需要普通切片视图时，写成 `value.slice()`
 或 `value$.as(T[]&)`。
 
