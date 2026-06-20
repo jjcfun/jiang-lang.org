@@ -3,7 +3,7 @@ title: Installation
 description: Install the Jiang compiler.
 ---
 
-Jiang 0.3.3 provides a prebuilt macOS arm64 compiler package. This is the recommended way to try the language today.
+Jiang 0.4.1 provides a prebuilt macOS arm64 compiler package. This is the recommended way to try the language today.
 
 ## Requirements
 
@@ -15,7 +15,7 @@ The release package does not bundle `libLLVM.dylib`; it uses the local LLVM 21 i
 
 ## Install a Release
 
-Download `jiang-0.3.3-macos-arm64.zip` from the [0.3.3 GitHub release](https://github.com/jjcfun/jiang/releases/tag/0.3.3), then unpack it.
+Download `jiang-0.4.1-macos-arm64.zip` from the [0.4.1 GitHub release](https://github.com/jjcfun/jiang/releases/tag/0.4.1), then unpack it.
 
 Install LLVM first:
 
@@ -34,7 +34,7 @@ Install Jiang:
 By default this installs:
 
 ```text
-~/.jiang/versions/0.3.3
+~/.jiang/versions/0.4.1
 ~/.jiang/bin/jiangc
 ```
 
@@ -55,7 +55,7 @@ jiangc --version
 The first line should be:
 
 ```text
-jiang 0.3.3
+jiang 0.4.1
 ```
 
 ## Build From Source
@@ -79,8 +79,12 @@ Build the next compiler with the installed bootstrap compiler:
 VERIFY=full bash ./script/build_next.sh
 ```
 
-The 0.4 development branch expects a Jiang 0.3.3 compiler on `PATH` as `jiangc`, or an explicit
-`BOOTSTRAP_BIN=/path/to/jiangc`.
+The 0.4.1 release branch is built with the `0.4.1-bootstrap` compiler. For local release
+verification, pass it explicitly:
+
+```bash
+BOOTSTRAP_BIN=/path/to/jiangc-0.4.1-bootstrap BOOTSTRAP_DEPTH=stable VERIFY=full bash ./script/build_next.sh
+```
 
 ## Next Step
 

@@ -29,9 +29,9 @@ trait Hashable: Equatable {
 
 非 `static` 方法要求会使用当前类型作为接收者；`static` 方法要求没有 `self`。
 
-## 动态 Trait 值（计划功能）
+## 动态 Trait 值
 
-动态 trait 值是后续待完成的功能。计划中的设计会给每个 trait 提供三个编译器内建伴生类型：
+动态 trait 值通过每个 trait 上的三个编译器内建伴生类型表达：
 
 ```c
 Writer.Any writer;
@@ -40,7 +40,7 @@ Writer.Receiver receiver;
 ```
 
 `Any`、`VTable` 和 `Receiver` 是 trait 上的保留伴生类型名，不是用户定义的关联类型。
-`Writer.Any` 是任意实现了 `Writer` 的值的借用动态视图。计划中的构造形式是 trait 上的
+`Writer.Any` 是任意实现了 `Writer` 的值的借用动态视图。构造形式是 trait 上的
 checked 操作：
 
 ```c
@@ -80,6 +80,10 @@ write_slot(writer.receiver, 123);
 Fn<Int> default_size = writer.vtable.default_buffer_size;
 Int size = default_size();
 ```
+
+Jiang 0.4.1 支持 ref receiver trait instance method 的动态分派和 vtable slot 访问。
+包含 `@self(move)` requirement 的 trait 暂不能构造 `Any`、`VTable` 或 `Receiver`；
+owned receiver trait object 留给后续版本。
 
 ## 在类型定义处实现
 

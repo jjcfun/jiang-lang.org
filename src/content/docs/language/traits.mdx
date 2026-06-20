@@ -29,10 +29,9 @@ trait Hashable: Equatable {
 
 Non-`static` required methods use the current type as the receiver. `static` required methods do not have `self`.
 
-## Dynamic Trait Values (Planned)
+## Dynamic Trait Values
 
-Dynamic trait values are planned but not implemented yet. The intended design gives every trait
-three compiler-provided companion types:
+Dynamic trait values use three compiler-provided companion types on every trait:
 
 ```c
 Writer.Any writer;
@@ -42,7 +41,7 @@ Writer.Receiver receiver;
 
 `Any`, `VTable`, and `Receiver` are reserved companion type names on traits; they are not user-defined
 associated types. `Writer.Any` is a borrowed dynamic view of any value whose concrete type implements
-`Writer`. The planned construction is a checked trait operation on the trait:
+`Writer`. Construction is a checked trait operation on the trait:
 
 ```c
 Writer.Any writer = Writer$.any(file);
@@ -81,6 +80,10 @@ write_slot(writer.receiver, 123);
 Fn<Int> default_size = writer.vtable.default_buffer_size;
 Int size = default_size();
 ```
+
+Jiang 0.4.1 supports dynamic dispatch for ref receiver trait instance methods and vtable slot
+access. Traits with `@self(move)` requirements are rejected for `Any`, `VTable`, and `Receiver`;
+owned receiver trait objects are planned for a later release.
 
 ## Implementing in a Type Body
 
