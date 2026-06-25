@@ -1,0 +1,48 @@
+---
+title: Introduction
+description: Jiang's positioning, core ideas, and target use cases.
+---
+
+Jiang is a systems programming language in active development. It aims to bring systems-level control,
+engineering abstractions, and domain-specific syntax extension into one language, so projects do not
+have to bounce between several languages and code generators to express their problem domain.
+
+## All-in-one
+
+Jiang's All-in-one direction is not about putting every feature into the core syntax. The core
+language should stay clear, checkable, and compilable, while custom syntax carries domain-specific
+surface forms.
+
+Custom syntax is the foundation of that direction. Users can extend Jiang with their ideal syntax for
+queries, user interfaces, shaders, vector computation, binary protocols, state machines, or script
+blocks. The expanded code still returns to Jiang syntax trees and continues through normal name
+resolution, type checking, generics, visibility, and backend optimization.
+
+## Systems Foundation
+
+Jiang is designed around ownership and lifetimes by default. Resource cleanup, borrowing, pointers,
+and memory layout should stay explicit in the language instead of depending on hidden runtime
+behavior.
+
+That does not rule out optional runtime capabilities. If Jiang later adds garbage collection, it
+should be chosen by users and packages for the cases that need it, such as embedded scripting,
+plugin systems, or user automation. Performance-critical paths can still remain in Jiang's ownership
+and lifetime model.
+
+## What It Fits
+
+Jiang is currently best suited for exploring:
+
+- Systems code that needs direct control over memory, layout, object files, and foreign interfaces.
+- Tools, frameworks, and platforms that combine domain-specific syntax with systems-level runtime efficiency.
+- Projects that want queries, user interfaces, protocols, shaders, data pipelines, or similar domain descriptions to participate in type checking.
+- Language work where the compiler and language mechanisms evolve together through self-hosting.
+
+## Current Status
+
+Jiang is still early. The language, standard library, and compiler internals will continue to change.
+The current release package targets macOS arm64; the compiler is self-hosting and verified by smoke
+tests and source-level language tests.
+
+Start with [Getting Started](/getting-started/) if you want to try the language, or read
+[Custom Syntax](/language/custom-syntax/) to understand Jiang's central extension mechanism.

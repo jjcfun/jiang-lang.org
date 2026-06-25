@@ -31,41 +31,42 @@ Non-`static` required methods use the current type as the receiver. `static` req
 
 ## Dynamic Trait Values
 
-Dynamic trait values use three compiler-provided companion types on every trait:
+Dynamic trait values use compiler-provided companion types on every trait:
 
 ```c
-Writer.Any writer;
-Writer.VTable vtable;
+Writer.Any& writer;
 Writer.Receiver receiver;
 ```
 
-`Any`, `VTable`, and `Receiver` are reserved companion type names on traits; they are not user-defined
-associated types. `Writer.Any` is a borrowed dynamic view of any value whose concrete type implements
-`Writer`. Construction is a checked trait operation on the trait:
+`Any` and `Receiver` are reserved companion type names on traits; they are not user-defined
+associated types. `Writer.Any&` is a borrowed dynamic view of any value whose concrete type implements
+`Writer`. Construct it with `Writer$.ref(value)`:
 
 ```c
-Writer.Any writer = Writer$.any(file);
+Writer.Any& writer = Writer$.ref(file);
 ```
 
 The construction requires `typeof(file): Writer`; it is not an unchecked cast and it does not move
-`file`. `Writer.VTable` is a lightweight handle to the method table for one concrete implementation:
+`file`. Use `Writer$.new(value)` when the dynamic trait value should own the receiver:
 
 ```c
-Writer.VTable file_vtable = Writer$.vtable(File);
+Writer.Any^ writer = Writer$.new(file);
 ```
 
-`Writer.Receiver` is the erased receiver used by instance-method slots:
+An owning dynamic trait value stores the receiver and drops it when the `Writer.Any^` is dropped.
+The compiler keeps a method table for the concrete implementation internally; that table type is not
+a public type user source can name. `Writer.Receiver` is the erased receiver used by instance-method slots:
 
 ```c
-Writer.Receiver receiver = Writer$.receiver(file);
-file_vtable.write(receiver, 123);
+Writer.Receiver receiver = writer.receiver;
+writer.write(123);
 ```
 
-`Writer.Any` conceptually stores a `Writer.Receiver` plus the matching `Writer.VTable`. Calls through
-`Writer.Any` dispatch through that table:
+`Writer.Any&` conceptually stores a `Writer.Receiver` plus the matching method table. Calls through
+`Writer.Any&` dispatch through that table:
 
 ```c
-() write_one(Writer.Any writer) {
+() write_one(Writer.Any& writer) {
     writer.write(123);
 }
 ```
@@ -74,16 +75,13 @@ Passing a trait method pointer uses the unbound vtable slot form. Receiver metho
 erased receiver as their first parameter, while static methods keep their declared parameter list:
 
 ```c
-Fn<(), Writer.Receiver, Int> write_slot = writer.vtable.write;
+Fn<(), Writer.Receiver, Int> write_slot = writer.write;
 write_slot(writer.receiver, 123);
-
-Fn<Int> default_size = writer.vtable.default_buffer_size;
-Int size = default_size();
 ```
 
-Jiang 0.4.1 supports dynamic dispatch for ref receiver trait instance methods and vtable slot
-access. Traits with `@self(move)` requirements are rejected for `Any`, `VTable`, and `Receiver`;
-owned receiver trait objects are planned for a later release.
+The current implementation supports dynamic dispatch for reference receiver methods, method slot
+access, and dropping owning dynamic trait values. Traits with `@self(move)` requirements are rejected
+for `Any` and `Receiver`.
 
 ## Implementing in a Type Body
 

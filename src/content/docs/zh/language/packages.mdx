@@ -15,8 +15,9 @@ sidebar:
 ```ini
 [package]
 name = app
-version = 0.4.1
+version = 0.4.2
 root = src/main.jiang
+type = bin
 ```
 
 字段含义：
@@ -24,6 +25,7 @@ root = src/main.jiang
 - `name`：包名称，未写时默认取目录名。
 - `version`：包版本，可选。编译器接受 ASCII 字母、数字、`.`、`_`、`+` 和 `-`。
 - `root`：入口源文件，未写时默认取 `<name>.jiang`。
+- `type`：包类型，可选；未写时是普通包，写成 `lang` 时表示这个包提供[自定义语法](/zh/language/custom-syntax/)。
 
 当编译器输入路径是目录时，它读取该目录下的 `package.ini`，再编译 `root` 指向的源文件。
 
@@ -34,7 +36,7 @@ root = src/main.jiang
 ```ini
 [package]
 name = app
-version = 0.4.1
+version = 0.4.2
 root = src/main.jiang
 
 [dependencies]

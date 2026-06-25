@@ -15,8 +15,9 @@ Use a fixed `package.ini` file:
 ```ini
 [package]
 name = app
-version = 0.4.1
+version = 0.4.2
 root = src/main.jiang
+type = bin
 ```
 
 Fields:
@@ -24,6 +25,7 @@ Fields:
 - `name`: package name; defaults to the directory name.
 - `version`: package version; optional. The compiler accepts ASCII letters, digits, `.`, `_`, `+`, and `-`.
 - `root`: entry source file; defaults to `<name>.jiang`.
+- `type`: package kind; defaults to an ordinary package. `lang` marks a [custom-syntax provider package](/language/custom-syntax/).
 
 When the compiler input is a directory, it reads `package.ini` and compiles the source file named by
 `root`.
@@ -35,7 +37,7 @@ Declare local source dependencies in `[dependencies]`:
 ```ini
 [package]
 name = app
-version = 0.4.1
+version = 0.4.2
 root = src/main.jiang
 
 [dependencies]

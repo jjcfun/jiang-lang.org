@@ -39,6 +39,7 @@ export default defineConfig({
           translations: { 'zh-CN': '开始' },
           items: [
             { label: 'Overview', translations: { 'zh-CN': '概览' }, slug: 'index' },
+            { label: 'Introduction', translations: { 'zh-CN': '介绍' }, slug: 'introduction' },
             { label: 'Getting Started', translations: { 'zh-CN': '快速开始' }, slug: 'getting-started' },
             { label: 'Installation', translations: { 'zh-CN': '安装' }, slug: 'install' },
           ],

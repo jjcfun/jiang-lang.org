@@ -138,7 +138,7 @@ Int address = 0x1000;
 Int* ptr = address$.as(Int*);
 ```
 
-In the 0.2 stage, packages are treated as globally unsafe by default. The compiler does not reject
+Packages are currently treated as globally unsafe by default. The compiler does not reject
 raw pointer casts or raw pointer access solely because they are unsafe. If capability or unsafe gates
 are introduced later, these low-level operations should be checked there.
 

@@ -1,5 +1,5 @@
 ---
-title: 编译器 CLI
+title: 编译器命令行
 description: Jiang 编译器命令行接口。
 ---
 
@@ -57,21 +57,21 @@ jiangc tests/samples/minimal.jiang -o minimal
 echo $?
 ```
 
-## Debug 和 Release 模式
+## 调试和发布模式
 
-`jiangc` 默认使用 debug 模式：
+`jiangc` 默认使用调试模式：
 
 ```bash
 jiangc --mode debug main.jiang -o main
 ```
 
-release 模式会启用 LLVM 优化；当输入是 package 目录时，release 模式会按 package 组织目标文件：
+发布模式会启用 LLVM 优化；当输入是包目录时，发布模式会按包组织目标文件：
 
 ```bash
 jiangc --mode release . -o app
 ```
 
-如果输入是单个源文件，release 模式仍然直接编译这个源文件。
+如果输入是单个源文件，发布模式仍然直接编译这个源文件。
 
 ## 链接器选项
 

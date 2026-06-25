@@ -1,0 +1,247 @@
+---
+title: 自定义语法
+description: Jiang 通过语言包提供块形式的自定义语法。
+sidebar:
+  order: 17
+---
+
+自定义语法是 Jiang 实现 All in one 的基石。用户可以基于自己的理想语法扩展 Jiang，
+同时继续享受 Jiang 自带的类型检查和系统级运行效率。
+
+它让一个包在特定位置接管一段源码的解析，再把结果交还给 Jiang 编译器继续做名字解析、
+类型检查和代码生成。它适合表达查询语句、着色器、配置片段等小型领域语法。
+
+当前实现只支持块形式：
+
+```c
+User user = #sql {
+    select * from User where id == \(id)
+};
+```
+
+`#sql` 中的 `sql` 不是普通变量名，也不通过 `import` 查找。它来自当前包描述文件里的依赖别名。
+
+## 代表性场景
+
+下面的片段是自定义语法的方向草图，用来展示它适合解决的问题；具体语法由对应语言包定义。
+
+对象关系查询可以把表、字段和插值参数一起纳入检查：
+
+```c
+User[] users = #query {
+    from User
+    where age >= \(min_age)
+    select id, name, email
+};
+```
+
+界面模板可以保留接近 HTML 的结构，同时让组件、属性和绑定表达式回到 Jiang 类型系统：
+
+```c
+View profile = #html {
+    <section class="profile">
+        <h1>{user.name}</h1>
+        <button on_click={save(user.id)}>Save</button>
+    </section>
+};
+```
+
+声明式界面可以使用更接近 SwiftUI 的树形写法，由语言包检查组件参数、状态绑定和事件签名：
+
+```c
+View settings = #ui {
+    VStack(spacing: 12) {
+        Text("Settings").font(.title)
+        Toggle("Enable cache", is_on: bind(settings.cache_enabled))
+        Button("Save") {
+            save(settings)
+        }
+    }
+};
+```
+
+图形着色器可以使用贴近图形领域的写法，再由语言包生成宿主侧可检查的入口和资源绑定：
+
+```c
+Shader blur = #shader {
+    texture source: Texture2D<Float4>;
+    uniform radius: Float;
+
+    fragment Float4 main(Float2 uv) {
+        return sample_blur(source, uv, radius);
+    }
+};
+```
+
+向量计算可以把批量运算写成清晰的数学表达式，由语言包选择合适的向量指令或普通后端路径：
+
+```c
+Vec4 result = #simd {
+    let a = load4(lhs);
+    let b = load4(rhs);
+    fma(a, b, bias)
+};
+```
+
+二进制协议可以把字段编号、字节序、长度关系和可选字段集中描述，生成高效的编码和解码代码：
+
+```c
+Codec<User> user_codec = #binary {
+    message User {
+        1: UInt64 id;
+        2: UInt8[]& name;
+        3: UInt8[]&? email;
+    }
+};
+```
+
+状态机或协议流程可以显式写出状态迁移，让语言包检查遗漏分支和非法转移：
+
+```c
+StateMachine connection = #state {
+    disconnected -> connecting on connect;
+    connecting -> connected on ready;
+    connected -> disconnected on close;
+};
+```
+
+命令行参数可以用声明式结构描述，再生成解析、帮助文本和类型安全的配置对象：
+
+```c
+CliOptions options = #cli {
+    command build {
+        flag release: Bool = false;
+        option target: Target = native;
+        arg input: Path;
+    }
+};
+```
+
+服务路由可以把路径参数、请求体和返回值集中描述，让路由处理函数保留静态类型：
+
+```c
+Router api = #route {
+    GET /users/:id -> get_user(id: UserId) -> User;
+    POST /users -> create_user(body: NewUser) -> User;
+};
+```
+
+数据管线可以显式描述步骤和依赖关系，由语言包检查输入输出类型是否能衔接：
+
+```c
+Pipeline image_pipeline = #pipeline {
+    load(path)
+        |> decode_png
+        |> resize(width: 256, height: 256)
+        |> encode_webp(quality: 90)
+};
+```
+
+寄存器和位域可以贴近硬件手册描述地址、权限和字段宽度，再生成低层访问代码：
+
+```c
+RegisterBlock uart = #mmio {
+    base 0x4000_1000;
+    reg control: UInt32 offset 0x00 {
+        enable: bit 0 read_write;
+        mode: bits 1..2 read_write;
+    }
+    reg status: UInt32 offset 0x04 read_only;
+};
+```
+
+## 整文件接入
+
+后续设计中，自定义语法还可以扩展到整份源码文件。一个包可以导入非 `.jiang` 后缀的文件，
+由对应语言包按文件类型解析，再把结果作为 Jiang 模块加入编译：
+
+```c
+import schema = "user.proto";
+import layout = "dashboard.ui";
+import kernel = "blur.shader";
+
+User user = schema.User(id: 1, name: "Jiang");
+View page = layout.render(user);
+```
+
+这样外部语言文件不是独立的生成步骤，而是包依赖图的一部分。字段、函数、资源和生成类型仍能继续进入
+Jiang 的名字解析、类型检查和后端优化。
+
+## 脚本语言嵌入
+
+Jiang 语言本身围绕所有权和生命周期设计，默认不要求垃圾回收。后续如果引入垃圾回收机制，也应该是
+可选运行时能力：用户和包可以按场景决定是否启用。自定义语法可以在这种可选运行时上承载脚本语言，
+让脚本片段或脚本文件作为 Jiang 包的一部分接入，适合游戏逻辑、插件、热更新规则和用户自动化：
+
+```c
+Script startup = #script {
+    let player = world.find("player")
+    player.inventory.add("key")
+    on event.dialog_finished {
+        world.open_door("north_gate")
+    }
+};
+```
+
+脚本侧可以使用更动态的对象模型，宿主侧仍由 Jiang 描述资源、边界类型和调用接口。这样脚本语言获得
+更灵活的表达方式，而关键路径仍可以留在 Jiang 的所有权和生命周期模型中，保留系统级运行效率。
+
+## 使用语言包
+
+使用方在 `package.ini` 中声明一个依赖：
+
+```ini
+[package]
+name = app
+root = src/main.jiang
+
+[dependencies]
+sql = ../sql_lang
+```
+
+被调用的依赖包需要声明为语言包：
+
+```ini
+[package]
+name = sql_lang
+root = lang.jiang
+type = lang
+```
+
+语言包的根模块必须公开导出固定入口 `Lang`，并满足 `std.jiang.syntax.Provider`。
+编译器会在宿主机器上把这个包编译成动态库，之后在语法阶段调用它。
+
+## 语法提供者
+
+语法提供者有两个入口：
+
+```c
+public std.jiang.syntax.ScanResult scan(
+    std.jiang.syntax.Input input,
+    std.jiang.syntax.Builder.Any& builder
+);
+
+public std.jiang.syntax.NodeId parse(
+    std.jiang.syntax.Input input,
+    std.jiang.syntax.Root.Kind entry_kind,
+    std.jiang.syntax.Builder.Any& builder
+);
+```
+
+`scan` 负责识别块边界。`parse` 负责把块内文本转换为 `std.jiang.syntax.Tree` 中的节点。
+返回的节点必须符合编译器传入的入口种类。
+
+当前普通源码里只在表达式位置接入自定义语法，因此入口种类是 `expression`。公开语法树已经保留
+文件、声明、语句、类型和模式等入口种类，供后续版本扩展到更多语法位置。
+
+## 编译边界
+
+自定义语法只改变源码解析入口，不绕过 Jiang 的后续编译流程：
+
+- 生成的节点继续进入普通名字解析、类型检查、中间表示和后端。
+- 语法提供者不能直接生成中间表示或后端代码。
+- 语言包动态库是本机缓存产物，不承诺跨编译器版本复用。
+- 语言包源码仍按普通包发布，缓存损坏或接口不匹配时应报告诊断。
+
+这让自定义语法可以使用更贴近领域的表面写法，同时保持类型规则、可见性、泛型实例化和后端行为仍由
+Jiang 编译器统一控制。

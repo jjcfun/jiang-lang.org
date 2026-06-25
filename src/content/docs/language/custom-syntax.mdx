@@ -1,0 +1,267 @@
+---
+title: Custom Syntax
+description: Jiang custom syntax through lang packages.
+sidebar:
+  order: 17
+---
+
+Custom syntax is the foundation for Jiang's All-in-one direction. Users can extend Jiang with their
+ideal domain syntax while keeping Jiang's built-in type checking and systems-level runtime
+efficiency.
+
+It lets a package parse a block of source at a specific syntax position, then return a Jiang syntax
+tree for normal name resolution, type checking, and code generation. It is intended for small domain
+syntaxes such as queries, shaders, or configuration fragments.
+
+The current implementation supports block invocation:
+
+```c
+User user = #sql {
+    select * from User where id == \(id)
+};
+```
+
+The `sql` name in `#sql` is not a normal value name and is not found through `import`. It comes from
+the current package manifest's dependency aliases.
+
+## Representative Scenarios
+
+The following snippets are sketches that show the kinds of problems custom syntax is meant to solve.
+The exact syntax is defined by the corresponding lang package.
+
+Object-relational queries can check tables, fields, and interpolated parameters together:
+
+```c
+User[] users = #query {
+    from User
+    where age >= \(min_age)
+    select id, name, email
+};
+```
+
+User interface templates can keep an HTML-like shape while returning components, attributes, and
+bindings to Jiang's type system:
+
+```c
+View profile = #html {
+    <section class="profile">
+        <h1>{user.name}</h1>
+        <button on_click={save(user.id)}>Save</button>
+    </section>
+};
+```
+
+Declarative user interfaces can use a tree-shaped syntax similar to SwiftUI, while the lang package
+checks component parameters, state bindings, and event signatures:
+
+```c
+View settings = #ui {
+    VStack(spacing: 12) {
+        Text("Settings").font(.title)
+        Toggle("Enable cache", is_on: bind(settings.cache_enabled))
+        Button("Save") {
+            save(settings)
+        }
+    }
+};
+```
+
+Shaders can use graphics-domain syntax, while the lang package generates checked host-side entry
+points and resource bindings:
+
+```c
+Shader blur = #shader {
+    texture source: Texture2D<Float4>;
+    uniform radius: Float;
+
+    fragment Float4 main(Float2 uv) {
+        return sample_blur(source, uv, radius);
+    }
+};
+```
+
+Vector computation can express batch math clearly, letting the lang package choose vector
+instructions or a normal backend path:
+
+```c
+Vec4 result = #simd {
+    let a = load4(lhs);
+    let b = load4(rhs);
+    fma(a, b, bias)
+};
+```
+
+Binary protocols can describe field numbers, byte order, length relationships, and optional fields
+in one place, then generate efficient encoders and decoders:
+
+```c
+Codec<User> user_codec = #binary {
+    message User {
+        1: UInt64 id;
+        2: UInt8[]& name;
+        3: UInt8[]&? email;
+    }
+};
+```
+
+State machines and protocol flows can spell out transitions so the lang package can check missing
+branches and illegal moves:
+
+```c
+StateMachine connection = #state {
+    disconnected -> connecting on connect;
+    connecting -> connected on ready;
+    connected -> disconnected on close;
+};
+```
+
+Command-line interfaces can be declared once, then generate parsing, help text, and a typed options
+object:
+
+```c
+CliOptions options = #cli {
+    command build {
+        flag release: Bool = false;
+        option target: Target = native;
+        arg input: Path;
+    }
+};
+```
+
+Service routes can keep path parameters, request bodies, and return values together while preserving
+static types for handlers:
+
+```c
+Router api = #route {
+    GET /users/:id -> get_user(id: UserId) -> User;
+    POST /users -> create_user(body: NewUser) -> User;
+};
+```
+
+Data pipelines can spell out steps and dependencies so the lang package can check whether each
+stage's output matches the next stage's input:
+
+```c
+Pipeline image_pipeline = #pipeline {
+    load(path)
+        |> decode_png
+        |> resize(width: 256, height: 256)
+        |> encode_webp(quality: 90)
+};
+```
+
+Registers and bit fields can mirror a hardware manual, then generate low-level access code:
+
+```c
+RegisterBlock uart = #mmio {
+    base 0x4000_1000;
+    reg control: UInt32 offset 0x00 {
+        enable: bit 0 read_write;
+        mode: bits 1..2 read_write;
+    }
+    reg status: UInt32 offset 0x04 read_only;
+};
+```
+
+## Whole-File Integration
+
+In a future design, custom syntax can also grow to whole source files. A package could import a
+non-`.jiang` file, let the matching lang package parse that file type, and add the result to the
+build as a Jiang module:
+
+```c
+import schema = "user.proto";
+import layout = "dashboard.ui";
+import kernel = "blur.shader";
+
+User user = schema.User(id: 1, name: "Jiang");
+View page = layout.render(user);
+```
+
+In that model, external language files are not a separate code-generation step; they are part of the
+package dependency graph. Fields, functions, resources, and generated types can still participate in
+Jiang name resolution, type checking, and backend optimization.
+
+## Embedded Scripting
+
+Jiang itself is designed around ownership and lifetimes; it does not require garbage collection by
+default. If Jiang later introduces garbage collection, it should be an optional runtime capability
+chosen by users and packages for the cases that need it. On that optional runtime, custom syntax can
+host scripting languages. Script blocks or script files could become part of a Jiang package, useful
+for game logic, plugins, hot-update rules, and user automation:
+
+```c
+Script startup = #script {
+    let player = world.find("player")
+    player.inventory.add("key")
+    on event.dialog_finished {
+        world.open_door("north_gate")
+    }
+};
+```
+
+The script side can use a more dynamic object model, while the host side still uses Jiang to define
+resources, boundary types, and call interfaces. That gives scripts a flexible surface language while
+keeping performance-critical paths in Jiang's ownership and lifetime model.
+
+## Using a Lang Package
+
+The using package declares a dependency:
+
+```ini
+[package]
+name = app
+root = src/main.jiang
+
+[dependencies]
+sql = ../sql_lang
+```
+
+The dependency must be a lang package:
+
+```ini
+[package]
+name = sql_lang
+root = lang.jiang
+type = lang
+```
+
+The lang package root module must publicly export `Lang`, and `Lang` must satisfy
+`std.jiang.syntax.Provider`. The compiler builds that package into a host dynamic library and calls it
+during syntax parsing.
+
+## Provider Entry Points
+
+A provider has two entry points:
+
+```c
+public std.jiang.syntax.ScanResult scan(
+    std.jiang.syntax.Input input,
+    std.jiang.syntax.Builder.Any& builder
+);
+
+public std.jiang.syntax.NodeId parse(
+    std.jiang.syntax.Input input,
+    std.jiang.syntax.Root.Kind entry_kind,
+    std.jiang.syntax.Builder.Any& builder
+);
+```
+
+`scan` identifies the block boundary. `parse` converts the block contents into nodes in
+`std.jiang.syntax.Tree`. The returned node must match the entry kind passed by the compiler.
+
+In ordinary source, custom syntax currently plugs into expression positions only, so the entry kind
+is `expression`. The public syntax tree already reserves file, declaration, statement, type, and
+pattern entry kinds for future expansion.
+
+## Compilation Boundary
+
+Custom syntax changes parsing, but it does not bypass the Jiang compiler pipeline:
+
+- Generated nodes still go through normal name resolution, type checking, intermediate representation, and backend code generation.
+- A provider cannot directly generate intermediate representation or backend code.
+- Provider dynamic libraries are host-local cache artifacts and are not reusable across compiler versions.
+- Lang packages are still distributed as source packages; cache damage or interface mismatches should produce diagnostics.
+
+This allows a domain-specific surface syntax while keeping type rules, visibility, monomorphization,
+and backend behavior under Jiang compiler control.

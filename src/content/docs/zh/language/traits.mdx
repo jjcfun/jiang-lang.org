@@ -1,6 +1,6 @@
 ---
 title: Trait 与扩展
-description: Jiang 语言中的 trait 方法要求、关联类型、trait 继承、extend 和内建 trait。
+description: Jiang 语言中的 trait 方法要求、关联类型、trait 继承、扩展和内建 trait。
 sidebar:
   order: 14
 ---
@@ -31,59 +31,54 @@ trait Hashable: Equatable {
 
 ## 动态 Trait 值
 
-动态 trait 值通过每个 trait 上的三个编译器内建伴生类型表达：
+动态 trait 值通过每个 trait 上的编译器内建伴生类型表达：
 
 ```c
-Writer.Any writer;
-Writer.VTable vtable;
+Writer.Any& writer;
 Writer.Receiver receiver;
 ```
 
-`Any`、`VTable` 和 `Receiver` 是 trait 上的保留伴生类型名，不是用户定义的关联类型。
-`Writer.Any` 是任意实现了 `Writer` 的值的借用动态视图。构造形式是 trait 上的
-checked 操作：
+`Any` 和 `Receiver` 是 trait 上的保留伴生类型名，不是用户定义的关联类型。
+`Writer.Any&` 是任意实现了 `Writer` 的值的借用动态视图，使用 `Writer$.ref(value)` 构造：
 
 ```c
-Writer.Any writer = Writer$.any(file);
+Writer.Any& writer = Writer$.ref(file);
 ```
 
 这个构造要求 `typeof(file): Writer`；它不是未经检查的强制转换，也不会转移 `file`。
-`Writer.VTable` 是指向某个具体类型实现该 trait 时使用的方法表的轻量 handle：
+如果需要让动态 trait 值拥有接收者，使用 `Writer$.new(value)`：
 
 ```c
-Writer.VTable file_vtable = Writer$.vtable(File);
+Writer.Any^ writer = Writer$.new(file);
 ```
 
-`Writer.Receiver` 是实例方法 slot 使用的擦除 receiver：
+拥有型动态 trait 值会保存接收者，并在自身释放时清理接收者。编译器内部会为具体实现保存方法表；
+这个方法表类型不是用户可命名的公开类型。`Writer.Receiver` 是实例方法槽位使用的擦除接收者：
 
 ```c
-Writer.Receiver receiver = Writer$.receiver(file);
-file_vtable.write(receiver, 123);
+Writer.Receiver receiver = writer.receiver;
+writer.write(123);
 ```
 
-概念上，`Writer.Any` 存储一个 `Writer.Receiver` 和对应的 `Writer.VTable`。通过
-`Writer.Any` 调用方法时会经由这张表动态分派：
+概念上，`Writer.Any&` 存储一个 `Writer.Receiver` 和对应的方法表。通过 `Writer.Any&`
+调用方法时会经由这张表动态分派：
 
 ```c
-() write_one(Writer.Any writer) {
+() write_one(Writer.Any& writer) {
     writer.write(123);
 }
 ```
 
-传递 trait 方法指针时使用未绑定的 vtable slot 形式。receiver 方法会把擦除 receiver 作为
+传递 trait 方法指针时使用未绑定的方法槽位形式。接收者方法会把擦除接收者作为
 第一个参数；静态方法保留原来的参数列表：
 
 ```c
-Fn<(), Writer.Receiver, Int> write_slot = writer.vtable.write;
+Fn<(), Writer.Receiver, Int> write_slot = writer.write;
 write_slot(writer.receiver, 123);
-
-Fn<Int> default_size = writer.vtable.default_buffer_size;
-Int size = default_size();
 ```
 
-Jiang 0.4.1 支持 ref receiver trait instance method 的动态分派和 vtable slot 访问。
-包含 `@self(move)` requirement 的 trait 暂不能构造 `Any`、`VTable` 或 `Receiver`；
-owned receiver trait object 留给后续版本。
+当前实现支持引用接收者方法的动态分派、方法槽位访问和拥有型动态 trait 值释放。
+包含 `@self(move)` 要求的 trait 暂不能构造 `Any` 或 `Receiver`。
 
 ## 在类型定义处实现
 
