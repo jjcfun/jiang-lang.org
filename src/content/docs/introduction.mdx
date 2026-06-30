@@ -24,6 +24,10 @@ Jiang is designed around ownership and lifetimes by default. Resource cleanup, b
 and memory layout should stay explicit in the language instead of depending on hidden runtime
 behavior.
 
+The 0.4.3 development branch has a builtin `#asm` syntax block for runtime code, system calls, and
+platform boundaries. It is not meant as the normal way to write application logic; it provides the
+low-level foundation needed for Linux no-libc, startup entries, and system interfaces.
+
 That does not rule out optional runtime capabilities. If Jiang later adds garbage collection, it
 should be chosen by users and packages for the cases that need it, such as embedded scripting,
 plugin systems, or user automation. Performance-critical paths can still remain in Jiang's ownership

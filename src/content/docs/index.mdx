@@ -24,6 +24,8 @@ These docs are written as a practical guide first. They describe the language as
 
 Jiang 0.4.2 continues the 0.4 line with package dependencies, lang-package custom syntax,
 owning dynamic trait values, release-mode backend paths, and broader source-level language tests.
+The 0.4.3 development branch is focused on compiler refactoring and the Linux no-libc direction;
+the builtin `#asm` syntax block already has a basic end-to-end path.
 
 ## Start Here
 
@@ -54,6 +56,8 @@ owning dynamic trait values, release-mode backend paths, and broader source-leve
 
 The Jiang compiler has reached an initial stable self-hosting milestone: the release compiler is produced from Jiang source and verified by smoke and language tests.
 
-The next priorities are broader language tests, release packaging polish, package/module ergonomics, backend coverage, and runtime coverage.
+The next priorities are broader language tests, release packaging polish, package/module ergonomics,
+backend coverage, and runtime coverage. `#asm` is primarily for runtime code, system calls, and
+platform boundaries; ordinary application code usually should not need it.
 
 For now, treat the website as a living language guide rather than a frozen specification. The most stable pieces are naming style, type notation, mutability, arrays, pointers, optionals, imports, packages, and the current compiler command-line workflow.

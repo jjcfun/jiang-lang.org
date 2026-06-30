@@ -1,6 +1,6 @@
 ---
 title: 自定义语法
-description: Jiang 通过语言包提供块形式的自定义语法。
+description: Jiang 通过语言包和内建语法块提供自定义语法。
 sidebar:
   order: 17
 ---
@@ -9,9 +9,9 @@ sidebar:
 同时继续享受 Jiang 自带的类型检查和系统级运行效率。
 
 它让一个包在特定位置接管一段源码的解析，再把结果交还给 Jiang 编译器继续做名字解析、
-类型检查和代码生成。它适合表达查询语句、着色器、配置片段等小型领域语法。
+类型检查和代码生成。它适合表达查询语句、界面、着色器、协议、低层汇编片段等领域语法。
 
-当前实现只支持块形式：
+当前实现支持块形式：
 
 ```c
 User user = #sql {
@@ -19,7 +19,8 @@ User user = #sql {
 };
 ```
 
-`#sql` 中的 `sql` 不是普通变量名，也不通过 `import` 查找。它来自当前包描述文件里的依赖别名。
+`#sql` 中的 `sql` 不是普通变量名，也不通过 `import` 查找。它通常来自当前包描述文件里的依赖别名。
+编译器也可以提供内建语法块，例如 `#asm`。
 
 ## 代表性场景
 
@@ -150,6 +151,72 @@ RegisterBlock uart = #mmio {
 };
 ```
 
+## 内建汇编块
+
+`#asm` 是当前开发分支已经接入的内建语法块，用来在 Jiang 函数中写少量目标平台汇编。
+它适合实现系统调用、启动代码、特殊指令或极少数后端暂时不能直接表达的操作。
+
+```c
+Int linux_syscall1(Int number, Int arg0) {
+    return #asm {
+        result Int;
+        code "syscall";
+        in "rax" number;
+        in "rdi" arg0;
+        out "rax";
+        clobber "rcx";
+        clobber "r11";
+        memory;
+        volatile;
+    };
+}
+```
+
+也可以把汇编块写成语句。当不需要返回值时，可以省略 `result`：
+
+```c
+() fence() {
+    #asm {
+        code "mfence";
+        memory;
+        volatile;
+    }
+}
+```
+
+`#asm` 是短名，后续用户仍可以用自己的语言包覆盖这个名字。需要明确使用编译器内建版本时，
+可以写完整路径：
+
+```c
+Int linux_syscall1_builtin(Int number, Int arg0) {
+    return #jiang.asm {
+        result Int;
+        code "syscall";
+        in "rax" number;
+        in "rdi" arg0;
+        out "rax";
+        clobber "rcx";
+        clobber "r11";
+        memory;
+        volatile;
+    };
+}
+```
+
+当前 `#asm` 支持这些条目：
+
+- `result T;`：汇编块的返回类型；省略时返回空值。
+- `code "...";`：汇编文本，必须提供。
+- `in "寄存器或约束" value;`：输入操作数。
+- `out "寄存器或约束";`：输出操作数。
+- `clobber "寄存器或资源";`：声明会被破坏的寄存器或资源。
+- `memory;`：声明汇编会读写普通内存。
+- `volatile;`：声明汇编有副作用，编译器不能随意删除或重排。
+- `noreturn;`：声明汇编不会返回。
+
+汇编语法本身依赖目标平台。`rax`、`rdi`、`syscall` 这类名字只适用于特定处理器和操作系统。
+普通业务代码不建议使用 `#asm`；它主要服务于运行时、系统接口和极少数性能或平台边界代码。
+
 ## 整文件接入
 
 后续设计中，自定义语法还可以扩展到整份源码文件。一个包可以导入非 `.jiang` 后缀的文件，
@@ -231,8 +298,8 @@ public std.jiang.syntax.NodeId parse(
 `scan` 负责识别块边界。`parse` 负责把块内文本转换为 `std.jiang.syntax.Tree` 中的节点。
 返回的节点必须符合编译器传入的入口种类。
 
-当前普通源码里只在表达式位置接入自定义语法，因此入口种类是 `expression`。公开语法树已经保留
-文件、声明、语句、类型和模式等入口种类，供后续版本扩展到更多语法位置。
+当前普通源码里已经在表达式和语句位置接入自定义语法。公开语法树也保留了文件、声明、类型和模式等
+入口种类，供后续版本扩展到更多语法位置。
 
 ## 编译边界
 

@@ -1,6 +1,6 @@
 ---
 title: Custom Syntax
-description: Jiang custom syntax through lang packages.
+description: Jiang custom syntax through lang packages and builtin syntax blocks.
 sidebar:
   order: 17
 ---
@@ -10,8 +10,8 @@ ideal domain syntax while keeping Jiang's built-in type checking and systems-lev
 efficiency.
 
 It lets a package parse a block of source at a specific syntax position, then return a Jiang syntax
-tree for normal name resolution, type checking, and code generation. It is intended for small domain
-syntaxes such as queries, shaders, or configuration fragments.
+tree for normal name resolution, type checking, and code generation. It is intended for domain
+syntaxes such as queries, user interfaces, shaders, protocols, and low-level assembly blocks.
 
 The current implementation supports block invocation:
 
@@ -21,8 +21,9 @@ User user = #sql {
 };
 ```
 
-The `sql` name in `#sql` is not a normal value name and is not found through `import`. It comes from
-the current package manifest's dependency aliases.
+The `sql` name in `#sql` is not a normal value name and is not found through `import`. It usually
+comes from the current package manifest's dependency aliases. The compiler can also provide builtin
+syntax blocks, such as `#asm`.
 
 ## Representative Scenarios
 
@@ -163,6 +164,74 @@ RegisterBlock uart = #mmio {
 };
 ```
 
+## Builtin Assembly Blocks
+
+`#asm` is a builtin syntax block available on the current development branch. It is meant for small
+pieces of target-specific assembly inside Jiang functions, such as system calls, startup code,
+special instructions, or rare backend boundary cases.
+
+```c
+Int linux_syscall1(Int number, Int arg0) {
+    return #asm {
+        result Int;
+        code "syscall";
+        in "rax" number;
+        in "rdi" arg0;
+        out "rax";
+        clobber "rcx";
+        clobber "r11";
+        memory;
+        volatile;
+    };
+}
+```
+
+An assembly block can also be used as a statement. If no value is needed, omit `result`:
+
+```c
+() fence() {
+    #asm {
+        code "mfence";
+        memory;
+        volatile;
+    }
+}
+```
+
+`#asm` is the short name. A user lang package may override that short name later. To explicitly use
+the compiler builtin, write the full builtin path:
+
+```c
+Int linux_syscall1_builtin(Int number, Int arg0) {
+    return #jiang.asm {
+        result Int;
+        code "syscall";
+        in "rax" number;
+        in "rdi" arg0;
+        out "rax";
+        clobber "rcx";
+        clobber "r11";
+        memory;
+        volatile;
+    };
+}
+```
+
+The current `#asm` block supports:
+
+- `result T;`: the result type. If omitted, the block returns unit.
+- `code "...";`: the assembly text. This item is required.
+- `in "register-or-constraint" value;`: an input operand.
+- `out "register-or-constraint";`: an output operand.
+- `clobber "register-or-resource";`: a register or resource modified by the assembly.
+- `memory;`: the assembly may read or write ordinary memory.
+- `volatile;`: the assembly has side effects and should not be freely removed or reordered.
+- `noreturn;`: the assembly does not return.
+
+Assembly syntax is target-specific. Names such as `rax`, `rdi`, and `syscall` are only meaningful on
+specific processors and operating systems. Most application code should not use `#asm`; it is mainly
+for runtime code, system boundaries, and narrow platform-specific operations.
+
 ## Whole-File Integration
 
 In a future design, custom syntax can also grow to whole source files. A package could import a
@@ -250,9 +319,8 @@ public std.jiang.syntax.NodeId parse(
 `scan` identifies the block boundary. `parse` converts the block contents into nodes in
 `std.jiang.syntax.Tree`. The returned node must match the entry kind passed by the compiler.
 
-In ordinary source, custom syntax currently plugs into expression positions only, so the entry kind
-is `expression`. The public syntax tree already reserves file, declaration, statement, type, and
-pattern entry kinds for future expansion.
+In ordinary source, custom syntax currently plugs into expression and statement positions. The public
+syntax tree also reserves file, declaration, type, and pattern entry kinds for future expansion.
 
 ## Compilation Boundary
 
