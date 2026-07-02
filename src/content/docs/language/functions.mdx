@@ -217,4 +217,19 @@ Fn<Int, User&> get_value = User.value;
 Int value = get_value(user$.ref());
 ```
 
+`unsafe` and `async` can be written before the return type inside `Fn<...>` to mark the context
+required to call the function. They describe the outer function type, not the return value itself:
+
+```c
+Fn<async Bool>[]& callbacks;
+Fn<unsafe Int, Int>[]& unsafe_callbacks;
+```
+
+`Fn<async Bool>[]&` means a borrowed slice whose elements are async function pointers. To describe
+an async function that returns a borrowed slice, write:
+
+```c
+Fn<async Bool[]&> load_callbacks;
+```
+
 These examples use existing function and method names as function values; anonymous function syntax is not introduced as a day-to-day writing style yet.

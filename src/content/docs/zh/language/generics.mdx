@@ -83,6 +83,31 @@ Pair<T, U> make_pair<T, U>(T left, U right);
 UInt hash_key<T>(T value);
 ```
 
+## 声明局部别名
+
+`@alias(Name = Type)` 可以给当前声明建立一个局部类型别名。它只在这个声明的签名、
+约束、成员和函数体中可见，不会导出到模块命名空间：
+
+```c
+@alias(Item = Int)
+@alias(Cmp = Fn<Bool, Item, Item>)
+Bool compare_with(Cmp cmp, Item left, Item right) {
+    cmp(left, right)
+}
+```
+
+同一个声明上的注解按源码顺序生效。当前声明的泛型参数先进入命名空间，后面的注解可以
+使用前面 `@alias` 引入的名字，前面的注解不能使用后面的名字。一个 `@alias(...)`
+可以包含多个逗号分隔的绑定，等价于按顺序拆成多个 `@alias`：
+
+```c
+@alias(Items = T[]&, Cmp = Fn<Bool, T, T>)
+@where(T: Hashable)
+Bool contains_match<T>(Items values, Cmp cmp, T left, T right) {
+    cmp(left, right)
+}
+```
+
 ## 类型相等约束
 
 `Name == Type` 表示泛型参数必须等于某个具体类型：

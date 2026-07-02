@@ -215,4 +215,19 @@ Fn<Int, User&> get_value = User.value;
 Int value = get_value(user$.ref());
 ```
 
+`unsafe` 和 `async` 可以写在 `Fn<...>` 的返回类型前，表示函数调用需要对应上下文。
+它们不修饰返回值类型本身，而是修饰外层函数类型：
+
+```c
+Fn<async Bool>[]& callbacks;
+Fn<unsafe Int, Int>[]& unsafe_callbacks;
+```
+
+`Fn<async Bool>[]&` 表示“元素为异步函数指针的切片引用”。如果要表示“异步函数返回切片引用”，
+应写成：
+
+```c
+Fn<async Bool[]&> load_callbacks;
+```
+
 当前示例使用已有函数名或方法名形成函数值；匿名函数语法尚未作为日常写法介绍。

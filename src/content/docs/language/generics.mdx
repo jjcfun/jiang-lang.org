@@ -82,6 +82,34 @@ Intersection bounds use `&`:
 UInt hash_key<T>(T value);
 ```
 
+## Declaration-Local Aliases
+
+`@alias(Name = Type)` creates a local type alias for the current declaration. The alias is visible
+only in that declaration's signature, constraints, members, and function body. It does not leak into
+the module namespace:
+
+```c
+@alias(Item = Int)
+@alias(Cmp = Fn<Bool, Item, Item>)
+Bool compare_with(Cmp cmp, Item left, Item right) {
+    cmp(left, right)
+}
+```
+
+Leading annotations are applied in source order. Generic parameters for the current declaration are
+available before annotations are applied. Later annotations can use aliases introduced by earlier
+`@alias` annotations, but earlier annotations cannot use aliases introduced later. One `@alias(...)`
+can contain multiple comma-separated bindings. This is equivalent to splitting them into multiple
+ordered `@alias` annotations:
+
+```c
+@alias(Items = T[]&, Cmp = Fn<Bool, T, T>)
+@where(T: Hashable)
+Bool contains_match<T>(Items values, Cmp cmp, T left, T right) {
+    cmp(left, right)
+}
+```
+
 ## Equality Constraints
 
 Generic parameter equality:
