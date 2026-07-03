@@ -70,6 +70,20 @@ public Int add(Int left, Int right) {
 `public const` 会把编译期值导出到模块接口。`comptime { ... }` 是顶层编译期 block，用于源码选择；
 详见 [Const 和 Comptime](/zh/language/const-and-comptime/)。
 
+## 关键字选项
+
+部分关键字可以携带选项。Jiang 统一把这组选项写在关键字后的方括号中：
+
+```c
+enum [UInt8] ByteTag {
+    block = 1,
+    item,
+}
+```
+
+旧的 `keyword(...)` 形式不再作为关键字选项语法使用。括号继续用于普通表达式或类型语法，
+这样关键字选项和函数调用在视觉上保持区分。
+
 ## 声明
 
 函数声明总是先写返回类型，再写函数名、泛型参数、参数列表和函数体：

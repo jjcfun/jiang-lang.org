@@ -3,27 +3,19 @@ title: Installation
 description: Install the Jiang compiler.
 ---
 
-Jiang 0.4.2 provides a prebuilt macOS arm64 compiler package. This is the recommended way to try the language today.
+Jiang 0.4.3 provides a prebuilt macOS arm64 compiler package. This is the recommended way to try the language today.
 
 ## Requirements
 
 - macOS on arm64.
-- LLVM 21.1.x from Homebrew `llvm@21`.
 - A host C compiler available as `cc` for final executable linking.
 
-The release package does not bundle `libLLVM.dylib`; it uses the local LLVM 21 installation at runtime.
+The release compiler statically links the LLVM libraries used by Jiang. You do not need a separate
+`libLLVM.dylib` installation to run the packaged compiler.
 
 ## Install a Release
 
-Download `jiang-0.4.2-macos-arm64.zip` from the [0.4.2 GitHub release](https://github.com/jjcfun/jiang/releases/tag/0.4.2), then unpack it.
-
-Install LLVM first:
-
-```bash
-bash ./script/install_llvm_macos.sh
-```
-
-If Homebrew is missing, the script prints the Homebrew install command and exits without changing the system.
+Download `jiang-0.4.3-macos-arm64.zip` from the [0.4.3 GitHub release](https://github.com/jjcfun/jiang/releases/tag/0.4.3), then unpack it.
 
 Install Jiang:
 
@@ -34,7 +26,7 @@ Install Jiang:
 By default this installs:
 
 ```text
-~/.jiang/versions/0.4.2
+~/.jiang/versions/0.4.3
 ~/.jiang/bin/jiangc
 ```
 
@@ -55,7 +47,7 @@ jiangc --version
 The first line should be:
 
 ```text
-jiang 0.4.2
+jiang 0.4.3
 ```
 
 ## Build From Source
@@ -70,8 +62,11 @@ cd jiang
 Install LLVM:
 
 ```bash
-bash ./script/install_llvm_macos.sh
+bash ./script/install_llvm.sh
 ```
+
+The script installs Jiang's managed LLVM 22 toolchain under
+`$JIANG_HOME/toolchains/llvm/<version>/<host>`. If `JIANG_HOME` is not set, `~/.jiang` is used.
 
 Build the next compiler with the installed bootstrap compiler:
 
@@ -79,11 +74,11 @@ Build the next compiler with the installed bootstrap compiler:
 VERIFY=full bash ./script/build_next.sh
 ```
 
-The 0.4.3 development branch defaults to the installed 0.4.2 release compiler. For local release
+The 0.4.4 development branch defaults to the 0.4.3 bootstrap compiler. For local release
 verification, pass it explicitly if needed:
 
 ```bash
-BOOTSTRAP_BIN=$HOME/.jiang/versions/0.4.2/bin/jiangc BOOTSTRAP_DEPTH=stable VERIFY=full bash ./script/build_next.sh
+BOOTSTRAP_BIN=$HOME/.jiang/versions/0.4.3/bin/jiangc BOOTSTRAP_DEPTH=stable VERIFY=full bash ./script/build_next.sh
 ```
 
 ## Next Step

@@ -36,11 +36,11 @@ Enum discriminants use `Int32` by default. Convert an enum value with a target i
 constructor such as `Int(value)` or `UInt8(value)`; enum cases do not expose a `.value`
 member.
 
-Use `enum(UInt8)` or another integer type when the stored representation must be
+Use `enum [UInt8]` or another integer type when the stored representation must be
 fixed:
 
 ```c
-enum(UInt8) ByteTag {
+enum [UInt8] ByteTag {
     block = 1,
     item,
 }
@@ -98,7 +98,7 @@ enum Kind {
     text,
 }
 
-union(Kind) TaggedValue {
+union [Kind] TaggedValue {
     Int int_value;
     UInt8[]& text;
 }

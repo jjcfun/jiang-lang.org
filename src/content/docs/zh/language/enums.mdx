@@ -37,10 +37,10 @@ enum Priority {
 `enum` 的 discriminant 默认使用 `Int32`。需要读取整数值时，使用目标整数类型构造，
 例如 `Int(value)` 或 `UInt8(value)`；`enum` case 不再提供 `.value` 成员。
 
-需要固定存储表示时，可以写 `enum(UInt8)` 或其他整数类型：
+需要固定存储表示时，可以写 `enum [UInt8]` 或其他整数类型：
 
 ```c
-enum(UInt8) ByteTag {
+enum [UInt8] ByteTag {
     block = 1,
     item,
 }
@@ -102,7 +102,7 @@ enum Kind {
     text,
 }
 
-union(Kind) TaggedValue {
+union [Kind] TaggedValue {
     Int int_value;
     UInt8[]& text;
 }

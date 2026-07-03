@@ -70,6 +70,20 @@ public Int add(Int left, Int right) {
 `public const` exports a compile-time value through the module interface. `comptime { ... }` is a
 top-level compile-time block for source selection; see [Const and Comptime](/language/const-and-comptime/).
 
+## Keyword Options
+
+Some keywords can carry options. Jiang writes these options with square brackets after the keyword:
+
+```c
+enum [UInt8] ByteTag {
+    block = 1,
+    item,
+}
+```
+
+The old `keyword(...)` form is not used for keyword options. Parentheses remain ordinary expression
+or type syntax, so keyword options stay visually separate from function calls.
+
 ## Statements
 
 Blocks contain declarations, destructuring statements, assignments, call statements, control-flow statements, and `defer`.

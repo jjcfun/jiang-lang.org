@@ -22,6 +22,22 @@ struct Offset {
 
 `Int x, y;` is shorthand for two fields of the same type.
 
+## Layout Options
+
+Struct layout options are written after `struct`:
+
+```c
+struct [packed, align: 8] Packet {
+    UInt8 tag;
+    UInt32 value;
+}
+```
+
+`packed` places fields without natural field padding. `align: N` sets the aggregate alignment to at
+least `N`, and `N` must be a power of two. Option order does not matter, so
+`struct [align: 8, packed]` is equivalent to `struct [packed, align: 8]`. Repeating the same option is
+an error.
+
 ## Default Constructors
 
 Structs without custom `init` can use the compiler-provided default constructor. The default
