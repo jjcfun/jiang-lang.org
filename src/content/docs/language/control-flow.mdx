@@ -158,11 +158,17 @@ The `else` block must be non-empty and end in `return`, `break`, `continue`, or 
 `defer` runs when the current block exits:
 
 ```c
-defer handle$.free();
+defer {
+    do [unsafe] {
+        handle$.dealloc();
+    }
+}
 
 defer {
     log("closing");
-    handle$.free();
+    do [unsafe] {
+        handle$.dealloc();
+    }
 }
 ```
 

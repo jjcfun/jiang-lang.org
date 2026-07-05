@@ -232,4 +232,12 @@ an async function that returns a borrowed slice, write:
 Fn<async Bool[]&> load_callbacks;
 ```
 
+Calling a function with the `unsafe` effect requires an explicit effect context:
+
+```c
+Int value = do [unsafe] {
+    unsafe_callback(1)
+};
+```
+
 These examples use existing function and method names as function values; anonymous function syntax is not introduced as a day-to-day writing style yet.

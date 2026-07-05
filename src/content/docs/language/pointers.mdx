@@ -35,7 +35,9 @@ Int^ owner = new Int(123);
 Int[3]^ array_owner = new [1, 2, 3];
 
 Int& ref = value$.ref();
-Int* raw = value$.ptr();
+Int* raw = do [unsafe] {
+    value$.ptr()
+};
 ```
 
 The pointer suffix is attached to the type:
@@ -87,7 +89,9 @@ Int value = 41;
 Int& ref = value$.ref();
 Int copied = ref$.get();
 
-Int* raw = value$.ptr();
+Int* raw = do [unsafe] {
+    value$.ptr()
+};
 Int raw_value = raw$.get();
 ```
 
@@ -95,14 +99,16 @@ Writing through a single-object raw pointer requires a mutable pointee:
 
 ```c
 Int! value = 0;
-Int!* raw = value$.ptr();
+Int!* raw = do [unsafe] {
+    value$.ptr()
+};
 raw$.set(42);
 ```
 
 ## Implicit Operation Layer
 
 `$` prevents receiver auto-dereference and enters the implicit operation layer. Operations such as
-`$.get()`, `$.ref()`, `$.ptr()`, `$.move()`, `$.free()`, and `Type$.size()` are covered separately:
+`$.get()`, `$.ref()`, `$.ptr()`, `$.move()`, `$.dealloc()`, and `Type$.size()` are covered separately:
 see [Implicit Operation Layer](/language/implicit-layer/).
 
 ## Many Raw Pointers

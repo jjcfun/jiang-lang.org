@@ -238,7 +238,9 @@ slice does not implicitly lose that guarantee when assigned to `T[]&`; write `va
 ```c
 Int^ owner = new Int(42);
 Int value = owner$.get();
-owner$.free();
+do [unsafe] {
+    owner$.dealloc();
+}
 ```
 
 `T^`, `T&`, and `T*` do not auto-dereference in ordinary value contexts. Use `$.get()` for explicit reads. Member access is the exception: `owner.member` can pass through `T^`:

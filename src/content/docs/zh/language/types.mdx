@@ -245,7 +245,9 @@ drop 时会析构元素并释放 allocation。
 ```c
 Int^ owner = new Int(42);
 Int value = owner$.get();
-owner$.free();
+do [unsafe] {
+    owner$.dealloc();
+}
 ```
 
 `T^`、`T&` 和 `T*` 在普通值上下文中都不会自动解引用，需要用 `$.get()` 显式读取。成员访问是例外，`owner.member` 会自动穿过 `T^`：

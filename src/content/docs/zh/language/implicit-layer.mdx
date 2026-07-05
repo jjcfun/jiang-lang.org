@@ -16,7 +16,9 @@ sidebar:
 Int value = 42;
 
 Int& ref = value$.ref();
-Int* ptr = value$.ptr();
+Int* ptr = do [unsafe] {
+    value$.ptr()
+};
 Int copied = ref$.get();
 ```
 
@@ -25,7 +27,7 @@ Int copied = ref$.get();
 ```c
 Int size = Int$.size();
 Int align = Int$.align();
-Int^ value = Int$.alloc();
+Int![*] value = Int!$.alloc();
 ```
 
 ## 绑定规则
@@ -50,13 +52,13 @@ Int raw = (left + right)$.as(Int);
 | 操作 | 含义 |
 | --- | --- |
 | `value$.ref()` | 返回 `T&` 引用 |
-| `value$.ptr()` | 返回 `T*` 单对象裸指针 |
+| `value$.ptr()` | 返回 `T*` 单对象裸指针，需要 `unsafe` |
 | `value$.get()` | 显式读取 `T^` / `T&` / `T*` 指向的值 |
 | `value$.set(new_value)` | 显式写入 `T!*` 指向的目标 |
 | `value$.move()` | 显式转移所有权，源变量随后失效 |
-| `value$.addr()` | 获取当前值的地址值 |
-| `value$.free()` | 释放默认堆分配器上的对象 |
-| `value$.as(Type)` | 低层强制转换 |
+| `value$.addr()` | 获取当前值的裸指针，需要 `unsafe` |
+| `value$.dealloc()` | 释放默认堆分配器上的对象，需要 `unsafe` |
+| `value$.as(Type)` | 低层强制转换；裸指针转换需要 `unsafe` |
 
 这些操作不是普通方法调用，而是引用、所有权、裸指针、分配和低层转换的内建操作。
 
@@ -100,8 +102,8 @@ Int value = a$.get(); // 错误：a 已经被转移。
 Int size = Int$.size();
 Int align = Int$.align();
 Int max_align = Int$.max_align();
-Int^ value = Int$.alloc();
-Int[*] values = Int$.alloc_array(10);
+Int![*] value = Int!$.alloc();
+Int![*] values = Int!$.alloc_many(10);
 ```
 
 这些操作用于查询布局信息或执行底层分配。布局相关信息也会被后端使用。
@@ -111,8 +113,8 @@ Int[*] values = Int$.alloc_array(10);
 | `Type$.size()` | 类型大小 |
 | `Type$.align()` | ABI 对齐 |
 | `Type$.max_align()` | 默认分配器保证支持的最大 Jiang 类型对齐 |
-| `Type$.alloc()` | 分配一个未初始化对象，返回 `Type^` |
-| `Type$.alloc_array(n)` | 分配连续数组存储，返回 `Type[*]` |
+| `Type$.alloc()` | 分配一个未初始化对象，返回 `Type![*]` |
+| `Type$.alloc_many(n)` | 分配连续数组存储，返回 `Type![*]` |
 
 ## 强制转换
 
@@ -128,11 +130,14 @@ Int i = Int(f);
 
 ```c
 Int address = 0x1000;
-Int* ptr = address$.as(Int*);
+Int* ptr = do [unsafe] {
+    address$.as(Int*)
+};
 ```
 
-当前包默认处在全局不安全模式，因此编译器不会因为裸指针转换或裸指针访问本身报错。
-后续如果引入能力检查，这类低层能力会被纳入显式授权规则。
+低层内存操作已经接入 `unsafe` effect。需要取裸指针、做裸指针转换、分配裸存储或显式释放存储时，
+使用 `do [unsafe] { ... }` 包住对应表达式或代码块。`$.get()` / `$.set()` 本身不属于 unsafe；
+真正的 unsafe 边界是创建或转换裸指针的操作。
 
 ## 可选值操作
 

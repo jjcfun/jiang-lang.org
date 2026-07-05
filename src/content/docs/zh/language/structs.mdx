@@ -135,14 +135,16 @@ Point^ p3 = new Point(4, 5);
 
 ## `deinit`
 
-`deinit` 是 `struct` 的析构入口。它由作用域退出、拥有所有权的指针析构和拥有所有权的字段析构触发；`ptr$.free()` 是低层释放操作，不作为普通析构入口使用。
+`deinit` 是 `struct` 的析构入口。它由作用域退出、拥有所有权的指针析构和拥有所有权的字段析构触发；`ptr$.dealloc()` 是低层释放操作，不作为普通析构入口使用。
 
 ```c
 struct Buffer {
     UInt8[*] data;
 
     deinit() {
-        self.data$.free();
+        do [unsafe] {
+            self.data$.dealloc();
+        }
         return ();
     }
 }

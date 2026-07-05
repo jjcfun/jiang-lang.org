@@ -111,8 +111,8 @@ _ item_ref = y[1]$.ref();  // item_ref: Int&
 `T[]&` 不拥有底层内存。把切片保存到结构体字段或返回给调用方时，需要保证被引用的数组或缓冲区生命周期覆盖切片的使用范围。
 
 标准库 `Vector<T>` 提供两种常用转换：`vector.slice()` 返回借用视图 `T[]&`；
-`vector.into_array()` 会消耗整个 `Vector`，并把已初始化元素转移给返回的 `T[]^` / `Box<Slice<T>>` 拥有。
-调用 `into_array()` 后，原 `Vector` 已经失效，不能继续使用。
+`vector.into_slice()` 会消耗整个 `Vector`，并把已初始化元素转移给返回的 `T[]^` / `Box<Slice<T>>` 拥有。
+调用 `into_slice()` 后，原 `Vector` 已经失效，不能继续使用。
 
 ## 多元素裸指针 `T[*]`
 

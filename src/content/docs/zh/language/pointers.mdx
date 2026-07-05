@@ -32,7 +32,9 @@ Int^ owner = new Int(123);
 Int[3]^ array_owner = new [1, 2, 3];
 
 Int& ref = value$.ref();
-Int* raw = value$.ptr();
+Int* raw = do [unsafe] {
+    value$.ptr()
+};
 ```
 
 `^`、`&` 和 `*` 都是类型后缀，紧跟在被包裹的类型后面：
@@ -86,7 +88,9 @@ Int value = 41;
 Int& ref = value$.ref();
 Int copied = ref$.get();
 
-Int* raw = value$.ptr();
+Int* raw = do [unsafe] {
+    value$.ptr()
+};
 Int raw_value = raw$.get();
 ```
 
@@ -94,14 +98,16 @@ Int raw_value = raw$.get();
 
 ```c
 Int! value = 0;
-Int!* raw = value$.ptr();
+Int!* raw = do [unsafe] {
+    value$.ptr()
+};
 raw$.set(42);
 ```
 
 ## 隐式操作层
 
 `$` 会阻止接收者自动解引用，并进入隐式操作层。`$.get()`、`$.ref()`、`$.ptr()`、`$.move()`、
-`$.free()`、`Type$.size()` 这类操作都在独立章节中说明：见[隐式操作层](/zh/language/implicit-layer/)。
+`$.dealloc()`、`Type$.size()` 这类操作都在独立章节中说明：见[隐式操作层](/zh/language/implicit-layer/)。
 
 ## 多元素裸指针
 

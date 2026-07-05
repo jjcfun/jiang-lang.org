@@ -17,7 +17,9 @@ Value operations are written as `value$.op(...)`:
 Int value = 42;
 
 Int& ref = value$.ref();
-Int* ptr = value$.ptr();
+Int* ptr = do [unsafe] {
+    value$.ptr()
+};
 Int copied = ref$.get();
 ```
 
@@ -26,7 +28,7 @@ Type operations are written as `Type$.op(...)`:
 ```c
 Int size = Int$.size();
 Int align = Int$.align();
-Int^ value = Int$.alloc();
+Int![*] value = Int!$.alloc();
 ```
 
 ## Binding Rules
@@ -52,13 +54,13 @@ operation layer, then resolves the following operation.
 | Operation | Meaning |
 | --- | --- |
 | `value$.ref()` | returns a `T&` reference |
-| `value$.ptr()` | returns a `T*` single-object raw pointer |
+| `value$.ptr()` | returns a `T*` single-object raw pointer; requires `unsafe` |
 | `value$.get()` | explicitly reads through `T^`, `T&`, or `T*` |
 | `value$.set(new_value)` | explicitly writes through a `T!*` target |
 | `value$.move()` | transfers ownership and invalidates the source |
-| `value$.addr()` | gets the address value of the current value |
-| `value$.free()` | frees an object allocated by the default heap allocator |
-| `value$.as(Type)` | low-level cast |
+| `value$.addr()` | gets a raw pointer to the current value; requires `unsafe` |
+| `value$.dealloc()` | frees an object allocated by the default heap allocator; requires `unsafe` |
+| `value$.as(Type)` | low-level cast; requires `unsafe` for raw pointer casts |
 
 These operations are not ordinary methods. They are built-in operations for references, ownership,
 raw pointers, allocation, and low-level casts.
@@ -104,8 +106,8 @@ Types can enter the implicit operation layer too:
 Int size = Int$.size();
 Int align = Int$.align();
 Int max_align = Int$.max_align();
-Int^ value = Int$.alloc();
-Int[*] values = Int$.alloc_array(10);
+Int![*] value = Int!$.alloc();
+Int![*] values = Int!$.alloc_many(10);
 ```
 
 These operations query layout information or perform low-level allocation. Layout information is
@@ -116,8 +118,8 @@ also consumed by the backend.
 | `Type$.size()` | type size |
 | `Type$.align()` | ABI alignment |
 | `Type$.max_align()` | maximum Jiang type alignment supported by the default allocator |
-| `Type$.alloc()` | allocates one uninitialized object and returns `Type^` |
-| `Type$.alloc_array(n)` | allocates contiguous array storage and returns `Type[*]` |
+| `Type$.alloc()` | allocates one uninitialized object and returns `Type![*]` |
+| `Type$.alloc_many(n)` | allocates contiguous array storage and returns `Type![*]` |
 
 ## Casts
 
@@ -135,12 +137,15 @@ use it as the normal spelling for numeric conversions, construction, or everyday
 
 ```c
 Int address = 0x1000;
-Int* ptr = address$.as(Int*);
+Int* ptr = do [unsafe] {
+    address$.as(Int*)
+};
 ```
 
-Packages are currently treated as globally unsafe by default. The compiler does not reject
-raw pointer casts or raw pointer access solely because they are unsafe. If capability or unsafe gates
-are introduced later, these low-level operations should be checked there.
+Low-level memory operations are gated by the `unsafe` effect. Use `do [unsafe] { ... }` when a
+small expression or block needs to take raw pointers, cast raw pointers, allocate raw storage, or
+explicitly deallocate storage. `$.get()` and `$.set()` are not themselves unsafe; the unsafe boundary
+is the operation that creates or casts the raw pointer.
 
 ## Optional Operations
 

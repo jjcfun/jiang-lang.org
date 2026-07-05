@@ -230,4 +230,12 @@ Fn<unsafe Int, Int>[]& unsafe_callbacks;
 Fn<async Bool[]&> load_callbacks;
 ```
 
+调用带 `unsafe` effect 的函数需要显式 effect context：
+
+```c
+Int value = do [unsafe] {
+    unsafe_callback(1)
+};
+```
+
 当前示例使用已有函数名或方法名形成函数值；匿名函数语法尚未作为日常写法介绍。

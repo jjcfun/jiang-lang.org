@@ -156,11 +156,17 @@ for i in 0..10 {
 `defer` 会在当前块退出时按后进先出顺序执行：
 
 ```c
-defer handle$.free();
+defer {
+    do [unsafe] {
+        handle$.dealloc();
+    }
+}
 
 defer {
     log("closing");
-    handle$.free();
+    do [unsafe] {
+        handle$.dealloc();
+    }
 }
 ```
 
