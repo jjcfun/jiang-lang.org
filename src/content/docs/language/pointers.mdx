@@ -13,6 +13,8 @@ rules are covered in [Ownership, Borrowing & Lifetimes](/language/ownership/).
 
 - `T^`: short form of `Box<T>`, an owning pointer.
 - `T&`: short form of `Reference<T>`, a non-owning reference.
+- `T!&`: a non-owning reference borrowed from mutable `T!` storage.
+- `T&!`: a mutable reference slot; the slot can be rebound to another `T&`.
 - `T*`: short form of `RawPointer<T>`, a single-object raw pointer for FFI / ABI / low-level code.
 - `T[*]`: short form of `ManyPointer<T>`, indexed by element.
 - `T[*:S]`: short form of `SentinelPointer<T, S>`, a many raw pointer with a sentinel value.
@@ -21,7 +23,9 @@ rules are covered in [Ownership, Borrowing & Lifetimes](/language/ownership/).
 - `T[]^`: short form of `Box<Slice<T>>`, an owned unsized array handle.
 - `T[:S]&`: short form of `Reference<SentinelSlice<T, S>>`, a borrowed sentinel slice reference.
 
-Only `T^` / `Box<T>` expresses language-level ownership.
+Only `T^` / `Box<T>` expresses language-level ownership. `T!&` and `T&!` describe different layers:
+`T!&` preserves the mutability of the referenced storage, while `T&!` makes the reference slot itself
+reassignable.
 These suffix forms are syntax sugar for their canonical type names; the short forms are the normal
 way to write application code.
 Ownership transfer, automatic destruction, and lifetime constraints are covered separately.

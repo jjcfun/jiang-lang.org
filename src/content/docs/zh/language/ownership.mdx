@@ -101,11 +101,14 @@ Int& ref = value$.ref();
 Int copied = ref$.get();
 ```
 
-在局部绑定中，`_&` 是一种推导借用绑定的简写：
+在局部绑定中，`ref _` 是一种推导借用绑定的简写：
 
 ```c
 Int value = 10;
-_& ref = value; // 生命周期规则等同于 value$.ref()
+ref _ ref = value; // 生命周期规则等同于 value$.ref()
+
+Int! mutable_value = 20;
+ref _ mutable_ref = mutable_value; // mutable_ref: Int!&
 ```
 
 在可选值和联合的承载值模式中，使用 `ref T name` 借用承载值，

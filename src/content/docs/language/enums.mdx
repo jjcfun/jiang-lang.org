@@ -143,8 +143,8 @@ Int first(Node node) {
 ```
 
 This matters when the payload is large, non-copyable, or should be inspected without moving it.
-`ref Int! value` is also allowed when the payload reference binding itself must be reassignable; the
-`!` applies to the binding, not to the payload source.
+`ref! Int value` is also allowed when the payload reference binding itself must be reassignable; the
+`!` applies to the reference slot, not to the payload source.
 
 Optional values use `.some(...)` and `.none`:
 
