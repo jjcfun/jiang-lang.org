@@ -161,13 +161,13 @@ T add<T>(T left, T right) {
 
 ## 方法
 
-类型里的函数分为实例方法和 `static` 方法。
+类型里的函数分为实例方法和不带 `self` 参数的关联函数。
 
 ```c
 struct User {
     Int id;
 
-    static User zero() {
+    User zero() {
         return User(id: 0)
     }
 
@@ -181,7 +181,7 @@ Int a = user.value();
 User z = User.zero();
 ```
 
-实例方法体内有隐式 `self`。`static` 方法没有接收者，不能使用 `self`。
+实例方法体内有隐式 `self`。不带接收者的关联函数不能使用 `self`。
 
 `init(...)` 是构造函数，拥有初始化中的 `self` 目标，只能通过 `Type(...)` / `new Type(...)`
 调用，不作为普通函数值暴露。`deinit()` 是资源清理入口，不能手动当作普通函数调用。
@@ -195,35 +195,80 @@ Int b = User.value(user$.ref());
 
 第二种形式把接收者引用作为第一个参数传入，适合需要把方法当作函数值保存或传递的场景。
 
-## 函数指针
+## 函数值和闭包
 
-`Fn<R, A, B, ...>` 表示函数指针类型。第一个类型参数是返回类型，后续参数是调用参数类型。
+Jiang 区分 C 风格函数指针和闭包：
+
+- `RawFn<R, A, B, ...>` 是裸函数指针，不带捕获环境。需要 C ABI callback 时使用它。
+- `Fn<R, A, B, ...>` 是 Jiang 闭包值。它可以捕获局部值，也可以包装匹配的 `RawFn`。
+- `Fn<R, A, B, ...>^` 是拥有型闭包 handle。闭包需要离开当前栈帧时使用它。
+
+第一个类型参数是返回类型，后续参数是调用参数类型。
 
 ```c
 Bool less(Int left, Int right) {
     return left < right;
 }
 
-Fn<Bool, Int, Int> compare = less;
+RawFn<Bool, Int, Int> raw_compare = less;
+Fn<Bool, Int, Int> compare = Fn(raw_compare);
 Bool ok = compare(1, 2);
 ```
 
-实例方法作为未绑定函数值时，接收者展开为第一个参数：
+匿名函数会使用上下文里的 expected type：
 
 ```c
-Fn<Int, User&> get_value = User.value;
+Fn<Int, Int> add_base(Int base) {
+    Fn<Int, Int> add = (value) => value + base;
+    return add$.move(); // 错误：stack Fn 不能让捕获的栈环境逃逸。
+}
+```
+
+栈上的 `Fn` 可以 move，但不能 copy。它可以传给立即调用的函数，但不能返回，也不能保存到可能
+比捕获的栈变量活得更久的位置。
+
+使用 `new` 创建拥有型闭包：
+
+```c
+Fn<Int>^ make_answer(Int value) {
+    return new () [_ snapshot = value] => snapshot;
+}
+
+Int main() {
+    Fn<Int>^ answer = make_answer(42);
+    return answer() - 42;
+}
+```
+
+`Fn^` 可以直接调用。如果 pattern matching 或字段访问拿到的是拥有型闭包 handle 的引用，
+需要先借成 callable view：
+
+```c
+Int call_optional(Fn<Int>^? maybe) {
+    guard maybe is .some(ref _ answer_ref) else {
+        return 0;
+    }
+    Fn<Int>& answer = answer_ref$.ref();
+    return answer();
+}
+```
+
+实例方法作为未绑定函数值时，接收者展开为第一个参数，并表示成 `RawFn`：
+
+```c
+RawFn<Int, User&> get_value = User.value;
 Int value = get_value(user$.ref());
 ```
 
-`unsafe` 和 `async` 可以写在 `Fn<...>` 的返回类型前，表示函数调用需要对应上下文。
-它们不修饰返回值类型本身，而是修饰外层函数类型：
+`unsafe` 和 `async` 可以写在 `RawFn<...>` 或 `Fn<...>` 的返回类型前，表示调用这个值需要
+对应上下文。它们不修饰返回值类型本身，而是修饰外层 callable 类型：
 
 ```c
 Fn<async Bool>[]& callbacks;
-Fn<unsafe Int, Int>[]& unsafe_callbacks;
+RawFn<unsafe Int, Int>[]& unsafe_callbacks;
 ```
 
-`Fn<async Bool>[]&` 表示“元素为异步函数指针的切片引用”。如果要表示“异步函数返回切片引用”，
+`Fn<async Bool>[]&` 表示“元素为异步闭包值的切片引用”。如果要表示“异步 callable 返回切片引用”，
 应写成：
 
 ```c
@@ -238,4 +283,4 @@ Int value = do [unsafe] {
 };
 ```
 
-当前示例使用已有函数名或方法名形成函数值；匿名函数语法尚未作为日常写法介绍。
+需要 ABI 级函数指针时使用 `RawFn`。普通 callback API 如果希望接收捕获闭包，应使用 `Fn`。

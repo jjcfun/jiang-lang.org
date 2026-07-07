@@ -48,14 +48,14 @@ enum [UInt8] ByteTag {
 UInt8 tag = UInt8(ByteTag.block);
 ```
 
-Enums can define `static` and instance methods:
+Enums can define instance methods and associated functions without a `self` parameter:
 
 ```c
 enum Mode {
     read,
     write,
 
-    static Int answer() {
+    Int answer() {
         return 42;
     }
 

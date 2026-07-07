@@ -19,7 +19,7 @@ Traits with required methods use a body:
 
 ```c
 trait Equatable {
-    static Bool equal(Self& lhs, Self& rhs);
+    Bool equal(Self& lhs, Self& rhs);
 }
 
 trait Hashable: Equatable {
@@ -27,7 +27,8 @@ trait Hashable: Equatable {
 }
 ```
 
-Non-`static` required methods use the current type as the receiver. `static` required methods do not have `self`.
+Requirements with a `self` parameter use the current value as the receiver. Requirements without
+`self` are associated functions on the implementing type.
 
 ## Dynamic Trait Values
 
@@ -72,16 +73,16 @@ writer.write(123);
 ```
 
 Passing a trait method pointer uses the unbound vtable slot form. Receiver methods include the
-erased receiver as their first parameter, while static methods keep their declared parameter list:
+erased receiver as their first parameter, while associated functions keep their declared parameter
+list:
 
 ```c
-Fn<(), Writer.Receiver, Int> write_slot = writer.write;
+RawFn<(), Writer.Receiver, Int> write_slot = writer.write;
 write_slot(writer.receiver, 123);
 ```
 
 The current implementation supports dynamic dispatch for reference receiver methods, method slot
-access, and dropping owning dynamic trait values. Traits with `@self(move)` requirements are rejected
-for `Any` and `Receiver`.
+access, and dropping owning dynamic trait values.
 
 ## Implementing in a Type Body
 

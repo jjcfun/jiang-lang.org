@@ -154,13 +154,13 @@ struct Buffer {
 
 ## 方法
 
-结构体支持 `static` 方法和实例方法：
+结构体支持实例方法和不带 `self` 参数的关联函数：
 
 ```c
 struct User {
     Int id;
 
-    static Int zero() {
+    Int zero() {
         return 0;
     }
 

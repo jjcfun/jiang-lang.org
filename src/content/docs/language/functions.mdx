@@ -164,13 +164,13 @@ T add<T>(T left, T right) {
 
 ## Methods
 
-Types can define instance methods and `static` methods:
+Types can define instance methods and associated functions without a `self` parameter:
 
 ```c
 struct User {
     Int id;
 
-    static User zero() {
+    User zero() {
         return User(id: 0)
     }
 
@@ -184,7 +184,7 @@ Int a = user.value();
 User z = User.zero();
 ```
 
-Instance methods have implicit `self`. `static` methods do not.
+Instance methods have implicit `self`. Associated functions without a receiver do not.
 
 `init(...)` is a constructor with an initializing `self` target. It is called through `Type(...)` or
 `new Type(...)`, and is not exposed as a normal function value. `deinit()` is the cleanup entry point
@@ -197,36 +197,86 @@ Int a = user.value();
 Int b = User.value(user$.ref());
 ```
 
-## Function Pointer Types
+## Function Values and Closures
 
-`Fn<R, A, B, ...>` is a named generic type convention for function pointers: the first type argument is the return type, followed by parameter types.
+Jiang separates C-style function pointers from closures:
+
+- `RawFn<R, A, B, ...>` is a raw function pointer. It has no captured environment and is the type to
+  use for C ABI callbacks.
+- `Fn<R, A, B, ...>` is a Jiang closure value. It can capture local values and can also wrap a
+  matching `RawFn`.
+- `Fn<R, A, B, ...>^` is an owned closure handle. Use it when the closure value must outlive the
+  current stack frame.
+
+The first type argument is the return type, followed by parameter types.
 
 ```c
 Bool less(Int left, Int right) {
     return left < right;
 }
 
-Fn<Bool, Int, Int> compare = less;
+RawFn<Bool, Int, Int> raw_compare = less;
+Fn<Bool, Int, Int> compare = Fn(raw_compare);
 Bool ok = compare(1, 2);
 ```
 
-An unbound instance method includes the receiver reference as its first parameter:
+Anonymous functions use the expected type from their context:
 
 ```c
-Fn<Int, User&> get_value = User.value;
+Fn<Int, Int> add_base(Int base) {
+    Fn<Int, Int> add = (value) => value + base;
+    return add$.move(); // error: stack Fn cannot escape its captured stack environment.
+}
+```
+
+A stack `Fn` is movable but not copyable. It can be passed to functions that call it immediately, but
+it cannot be returned or stored somewhere that may outlive the captured stack values.
+
+Use `new` to create an owned closure:
+
+```c
+Fn<Int>^ make_answer(Int value) {
+    return new () [_ snapshot = value] => snapshot;
+}
+
+Int main() {
+    Fn<Int>^ answer = make_answer(42);
+    return answer() - 42;
+}
+```
+
+`Fn^` can be called directly. If pattern matching or field access gives you a reference to an owned
+closure handle, borrow a callable view first:
+
+```c
+Int call_optional(Fn<Int>^? maybe) {
+    guard maybe is .some(ref _ answer_ref) else {
+        return 0;
+    }
+    Fn<Int>& answer = answer_ref$.ref();
+    return answer();
+}
+```
+
+An unbound instance method includes the receiver reference as its first parameter and is represented
+as a `RawFn`:
+
+```c
+RawFn<Int, User&> get_value = User.value;
 Int value = get_value(user$.ref());
 ```
 
-`unsafe` and `async` can be written before the return type inside `Fn<...>` to mark the context
-required to call the function. They describe the outer function type, not the return value itself:
+`unsafe` and `async` can be written before the return type inside `RawFn<...>` or `Fn<...>` to mark
+the context required to call the value. They describe the outer callable type, not the return value
+itself:
 
 ```c
 Fn<async Bool>[]& callbacks;
-Fn<unsafe Int, Int>[]& unsafe_callbacks;
+RawFn<unsafe Int, Int>[]& unsafe_callbacks;
 ```
 
-`Fn<async Bool>[]&` means a borrowed slice whose elements are async function pointers. To describe
-an async function that returns a borrowed slice, write:
+`Fn<async Bool>[]&` means a borrowed slice whose elements are async closure values. To describe an
+async callable that returns a borrowed slice, write:
 
 ```c
 Fn<async Bool[]&> load_callbacks;
@@ -240,4 +290,5 @@ Int value = do [unsafe] {
 };
 ```
 
-These examples use existing function and method names as function values; anonymous function syntax is not introduced as a day-to-day writing style yet.
+Use `RawFn` when you need an ABI-level function pointer. Use `Fn` for normal callback APIs that may
+accept capturing closures.

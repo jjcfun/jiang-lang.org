@@ -19,7 +19,7 @@ trait Numeric;
 
 ```c
 trait Equatable {
-    static Bool equal(Self& lhs, Self& rhs);
+    Bool equal(Self& lhs, Self& rhs);
 }
 
 trait Hashable: Equatable {
@@ -27,7 +27,7 @@ trait Hashable: Equatable {
 }
 ```
 
-非 `static` 方法要求会使用当前类型作为接收者；`static` 方法要求没有 `self`。
+带 `self` 参数的方法要求会把当前值作为接收者；不带 `self` 的要求是实现类型上的关联函数。
 
 ## 动态 Trait 值
 
@@ -70,15 +70,14 @@ writer.write(123);
 ```
 
 传递 trait 方法指针时使用未绑定的方法槽位形式。接收者方法会把擦除接收者作为
-第一个参数；静态方法保留原来的参数列表：
+第一个参数；关联函数保留原来的参数列表：
 
 ```c
-Fn<(), Writer.Receiver, Int> write_slot = writer.write;
+RawFn<(), Writer.Receiver, Int> write_slot = writer.write;
 write_slot(writer.receiver, 123);
 ```
 
 当前实现支持引用接收者方法的动态分派、方法槽位访问和拥有型动态 trait 值释放。
-包含 `@self(move)` 要求的 trait 暂不能构造 `Any` 或 `Receiver`。
 
 ## 在类型定义处实现
 

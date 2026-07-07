@@ -147,13 +147,13 @@ struct Buffer {
 
 ## Methods
 
-Types can define `static` methods and instance methods:
+Types can define instance methods and associated functions without a `self` parameter:
 
 ```c
 struct User {
     Int id;
 
-    static Int zero() {
+    Int zero() {
         return 0;
     }
 
