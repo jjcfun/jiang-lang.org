@@ -285,7 +285,7 @@ Fn<async Bool[]&> load_callbacks;
 Calling a function with the `unsafe` effect requires an explicit effect context:
 
 ```c
-Int value = do [unsafe] {
+Int value = unsafe {
     unsafe_callback(1)
 };
 ```

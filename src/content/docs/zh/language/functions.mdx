@@ -278,7 +278,7 @@ Fn<async Bool[]&> load_callbacks;
 调用带 `unsafe` effect 的函数需要显式 effect context：
 
 ```c
-Int value = do [unsafe] {
+Int value = unsafe {
     unsafe_callback(1)
 };
 ```

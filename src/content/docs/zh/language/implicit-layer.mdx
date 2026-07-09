@@ -16,7 +16,7 @@ sidebar:
 Int value = 42;
 
 Int& ref = value$.ref();
-Int* ptr = do [unsafe] {
+Int* ptr = unsafe {
     value$.ptr()
 };
 Int copied = ref$.get();
@@ -130,13 +130,13 @@ Int i = Int(f);
 
 ```c
 Int address = 0x1000;
-Int* ptr = do [unsafe] {
+Int* ptr = unsafe {
     address$.as(Int*)
 };
 ```
 
 低层内存操作已经接入 `unsafe` effect。需要取裸指针、做裸指针转换、分配裸存储或显式释放存储时，
-使用 `do [unsafe] { ... }` 包住对应表达式或代码块。`$.get()` / `$.set()` 本身不属于 unsafe；
+使用 `unsafe { ... }` 包住对应表达式或代码块。`$.get()` / `$.set()` 本身不属于 unsafe；
 真正的 unsafe 边界是创建或转换裸指针的操作。
 
 ## 可选值操作

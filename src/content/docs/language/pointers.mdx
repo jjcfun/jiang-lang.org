@@ -39,7 +39,7 @@ Int^ owner = new Int(123);
 Int[3]^ array_owner = new [1, 2, 3];
 
 Int& ref = value$.ref();
-Int* raw = do [unsafe] {
+Int* raw = unsafe {
     value$.ptr()
 };
 ```
@@ -93,7 +93,7 @@ Int value = 41;
 Int& ref = value$.ref();
 Int copied = ref$.get();
 
-Int* raw = do [unsafe] {
+Int* raw = unsafe {
     value$.ptr()
 };
 Int raw_value = raw$.get();
@@ -103,7 +103,7 @@ Writing through a single-object raw pointer requires a mutable pointee:
 
 ```c
 Int! value = 0;
-Int!* raw = do [unsafe] {
+Int!* raw = unsafe {
     value$.ptr()
 };
 raw$.set(42);

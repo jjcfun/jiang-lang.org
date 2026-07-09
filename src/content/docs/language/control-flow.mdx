@@ -159,14 +159,14 @@ The `else` block must be non-empty and end in `return`, `break`, `continue`, or 
 
 ```c
 defer {
-    do [unsafe] {
+    unsafe {
         handle$.dealloc();
     }
 }
 
 defer {
     log("closing");
-    do [unsafe] {
+    unsafe {
         handle$.dealloc();
     }
 }

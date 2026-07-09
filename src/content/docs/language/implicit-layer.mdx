@@ -17,7 +17,7 @@ Value operations are written as `value$.op(...)`:
 Int value = 42;
 
 Int& ref = value$.ref();
-Int* ptr = do [unsafe] {
+Int* ptr = unsafe {
     value$.ptr()
 };
 Int copied = ref$.get();
@@ -137,12 +137,12 @@ use it as the normal spelling for numeric conversions, construction, or everyday
 
 ```c
 Int address = 0x1000;
-Int* ptr = do [unsafe] {
+Int* ptr = unsafe {
     address$.as(Int*)
 };
 ```
 
-Low-level memory operations are gated by the `unsafe` effect. Use `do [unsafe] { ... }` when a
+Low-level memory operations are gated by the `unsafe` effect. Use `unsafe { ... }` when a
 small expression or block needs to take raw pointers, cast raw pointers, allocate raw storage, or
 explicitly deallocate storage. `$.get()` and `$.set()` are not themselves unsafe; the unsafe boundary
 is the operation that creates or casts the raw pointer.

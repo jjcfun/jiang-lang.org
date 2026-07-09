@@ -142,7 +142,7 @@ struct Buffer {
     UInt8[*] data;
 
     deinit() {
-        do [unsafe] {
+        unsafe {
             self.data$.dealloc();
         }
         return ();

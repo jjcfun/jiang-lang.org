@@ -241,7 +241,7 @@ slice does not implicitly lose that guarantee when assigned to `T[]&`; write `va
 ```c
 Int^ owner = new Int(42);
 Int value = owner$.get();
-do [unsafe] {
+unsafe {
     owner$.dealloc();
 }
 ```

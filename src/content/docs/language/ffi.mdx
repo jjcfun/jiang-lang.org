@@ -41,7 +41,7 @@ non-literal sentinel view as a plain byte slice:
 
 ```c
 UInt8[:0]& view = "hello";
-do [unsafe] {
+unsafe {
     puts(view$.ptr());
 }
 
@@ -60,7 +60,7 @@ extern public Int write(Int fd, UInt8[*] buf, Int count);
 
 ```c
 Int value = 42;
-Int* raw = do [unsafe] {
+Int* raw = unsafe {
     value$.ptr()
 };
 Int copied = raw$.get();
@@ -70,7 +70,7 @@ Writing through a single-object raw pointer requires a mutable pointee:
 
 ```c
 Int! value = 0;
-Int!* raw = do [unsafe] {
+Int!* raw = unsafe {
     value$.ptr()
 };
 raw$.set(42);
@@ -98,7 +98,7 @@ struct CBuffer {
     Int length;
 
     deinit() {
-        do [unsafe] {
+        unsafe {
             self.data$.dealloc();
         }
         return ();

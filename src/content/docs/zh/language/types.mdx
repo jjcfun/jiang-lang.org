@@ -248,7 +248,7 @@ drop 时会析构元素并释放 allocation。
 ```c
 Int^ owner = new Int(42);
 Int value = owner$.get();
-do [unsafe] {
+unsafe {
     owner$.dealloc();
 }
 ```

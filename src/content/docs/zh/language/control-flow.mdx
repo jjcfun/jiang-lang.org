@@ -157,14 +157,14 @@ for i in 0..10 {
 
 ```c
 defer {
-    do [unsafe] {
+    unsafe {
         handle$.dealloc();
     }
 }
 
 defer {
     log("closing");
-    do [unsafe] {
+    unsafe {
         handle$.dealloc();
     }
 }
