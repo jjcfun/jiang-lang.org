@@ -176,7 +176,7 @@ Use `defer expr;` for a single operation or `defer { ... }` for several operatio
 
 ## `try catch`
 
-`try expr catch (...) => fallback` handles a `T@E` result:
+`try expr catch (...) => fallback` handles a `Result<T, E>` value:
 
 ```c
 Int value = try parse(text) catch (err) => {

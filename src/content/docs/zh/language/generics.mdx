@@ -195,17 +195,17 @@ Slot<Int!> slot = Slot<Int!> { value: 1 }
 
 ## 与可错返回组合
 
-泛型函数可以返回 `T@E`。`@E` 位于返回类型边界，错误类型本身不在 `@` 后追加 `?` 或 `!`：
+泛型函数可以返回 `Result<T, E>`。错误类型本身不在第二个类型参数上追加 `?` 或 `!`：
 
 ```c
 @where(T: Numeric)
-T@ParseErr parse_number<T>(UInt8[]& text);
+Result<T, ParseErr> parse_number<T>(UInt8[]& text);
 ```
 
 如果成功值需要可选或可变，把后缀写在 `@` 左侧：
 
 ```c
-T?@ParseErr parse_optional<T>(UInt8[]& text);
+Result<T?, ParseErr> parse_optional<T>(UInt8[]& text);
 ```
 
 ## 使用边界

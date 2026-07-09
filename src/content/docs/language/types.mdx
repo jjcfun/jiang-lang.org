@@ -72,10 +72,9 @@ Common suffix forms:
 | `T[]&` | `Ref<Slice<T>>` | borrowed slice reference with runtime length |
 | `T[:S]` | `SentinelSlice<T, S>` | sentinel unsized array type |
 | `T[:S]&` | `Ref<SentinelSlice<T, S>>` | borrowed sentinel slice reference |
-| `T@E` | `Result<T, E>` | errorable return in return position |
 
 These surface forms are syntax sugar for the canonical names. The compiler still gives `T?`,
-`T^`, `T&`, `T[]&`, and `T@E` their built-in meaning even if user code declares a type with the
+`T^`, `T&`, and `T[]&` their built-in meaning even if user code declares a type with the
 same name as one of the canonical types. Most code should use the short forms; the canonical names
 are useful when describing type relationships or writing `extend` and `@where`.
 
@@ -286,14 +285,14 @@ if maybe is .some(payload) {
 
 ## Errorable Returns
 
-`T@E` is used in function and method return position. It is equivalent to `Result<T, E>` there:
+`Result<T, E>` is used in function and method return position for errorable results:
 
 ```c
 enum Err {
     bad = 1,
 }
 
-Int@Err ok() {
+Result<Int, Err> ok() {
     return 42;
 }
 

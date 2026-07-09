@@ -174,7 +174,7 @@ defer {
 
 ## `try catch`
 
-`try expr catch (...) => 备用值` 用于把 `T@E` 结果显式转换成成功值 `T`。备用值会在失败时使用：
+`try expr catch (...) => 备用值` 用于把 `Result<T, E>` 显式转换成成功值 `T`。备用值会在失败时使用：
 
 ```c
 Int value = try parse(text) catch (err) => {
