@@ -62,16 +62,16 @@ Common suffix forms:
 | `T!` | `T` with a mutability marker | current layer is mutable |
 | `T?` | `Option<T>` | optional value |
 | `T^` | `Box<T>` | owning pointer |
-| `T&` | `Reference<T>` | non-owning reference |
+| `T&` | `Ref<T>` | non-owning reference |
 | `T*` | `RawPointer<T>` | single-object raw pointer |
 | `T[*]` | `ManyPointer<T>` | many raw pointer indexed by element |
 | `T[*:S]` | `SentinelPointer<T, S>` | many raw pointer with a sentinel value |
 | `T[N]` | `Array<T, N>` | fixed-size array |
 | `T[N:S]` | `SentinelArray<T, N, S>` | fixed-size array with a sentinel value |
 | `T[]` | `Slice<T>` | unsized array type |
-| `T[]&` | `Reference<Slice<T>>` | borrowed slice reference with runtime length |
+| `T[]&` | `Ref<Slice<T>>` | borrowed slice reference with runtime length |
 | `T[:S]` | `SentinelSlice<T, S>` | sentinel unsized array type |
-| `T[:S]&` | `Reference<SentinelSlice<T, S>>` | borrowed sentinel slice reference |
+| `T[:S]&` | `Ref<SentinelSlice<T, S>>` | borrowed sentinel slice reference |
 | `T@E` | `Result<T, E>` | errorable return in return position |
 
 These surface forms are syntax sugar for the canonical names. The compiler still gives `T?`,
@@ -220,7 +220,7 @@ Int[2][3] matrix = [[1, 2], [3, 4], [5, 6]];
 ```
 
 `T[]` is the short form of `Slice<T>`, an unsized array type whose length is known at runtime.
-Bare `T[]` is not a normal by-value type. Use `T[]&`, which is `Reference<Slice<T>>`, for a
+Bare `T[]` is not a normal by-value type. Use `T[]&`, which is `Ref<Slice<T>>`, for a
 borrowed slice reference:
 
 ```c
