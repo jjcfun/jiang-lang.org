@@ -74,10 +74,10 @@ bash ./script/install_llvm.sh
 VERIFY=full bash ./script/build_next.sh
 ```
 
-0.4.5 开发分支可以使用 0.4.4 发布版编译器作为自举编译器。本地做发布验证时可以显式指定：
+0.4.6 开发分支可以使用 0.4.5 发布版编译器作为自举编译器。本地做发布验证时可以显式指定：
 
 ```bash
-BOOTSTRAP_BIN=$HOME/.jiang/versions/0.4.4/bin/jiangc BOOTSTRAP_DEPTH=stable VERIFY=full bash ./script/build_next.sh
+BOOTSTRAP_BIN=$HOME/.jiang/versions/0.4.5/bin/jiangc BOOTSTRAP_DEPTH=stable VERIFY=full bash ./script/build_next.sh
 ```
 
 ## 下一步

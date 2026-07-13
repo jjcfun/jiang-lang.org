@@ -283,4 +283,36 @@ Int value = unsafe {
 };
 ```
 
+## 异步函数和 Future
+
+`async` 函数是无栈协程。在异步上下文中调用它时，调用点会隐式挂起直到结果可用，因此调用表达式
+直接表现为声明的返回类型：
+
+```jiang
+async Int load_page() {
+    1
+}
+
+async Int render() {
+    load_page() + 1
+}
+```
+
+使用 `async call(...)` 或 `async { ... }` 可以立即启动任务并得到 body-local `Future<T>`。
+调用 `await()` 会消费该 Future。先启动多个 Future，再按源码顺序等待，仍然可以保持并发推进：
+
+```jiang
+async Int load_both() {
+    Future<Int> left = async load_left();
+    Future<Int> right = async load_right();
+    left.await() + right.await()
+}
+```
+
+`Future<T>` 不能出现在参数、返回类型、字段、全局变量或 public ABI 中。Future 离开作用域前未被
+等待时表示 detach；Jiang 0.4.6 不提供 cancellation。`async [WorkerDomain] { ... }` 用于选择
+execution domain，无 domain 的 async block 继承 current domain。普通函数使用
+`sync [Domain] { ... }` 进入异步执行并阻塞等待结果。0.4.6 在 Darwin 上实现 pending Future 的
+阻塞等待；非 Darwin target 会报告 backend unsupported 诊断，不会 busy-spin。
+
 需要 ABI 级函数指针时使用 `RawFn`。普通 callback API 如果希望接收捕获闭包，应使用 `Fn`。

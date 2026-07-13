@@ -290,5 +290,39 @@ Int value = unsafe {
 };
 ```
 
+## Async Functions and Futures
+
+An `async` function is a stackless coroutine. Calling it from an async context implicitly suspends
+the caller until the result is available, so the call expression has the declared result type:
+
+```jiang
+async Int load_page() {
+    1
+}
+
+async Int render() {
+    load_page() + 1
+}
+```
+
+Use `async call(...)` or `async { ... }` to start work eagerly and receive a body-local `Future<T>`.
+Calling `await()` consumes that future. Starting multiple futures before awaiting them preserves
+concurrent progress even when they are awaited in source order:
+
+```jiang
+async Int load_both() {
+    Future<Int> left = async load_left();
+    Future<Int> right = async load_right();
+    left.await() + right.await()
+}
+```
+
+`Future<T>` cannot appear in parameters, return types, fields, globals, or public ABI. A future that
+leaves scope without being awaited is detached; Jiang 0.4.6 does not provide cancellation.
+`async [WorkerDomain] { ... }` selects an execution domain, while a domain-less async block inherits
+the current domain. Ordinary functions enter async execution with `sync [Domain] { ... }`, which
+blocks until the result is ready. Blocking pending futures is implemented on Darwin in 0.4.6;
+non-Darwin targets report an unsupported backend diagnostic instead of busy-spinning.
+
 Use `RawFn` when you need an ABI-level function pointer. Use `Fn` for normal callback APIs that may
 accept capturing closures.
