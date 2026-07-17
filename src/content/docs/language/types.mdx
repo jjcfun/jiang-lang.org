@@ -57,26 +57,25 @@ Int?[2]?[3] nullable_rows;
 
 Common suffix forms:
 
-| Surface syntax | Canonical type name | Meaning |
-| --- | --- | --- |
-| `T!` | `T` with a mutability marker | current layer is mutable |
-| `T?` | `Option<T>` | optional value |
-| `T^` | `Box<T>` | owning pointer |
-| `T&` | `Ref<T>` | non-owning reference |
-| `T*` | `RawPointer<T>` | single-object raw pointer |
-| `T[*]` | `ManyPointer<T>` | many raw pointer indexed by element |
-| `T[*:S]` | `SentinelPointer<T, S>` | many raw pointer with a sentinel value |
-| `T[N]` | `Array<T, N>` | fixed-size array |
-| `T[N:S]` | `SentinelArray<T, N, S>` | fixed-size array with a sentinel value |
-| `T[]` | `Slice<T>` | unsized array type |
-| `T[]&` | `Ref<Slice<T>>` | borrowed slice reference with runtime length |
-| `T[:S]` | `SentinelSlice<T, S>` | sentinel unsized array type |
-| `T[:S]&` | `Ref<SentinelSlice<T, S>>` | borrowed sentinel slice reference |
+| Surface syntax | Meaning |
+| --- | --- |
+| `T!` | current value/place layer is mutable |
+| `T?` | optional value |
+| `T^` / `T^!` | readonly / writable owning pointer place |
+| `T&` / `T!&` | shared readonly / unique mutable borrow |
+| `T&!` / `T!&!` | rebindable shared / unique reference slot |
+| `T*` / `T!*` | readonly-pointee / mutable-pointee raw pointer |
+| `T[N]` / `T[N]!` | readonly / writable fixed-size array place |
+| `T[N:S]` | fixed-size array with sentinel value `S` |
+| `T[]` | unsized array type |
+| `T[]&` / `T[]!&` | shared readonly / unique mutable borrowed slice |
+| `T[]^` / `T[]^!` | readonly / writable owning slice place |
+| `T[:S]&` | borrowed sentinel slice reference |
 
-These surface forms are syntax sugar for the canonical names. The compiler still gives `T?`,
-`T^`, `T&`, and `T[]&` their built-in meaning even if user code declares a type with the
-same name as one of the canonical types. Most code should use the short forms; the canonical names
-are useful when describing type relationships or writing `extend` and `@where`.
+Compiler-owned nominal names behind these forms are not available to user source. Always use the
+surface syntax in declarations, `extend` targets, and `@where` type patterns. A user-defined type
+named `Option`, `Result`, `Ref`, `Box`, or `Slice` is an ordinary nominal type and receives no
+built-in behavior.
 
 Within one layer, `?` must come before `!`: write `Int?!`, not `Int!?`, `Int??`, or `Int!!`.
 
@@ -99,7 +98,9 @@ The suffixes after `_` belong to the new binding, not to the right-hand side:
 | `_ name` | bind a new immutable value with the RHS type |
 | `_! name` | bind a new mutable value with the RHS type |
 | `ref _ name` | borrow the RHS place and bind an immutable inferred reference |
-| `ref! _ name` | borrow the RHS place and bind a mutable inferred reference slot |
+| `ref _! name` | shared borrow with a rebindable reference slot |
+| `ref! _ name` | unique mutable borrow with an immutable reference slot |
+| `ref! _! name` | unique mutable borrow with a rebindable reference slot |
 
 Use `_!` when the new binding itself must be reassignable:
 
@@ -147,14 +148,14 @@ _ same_ref = existing;   // same_ref: Int&
 // ref _ nested = existing; // error: `ref _` does not borrow an existing reference again.
 ```
 
-Use `ref! _` when the reference binding itself must be reassignable. The `!` applies to the binding's
-outer layer; it does not require the borrowed source to be mutable:
+Inside destructuring and patterns, `ref` versus `ref!` selects shared versus unique mutable borrow;
+the `!` after the type placeholder selects a rebindable reference slot:
 
 ```c
-Int first = 1;
-Int second = 2;
-ref! _ current = first;
-current = second$.ref();
+Int! first = 1;
+Int! second = 2;
+(ref! _ current) = (first);
+(ref! _! rebindable) = (second);
 ```
 
 The same `_` binding patterns are used inside destructuring. Use `ref T name` when borrowing a
@@ -178,19 +179,17 @@ that nested value type:
 Bool! flag = true;     // mutable binding slot containing Bool
 flag = false;
 
-Int[3]! values = [1, 2, 3]; // mutable binding slot containing Int[3]
+Int[3]! values = [1, 2, 3]; // writable array place
+values[0] = 10;
 values = [4, 5, 6];
-
-Int![3]! mutable_items = [1, 2, 3]; // mutable binding slot containing Int![3]
-mutable_items[0] = 10;
-mutable_items = [4, 5, 6];
 ```
 
-For example, `Int! value` declares a mutable binding whose stored value type is `Int`; `Int![]`
-uses `!` one layer deeper, so the array element type is mutable. `Int[]! value` is a mutable binding
-whose stored value type is `Int[]`.
+For ordinary values, fixed arrays, and owners, only the outer place carries mutability. There is no
+separate `T![N]` array-element type. Raw pointers and borrowed references are the exceptions: the
+`!` before `*` or `&` is canonical pointee capability.
 
-For aggregate values, a member is writable only when that member's own type is mutable.
+For aggregate values, a member is writable only when both the outer access place and the member
+declaration provide write capability. A readonly outer view recursively freezes reachable fields.
 
 ```c
 struct User {
@@ -198,9 +197,12 @@ struct User {
     Int! age;
 }
 
-User user = User(id: 1, age: 18)
+User! user = User(id: 1, age: 18)
 user.age = 19;
 // user.id = 2; // error
+
+User& readonly = user$.ref();
+// readonly.age = 20; // error: the shared outer borrow freezes the field
 ```
 
 ## Arrays and Slices
@@ -218,20 +220,19 @@ Nested arrays use repeated suffixes:
 Int[2][3] matrix = [[1, 2], [3, 4], [5, 6]];
 ```
 
-`T[]` is the short form of `Slice<T>`, an unsized array type whose length is known at runtime.
-Bare `T[]` is not a normal by-value type. Use `T[]&`, which is `Ref<Slice<T>>`, for a
-borrowed slice reference:
+`T[]` is an unsized array type whose length is known at runtime. Bare `T[]` is not a normal by-value
+type. Use `T[]&` for a borrowed slice reference:
 
 ```c
 Int[_] values = [1, 2, 3];
 Int[]& view = values[..];
 ```
 
-`T[]^`, which is `Box<Slice<T>>`, is the owned handle for an unsized array. It owns the initialized
-buffer, drops the elements, and frees the allocation.
+`T[]^` is the owned handle for an unsized array. It owns the initialized buffer, drops the elements,
+and frees the allocation.
 
-`T[:S]` is the short form of `SentinelSlice<T, S>`, a sentinel unsized array type. Sentinel slice
-views such as `T[:S]&` carry an additional type-level sentinel guarantee. A non-literal sentinel
+`T[:S]` is a sentinel unsized array type. Sentinel slice views such as `T[:S]&` carry an additional
+type-level sentinel guarantee. A non-literal sentinel
 slice does not implicitly lose that guarantee when assigned to `T[]&`; write `value.slice()` or
 `value$.as(T[]&)` to request a plain slice view.
 
@@ -245,7 +246,8 @@ unsafe {
 }
 ```
 
-`T^`, `T&`, and `T*` do not auto-dereference in ordinary value contexts. Use `$.get()` for explicit reads. Member access is the exception: `owner.member` can pass through `T^`:
+`T^` can auto-dereference when the expected type is `T`; use `$.get()` for an explicit pointee read.
+`T&` and `T*` require explicit reads. Member access can pass through `T^`:
 
 ```c
 Int value = 41;
@@ -262,11 +264,10 @@ Int n = box.value;
 
 ## Optional
 
-`T?` means the value may be `null`. It is equivalent to `Option<T>`:
+`T?` means the value may be `null`:
 
 ```c
 Int? maybe = 42;
-Option<Int> explicit = 42;
 Int? none = null;
 ```
 
@@ -285,14 +286,14 @@ if maybe is .some(payload) {
 
 ## Errorable Returns
 
-`Result<T, E>` is used in function and method return position for errorable results:
+`T@E` is used in function and method return position for errorable results:
 
 ```c
 enum Err {
     bad = 1,
 }
 
-Result<Int, Err> ok() {
+Int@Err ok() {
     return 42;
 }
 

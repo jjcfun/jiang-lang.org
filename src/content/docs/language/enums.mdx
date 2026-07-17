@@ -71,13 +71,13 @@ Int b = Int(Mode.read);
 ## Unions
 
 ```c
-union Result<T, E> {
+union Outcome<T, E> {
     T ok;
     E err;
 }
 
-Result<Int, ParseErr> a = Result.ok(42);
-Result<Int, ParseErr> b = .err(ParseErr.bad);
+Outcome<Int, ParseErr> a = Outcome.ok(42);
+Outcome<Int, ParseErr> b = .err(ParseErr.bad);
 ```
 
 Same-type variants can be grouped:
@@ -143,8 +143,8 @@ Int first(Node node) {
 ```
 
 This matters when the payload is large, non-copyable, or should be inspected without moving it.
-`ref! Int value` is also allowed when the payload reference binding itself must be reassignable; the
-`!` applies to the reference slot, not to the payload source.
+In patterns, `ref! Int value` creates a unique mutable borrow. Write `ref Int! value` or
+`ref! Int! value` when the resulting reference slot itself must be rebindable.
 
 Optional values use `.some(...)` and `.none`:
 

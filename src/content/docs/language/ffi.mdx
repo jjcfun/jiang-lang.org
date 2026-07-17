@@ -71,22 +71,22 @@ Writing through a single-object raw pointer requires a mutable pointee:
 ```c
 Int! value = 0;
 Int!* raw = unsafe {
-    value$.ptr()
+    value$.mut_ptr()
 };
 raw$.set(42);
 ```
 
-## Many Raw Pointers
+## Raw Buffer Pointers
 
-`T[*]` is also a raw pointer form. It is useful for C buffer parameters:
+`T*` is also the unbounded raw contiguous-memory view used by C buffer parameters:
 
 ```c
-extern public Int read(Int fd, UInt8[*] buf, Int count);
+extern Int read(Int fd, UInt8!* buf, Int count);
 ```
 
-`T*` is not used for free position movement like a C pointer. Use `T[*]` for position-based access
-into contiguous memory. `T[*]` has no length. Wrap it with a length field or use `T[]&` when Jiang
-code needs a borrowed length-bearing view.
+Indexing `T*` is unsafe because it carries no length. Wrap it with a length field or use `T[]&` when
+Jiang code needs a borrowed length-bearing view. The old `T[*]` spelling is compatibility syntax
+and should not be used by new code.
 
 ## Resource Boundaries
 
@@ -94,7 +94,7 @@ When wrapping external resources, make ownership explicit:
 
 ```c
 struct CBuffer {
-    UInt8[*] data;
+    UInt8!* data;
     Int length;
 
     deinit() {

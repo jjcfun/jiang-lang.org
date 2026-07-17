@@ -3,7 +3,7 @@ title: 安装
 description: 安装 Jiang 编译器。
 ---
 
-Jiang 0.4.4 提供 macOS arm64 预构建编译器包。现阶段推荐用发布包体验语言。
+Jiang 0.4.7 提供 macOS arm64 预构建编译器包。现阶段推荐用发布包体验语言。
 
 ## 环境要求
 
@@ -15,7 +15,7 @@ Jiang 0.4.4 提供 macOS arm64 预构建编译器包。现阶段推荐用发布�
 
 ## 安装发布包
 
-从 [0.4.4 GitHub 发布页](https://github.com/jjcfun/jiang/releases/tag/0.4.4) 下载 `jiang-0.4.4-macos-arm64.zip`，然后解压。
+从 [0.4.7 GitHub 发布页](https://github.com/jjcfun/jiang/releases/tag/0.4.7) 下载 `jiang-0.4.7-macos-arm64.zip`，然后解压。
 
 安装 Jiang：
 
@@ -26,7 +26,7 @@ Jiang 0.4.4 提供 macOS arm64 预构建编译器包。现阶段推荐用发布�
 默认安装到：
 
 ```text
-~/.jiang/versions/0.4.4
+~/.jiang/versions/0.4.7
 ~/.jiang/bin/jiangc
 ```
 
@@ -47,7 +47,7 @@ jiangc --version
 第一行应该是：
 
 ```text
-jiang 0.4.4
+jiang 0.4.7
 ```
 
 ## 从源码构建
@@ -74,10 +74,11 @@ bash ./script/install_llvm.sh
 VERIFY=full bash ./script/build_next.sh
 ```
 
-0.4.6 开发分支可以使用 0.4.5 发布版编译器作为自举编译器。本地做发布验证时可以显式指定：
+0.4.7 release 分支使用对应的 `0.4.7-bootstrap` 过渡编译器。可以指向 bootstrap
+worktree 或已安装的 bootstrap artifact：
 
 ```bash
-BOOTSTRAP_BIN=$HOME/.jiang/versions/0.4.5/bin/jiangc BOOTSTRAP_DEPTH=stable VERIFY=full bash ./script/build_next.sh
+BOOTSTRAP_BIN=$HOME/.jiang/versions/0.4.7-bootstrap/bin/jiangc BOOTSTRAP_DEPTH=next VERIFY=full bash ./script/build_next.sh
 ```
 
 ## 下一步

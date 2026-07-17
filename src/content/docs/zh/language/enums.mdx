@@ -73,16 +73,17 @@ Int b = Int(Mode.read);
 `union` 是带标签的安全联合类型。它不是 C 风格的无标签裸联合。
 
 ```c
-union Result<T, E> {
+union Outcome<T, E> {
     T ok;
     E err;
 }
 
-Result<Int, ParseErr> a = Result.ok(42);
-Result<Int, ParseErr> b = .err(ParseErr.bad);
+Outcome<Int, ParseErr> a = Outcome.ok(42);
+Outcome<Int, ParseErr> b = .err(ParseErr.bad);
 ```
 
-携带值可以是普通类型，例如 `struct`、元组、数组、切片、`Fn<...>`、`T^`、`T&`、`T[*]`、`T*`、可选类型，以及其他 `union` / `enum`。
+携带值可以是普通类型，例如 `struct`、元组、数组、slice、`Fn<...>`、`T^`、`T&`、`T*`、
+可选类型，以及其他 `union` / `enum`。
 
 同类型多个变体可以合并声明：
 
@@ -149,8 +150,8 @@ Int first(Node node) {
 ```
 
 当承载值较大、不可复制，或者只想检查而不想转移承载值时，应使用 `ref` 绑定。
-`ref! Int value` 也可以用于承载值模式，表示这个引用 slot 本身可重新赋值；`!` 作用在引用
-slot 上，不要求承载值来源可写。
+pattern 中的 `ref! Int value` 会创建 unique mutable borrow。如果结果 reference slot 本身需要
+可重绑定，写成 `ref Int! value` 或 `ref! Int! value`。
 
 可选值使用 `.some(...)` / `.none` 模式：
 

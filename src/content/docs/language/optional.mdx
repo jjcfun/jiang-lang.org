@@ -5,14 +5,13 @@ sidebar:
   order: 9
 ---
 
-Optional values are written as `T?`. This is the short form of `Option<T>`, so use whichever form
-is clearer in context.
+Optional values are written as `T?`. The compiler-owned nominal name behind this form is not
+available to user source.
 
 ## Basic Usage
 
 ```c
 Int? maybe = 123;
-Option<Int> also_maybe = 123;
 _ same = maybe;
 
 Bar? bar = Bar(x: 1, y: 2)

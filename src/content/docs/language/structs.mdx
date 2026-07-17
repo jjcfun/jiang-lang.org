@@ -75,7 +75,8 @@ Window make_window() {
 }
 ```
 
-Owning pointers do not auto-dereference in assignment, initialization, or arithmetic value contexts. Field access can pass through `T^`:
+Owning pointers can auto-dereference when the expected type is the pointee type. Field access can
+also pass through `T^`:
 
 ```c
 print(heap_point.x);
@@ -83,7 +84,8 @@ print(heap_point.x);
 
 ## Field Mutability
 
-A field is writable only when the field type itself is mutable:
+A field is writable only when both the outer access place and the field declaration are writable.
+A readonly value, `T&`, or readonly owner recursively freezes reachable fields:
 
 ```c
 struct User {
@@ -92,9 +94,12 @@ struct User {
     UInt8[]&? nick_name;
 }
 
-User user = User(id: 123, age: 18)
+User! user = User(id: 123, age: 18)
 user.age = user.age + 1;
 // user.id = 200; // error
+
+User& readonly = user$.ref();
+// readonly.age = 20; // error: readonly outer borrow
 ```
 
 ## `init`
@@ -166,6 +171,9 @@ Int a = User.zero();
 User u = User(id: 42)
 Int b = u.value();
 ```
+
+The shorthand `self` is a readonly `Self&` receiver. A method that writes mutable fields declares
+`Self!& self` explicitly; borrow checking creates a unique mutable reborrow at the call site.
 
 ## Local Declarations
 

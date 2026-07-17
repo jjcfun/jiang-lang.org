@@ -1,131 +1,116 @@
 ---
 title: Pointer and Reference Types
-description: Owning pointers, references, single-object raw pointers, many raw pointers, slices, and explicit dereference.
+description: Owning pointers, shared and mutable borrows, raw pointers, and slices.
 sidebar:
   order: 10
 ---
 
-Jiang has explicit syntax for owning pointers, non-owning references, raw pointers, many raw
-pointers, and slices. This page explains the type forms and basic operations. Resource movement and lifetime
-rules are covered in [Ownership, Borrowing & Lifetimes](/language/ownership/).
+Jiang separates ownership, borrow kind, pointee capability, and binding mutability. Resource
+movement and lifetime rules are covered in [Ownership, Borrowing & Lifetimes](/language/ownership/).
 
-## Pointer Forms
+## Pointer and Reference Forms
 
-- `T^`: short form of `Box<T>`, an owning pointer.
-- `T&`: short form of `Ref<T>`, a non-owning reference.
-- `T!&`: a non-owning reference borrowed from mutable `T!` storage.
-- `T&!`: a mutable reference slot; the slot can be rebound to another `T&`.
-- `T*`: short form of `RawPointer<T>`, a single-object raw pointer for FFI / ABI / low-level code.
-- `T[*]`: short form of `ManyPointer<T>`, indexed by element.
-- `T[*:S]`: short form of `SentinelPointer<T, S>`, a many raw pointer with a sentinel value.
-- `T[]`: short form of `Slice<T>`, an unsized array type whose length is known at runtime.
-- `T[]&`: short form of `Ref<Slice<T>>`, a borrowed slice reference with runtime length.
-- `T[]^`: short form of `Box<Slice<T>>`, an owned unsized array handle.
-- `T[:S]&`: short form of `Ref<SentinelSlice<T, S>>`, a borrowed sentinel slice reference.
+- `T^`: an owning pointer in a readonly owner place.
+- `T^!`: a writable owner place; it can replace the owner and mutate writable pointee fields.
+- `T&`: a shared readonly non-owning borrow.
+- `T!&`: a unique mutable non-owning borrow. It cannot be implicitly copied.
+- `T&!`: a rebindable reference slot that contains a shared borrow.
+- `T!&!`: a rebindable reference slot that contains a unique mutable borrow.
+- `T*`: a readonly-pointee raw pointer for FFI, ABI, and low-level code.
+- `T!*`: a mutable-pointee raw pointer.
+- `T*!` / `T!*!`: rebindable raw-pointer places without / with pointee write capability.
+- `T[]&` / `T[]!&`: shared readonly / unique mutable borrowed slices.
+- `T[]^` / `T[]^!`: readonly / writable owning-slice places.
+- `T[:S]&`: a borrowed sentinel slice whose sentinel value is `S`.
 
-Only `T^` / `Box<T>` expresses language-level ownership. `T!&` and `T&!` describe different layers:
-`T!&` preserves the mutability of the referenced storage, while `T&!` makes the reference slot itself
-reassignable.
-These suffix forms are syntax sugar for their canonical type names; the short forms are the normal
-way to write application code.
-Ownership transfer, automatic destruction, and lifetime constraints are covered separately.
+Only `T^` and `T[]^` express language-level ownership. Compiler-owned names behind these forms are
+not available to user source; use the surface syntax directly.
 
-## Creating Pointers and References
+The `!` before `&` or `*` belongs to the pointee capability. The outermost `!` belongs to the current
+binding/place. For example, `T!&` is a unique mutable borrow, while `T&!` is a rebindable slot holding
+a shared readonly borrow.
+
+## Creating Borrows and Raw Pointers
 
 ```c
 Int value = 123;
+Int& shared = value$.ref();
 
-Int^ owner = new Int(123);
-Int[3]^ array_owner = new [1, 2, 3];
+Int! mutable_value = 123;
+Int!& unique = mutable_value$.mut_ref();
 
-Int& ref = value$.ref();
 Int* raw = unsafe {
     value$.ptr()
 };
+
+Int!* mutable_raw = unsafe {
+    mutable_value$.mut_ptr()
+};
 ```
 
-The pointer suffix is attached to the type:
+`ref()` and `ptr()` never manufacture write capability. The mutable forms are `mut_ref()` and
+`mut_ptr()`, and they require a writable source place. Raw-pointer creation and access remain
+inside `unsafe`.
 
-```c
-Int^ owner;
-Int& ref;
-Int* raw;
-```
+## Dereference and Member Access
 
-## Combining with Optional and Mutable
-
-```c
-Int!^? maybe_owner;
-Int?& maybe_ref;
-Int^! owner_slot;
-```
-
-Within a layer, write `?` before `!`.
-
-## Dereference
-
-`T^` does not auto-dereference for assignment, initialization, or arithmetic value contexts. Use `$.get()` when you need the pointed-to value:
+`T^` can auto-dereference when the expected type is `T`; `$.get()` requests an explicit pointee read:
 
 ```c
 Int^ make_value();
 
-Int^ owner = make_value();
-_ inferred = make_value();
-Int copied = make_value()$.get();
-Int sum = make_value()$.get() + 1;
+Int^ owner = make_value(); // preserve ownership
+_ inferred = make_value(); // inferred: Int^
+Int copied = make_value();  // expected Int: auto-dereference
+Int explicit = owner$.get();
 ```
 
-Member access is the exception: `owner.member` can pass through `T^` to access the owned value's member.
+Member access can pass through an owning pointer:
 
 ```c
-struct Box {
+struct Item {
     Int value;
 }
 
-Box^ box = new Box(value: 42);
-Int n = box.value;
+Item^ item = new Item(value: 42);
+Int value = item.value;
 ```
 
-`T&` and `T*` use `$.get()` for explicit reads:
-
-```c
-Int value = 41;
-Int& ref = value$.ref();
-Int copied = ref$.get();
-
-Int* raw = unsafe {
-    value$.ptr()
-};
-Int raw_value = raw$.get();
-```
-
-Writing through a single-object raw pointer requires a mutable pointee:
+References and raw pointers use `$.get()` for explicit reads. Writing requires a unique mutable
+borrow or mutable-pointee raw pointer:
 
 ```c
 Int! value = 0;
-Int!* raw = unsafe {
-    value$.ptr()
-};
-raw$.set(42);
+Int!& ref = value$.mut_ref();
+ref$.set(41);
+
+unsafe {
+    Int!* raw = value$.mut_ptr();
+    raw$.set(42);
+}
 ```
+
+## Raw Pointer Indexing
+
+`T*` is also the unbounded raw contiguous-memory view. The old `T[*]` and `T[*:S]` spellings are
+legacy compatibility syntax and should not be used by new code. Indexing is always unsafe because
+the pointer carries no length:
+
+```c
+unsafe {
+    UInt8* bytes = source$.ptr();
+    UInt8 first = bytes[0];
+
+    UInt8!* output = destination$.mut_ptr();
+    output[1] = 42;
+}
+```
+
+Use `T[]&` when the API should carry a runtime length, and `T[:S]&` when it should carry a sentinel
+guarantee.
 
 ## Implicit Operation Layer
 
 `$` prevents receiver auto-dereference and enters the implicit operation layer. Operations such as
-`$.get()`, `$.ref()`, `$.ptr()`, `$.move()`, `$.dealloc()`, and `Type$.size()` are covered separately:
-see [Implicit Operation Layer](/language/implicit-layer/).
-
-## Many Raw Pointers
-
-`T[*]` is a raw pointer form for contiguous element access. It is indexed but has no length:
-
-```c
-UInt8[*] bytes;
-
-UInt8 first = bytes[0];
-bytes[1] = 42;
-```
-
-Unlike C, `T*` is a single-object raw pointer and is not the type used for free pointer arithmetic.
-Use `T[*]` when code needs position-based access into contiguous memory. Use `T[]&` for a borrowed
-length-bearing view.
+`$.get()`, `$.set()`, `$.ref()`, `$.mut_ref()`, `$.ptr()`, `$.mut_ptr()`, and `$.move()` are covered in
+[Implicit Operation Layer](/language/implicit-layer/).

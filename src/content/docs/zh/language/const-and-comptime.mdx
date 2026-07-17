@@ -98,16 +98,18 @@ comptime {
 编译期泛型参数让声明接收一个编译期值：
 
 ```c
-struct StaticCount<const Int N> {
+struct StaticCount<N: const Int> {
     Int value;
 }
 
-Int const_value<const Int N>() {
+Int const_value<N: const Int>() {
     N
 }
 ```
 
 参数名属于值层，可以出现在需要编译期值的表达式里；它不是类型名。
+
+`@where(N: const Int)` 是 canonical constraint 形式；inline `N: const Int` 会 lower 到同一 predicate。
 
 ## 当前边界
 

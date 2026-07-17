@@ -46,16 +46,24 @@ Pair<Int!, Int[3]^> mutable_and_owner;
 Const generic parameters are compile-time values:
 
 ```c
-struct StaticCount<const Int N> {
+struct StaticCount<N: const Int> {
     Int value;
 }
 
-Int const_value<const Int N>() {
+Int const_value<N: const Int>() {
     N
 }
 ```
 
 Const generic names are value-level names. They can be used in expressions, but not as type names.
+The inline form lowers to the same canonical predicate as a leading constraint:
+
+```c
+@where(N: const Int)
+struct CanonicalCount<N> {
+    Int value;
+}
+```
 
 ## `@where`
 
@@ -122,21 +130,21 @@ Int use_byte<T>(T value);
 Use `!=` to reject a concrete type shape:
 
 ```c
-@where(T != Box<_>)
+@where(T != _^)
 struct PlainSlot<T> {
     T value;
 }
 ```
 
 `_` inside a type shape is an anonymous placeholder. It does not introduce a generic name; it only
-means that any type argument is accepted in that position. For example, `Box<_>` matches every
-`Box<T>`, and `Vector<_>` matches a `Vector` with any element type:
+means that any type argument is accepted in that position. For example, `_^` matches every owning
+pointer type, and `Vector<_>` matches a `Vector` with any element type:
 
 ```c
 @where(T == Vector<_>)
 Int vector_only<T>(T value);
 
-@where(T != Option<_>)
+@where(T != _?)
 struct NonOptional<T> {
     T value;
 }
@@ -148,7 +156,7 @@ Use `:` for trait bounds. Use `==` or `!=` for concrete type-shape matching:
 @where(T: Sequence<Element = UInt8>)
 Int count_bytes<T>(T value);
 
-@where(T == Box<_>)
+@where(T == _^)
 Int box_only<T>(T value);
 ```
 
@@ -192,22 +200,22 @@ Slot<Int!> slot = Slot<Int!> { value: 1 }
 
 ## Errorable Returns
 
-Generic functions can return `Result<T, E>` in result position:
+Generic functions can return `T@E` in result position:
 
 ```c
 @where(T: Numeric)
-Result<T, ParseErr> parse_number<T>(UInt8[]& text);
+T@ParseErr parse_number<T>(UInt8[]& text);
 ```
 
-If the success value is optional, put `?` on the first `Result` type argument:
+If the success value is optional, put `?` on the success type:
 
 ```c
-Result<T?, ParseErr> parse_optional<T>(UInt8[]& text);
+T?@ParseErr parse_optional<T>(UInt8[]& text);
 ```
 
 ## Grammar Boundaries
 
 - Generic type parameters accept types. Const generic parameters accept compile-time values with an
-  explicit type, such as `const Int N`.
+  explicit type, such as `N: const Int`.
 - `@where(...)` is written before the declaration, not after it.
 - Associated type projection constraints use the `T.[Trait].Name == Type` form.

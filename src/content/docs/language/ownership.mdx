@@ -12,7 +12,7 @@ This chapter explains how resources move, when they are destroyed, and how refer
 
 Plain `struct` and `union` types are implicitly copyable by default. `T^` is a built-in
 resource type and cannot be implicitly copied. Nominal types that explicitly declare `Movable` also
-cannot be implicitly copied. `T&`, `T[*]`, `T*`, and `T[]&` are non-owning views; fields with these
+cannot be implicitly copied. `T&`, `T*`, and `T[]&` are non-owning views; fields with these
 types do not affect implicit copy. `!` is the mutability marker for the current type layer and does
 not change ownership classification.
 
@@ -79,7 +79,7 @@ Resource-owning types should describe cleanup with `deinit` and avoid implicit c
 
 Destruction only runs for `Movable` types. Dropping `T^` first drops the pointee and then frees the
 heap storage. Dropping `T?` is conditional: `some` drops the payload, while `none` has no payload to
-drop. Non-owning views such as `T&`, `T*`, `T[*]`, and `T[]&` do not free their targets.
+drop. Non-owning views such as `T&`, `T*`, and `T[]&` do not free their targets.
 
 ## Reference Rules
 
@@ -91,14 +91,15 @@ Int& ref = value$.ref();
 Int copied = ref$.get();
 ```
 
-For local bindings, `ref _` is shorthand for a borrowed binding with inferred pointee type:
+For local bindings, `ref _` creates a shared borrow with an inferred pointee type. A standalone
+mutable borrow is written with an explicit `T!&` type and `mut_ref()`:
 
 ```c
 Int value = 10;
 ref _ ref = value; // same lifetime rule as value$.ref()
 
 Int! mutable_value = 20;
-ref _ mutable_ref = mutable_value; // mutable_ref: Int!&
+Int!& mutable_ref = mutable_value$.mut_ref();
 ```
 
 Inside optional and union payload patterns, use `ref T name` to borrow the payload instead of
@@ -180,13 +181,25 @@ Int^ make_owner() {
 }
 ```
 
-Jiang's borrow checking focuses on preventing dangling references. It does not model Rust-style
-exclusive mutable borrows, and it does not provide data-race safety.
+Jiang distinguishes shared readonly and unique mutable loans. Any number of non-overlapping or
+shared `T&` loans may coexist. A live `T!&` loan must be exclusive for every overlapping place, and
+cannot be implicitly copied. While any reference loan is live, overlapping source storage cannot be
+overwritten, moved, or dropped.
+
+Loan lifetimes are non-lexical: a loan ends after its last reachable use, so sequential mutable
+reborrows are allowed. Struct sibling fields and distinct constant array indexes can be borrowed
+independently; dynamic indexes and subslices conservatively overlap.
+
+If an async call captures a borrow, its body-local `Task` holds that loan until `await()` or
+`cancel()` confirms terminal completion. A Task carrying a non-static loan cannot detach. Domain
+scheduling never relaxes shared/unique rules, so safe references remain data-race free across
+serial and concurrent Domains.
 
 ## Lifetime Annotations
 
-`@life(a > b)` expresses that `a` must outlive `b`. The rule prevents dangling references; it does
-not check shared/mutable aliasing and does not provide data-race safety.
+`@life(a > b)` expresses that `a` must outlive `b`. Lifetime annotations describe cross-function
+source relationships; MIR loan analysis separately enforces shared/mutable aliasing and source
+invalidation at each call site.
 
 When a value stores `T&` or `T[]&` fields, the referenced target must outlive the value that stores
 the field. Cross-function or stored-field relationships can be expressed with `@life(...)`:

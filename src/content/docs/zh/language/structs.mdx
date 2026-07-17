@@ -73,7 +73,7 @@ Window make_window() {
 }
 ```
 
-拥有所有权的指针不会在赋值、初始化或算术这类值上下文中自动解引用；但字段访问会自动穿过 `T^`，因此可以直接访问字段：
+expected type 是 pointee 类型时，owning pointer 可以自动解引用；字段访问也会自动穿过 `T^`：
 
 ```c
 print("x=%d y=%d", heap_point.x, heap_point.y);
@@ -81,7 +81,8 @@ print("x=%d y=%d", heap_point.x, heap_point.y);
 
 ## 字段可变性
 
-字段能否被写入由字段类型自身决定，不由外层变量是否带 `!` 决定：
+字段只在外层访问 place 和字段声明都可写时才能写入。readonly value、`T&` 或 readonly owner
+会递归冻结可达字段：
 
 ```c
 struct User {
@@ -90,9 +91,12 @@ struct User {
     UInt8[]&? nick_name;
 }
 
-User user = User(id: 123, age: 18)
+User! user = User(id: 123, age: 18)
 user.age = user.age + 1;
 // user.id = 200; // 编译错误：字段自身不可变
+
+User& readonly = user$.ref();
+// readonly.age = 20; // 编译错误：readonly outer borrow
 ```
 
 如果字段有默认值，构造时可以省略对应字段。
@@ -174,7 +178,8 @@ User u = User(id: 42)
 Int b = u.value();
 ```
 
-实例方法体内有隐式 `self: Self&`。字段能否赋值仍只由字段类型自身是否带 `!` 决定，方法不需要额外的 `mutating` 标记。
+简写 `self` 是 readonly `Self&` receiver。需要修改可写字段时，显式声明 `Self!& self`；
+borrow checker 会在调用点建立 unique mutable reborrow。
 
 ## 局部声明
 

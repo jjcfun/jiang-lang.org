@@ -87,14 +87,14 @@ Int value = Holder<Int>.only_int();
 argument in that position:
 
 ```c
-@where(T == Box<_>)
+@where(T == _^)
 extend <T> Holder<T> {
     public Bool stores_box() {
         true
     }
 }
 
-@where(T != Option<_>)
+@where(T != _?)
 extend <T> Holder<T> {
     public Bool stores_non_optional() {
         true
@@ -108,28 +108,28 @@ Use `:` for trait bounds. Use `==` or `!=` for concrete type-shape matching:
 @where(T: Sequence<Element = UInt8>)
 Int count_bytes<T>(T value);
 
-@where(T == Box<_>)
+@where(T == _^)
 Int box_only<T>(T value);
 ```
 
 The extension target itself can also use anonymous placeholders:
 
 ```c
-extend Ref<_> {
+extend <T> T& {
     public Bool is_reference() {
         true
     }
 }
 
-extend Box<Slice<_>> {
+extend <T> T[]^ {
     public Bool is_owned_slice() {
         true
     }
 }
 ```
 
-Canonical type names and suffix syntax use the same type model. For example, `UInt8[]^` looks up
-associated functions as `Box<Slice<UInt8>>`.
+Compiler-owned type names are hidden. Extensions target the surface forms directly, including
+generic patterns such as `extend <T> T&` and `extend <T> T[]^`.
 
 ## Module Visibility
 

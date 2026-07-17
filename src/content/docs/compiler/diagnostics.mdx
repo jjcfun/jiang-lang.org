@@ -57,10 +57,10 @@ Int! count = 0;
 count = count + 1;
 ```
 
-For arrays, the element layer and outer binding slot are separate:
+Fixed arrays use one writable aggregate place:
 
 ```c
-Int![3] values = [1, 2, 3];
+Int[3]! values = [1, 2, 3];
 values[0] = 10;
 ```
 

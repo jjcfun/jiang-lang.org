@@ -1,6 +1,6 @@
 ---
 title: Arrays & Slices
-description: Arrays, slices, nested arrays, and many raw pointers in Jiang.
+description: Arrays, slices, nested arrays, and raw pointer views in Jiang.
 sidebar:
   order: 6
 ---
@@ -35,18 +35,13 @@ Int[3] c = [1, 2, 3];
 
 ## Mutability
 
-Element mutability and outer binding mutability are separate layers:
+Fixed arrays use one aggregate place capability. `T[N]` is readonly and `T[N]!` allows both element
+writes and replacement of the complete array. Jiang does not define a separate `T![N]` form:
 
 ```c
-Int![_] items = [1, 2, 3];
-items[1] = 4;
-
-Int[_]! slot = [1, 2, 3];
-slot = [4, 5, 6];
-
-Int![_]! both = [1, 2, 3];
-both[1] = 4;
-both = [4, 5, 6];
+Int[_]! values = [1, 2, 3];
+values[1] = 4;
+values = [4, 5, 6];
 ```
 
 ## Nested Arrays
@@ -69,8 +64,8 @@ Int?[2]?[3] nullable_rows = [[1, null], null, [5, 6]];
 
 ## Slices
 
-`T[]` is the short form of `Slice<T>`, an unsized array type whose length is known at runtime.
-Bare `T[]` is not a normal by-value type. Use `T[]&` for a borrowed runtime-length view over
+`T[]` is an unsized array type whose length is known at runtime. Bare `T[]` is not a normal by-value
+type. Use `T[]&` for a borrowed runtime-length view over
 contiguous storage. The borrowed slice does not own the storage.
 
 ```c
@@ -95,21 +90,20 @@ _ item_ref = view[1]$.ref();
 ```
 
 `T[]&` is a borrowed view and does not own the underlying storage. `Vector<T>.slice()` returns such a
-borrowed view. `T[]^`, which is `Box<Slice<T>>`, is the owned unsized array handle. Use
+borrowed view. `T[]^` is the owned unsized array handle. Use
 `Vector<T>.into_slice()` when the vector should be consumed and its initialized items should become
 an owned `T[]^`; the original vector is moved and cannot be used afterward.
 
-## Many Raw Pointers
+## Raw Pointer Views
 
-`T[*]` is a raw pointer form for contiguous elements without a length:
+`T*` is the raw pointer form for contiguous elements without a length:
 
 ```c
-UInt8[*] data;
+UInt8* data;
 Int length;
 
-UInt8 first = data[0];
+UInt8 first = unsafe { data[0] };
 ```
 
-`T*` is a single-object raw pointer and is not used for free position movement. Use `T[*]` for
-position-based contiguous-memory access, and use `T[]&` when Jiang code needs a borrowed
-length-bearing view.
+Raw-pointer indexing is unsafe because the pointer carries no length. Use `T[]&` when Jiang code
+needs a borrowed length-bearing view. The old `T[*]` spelling is compatibility syntax only.

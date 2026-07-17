@@ -47,16 +47,24 @@ Pair<Int!, Int[3]^> mutable_and_owner;
 编译期泛型参数是编译期值：
 
 ```c
-struct StaticCount<const Int N> {
+struct StaticCount<N: const Int> {
     Int value;
 }
 
-Int const_value<const Int N>() {
+Int const_value<N: const Int>() {
     N
 }
 ```
 
 编译期泛型名字属于值层，可以在表达式中使用；它不是类型名。
+inline 形式会 lower 到与 leading constraint 相同的 canonical predicate：
+
+```c
+@where(N: const Int)
+struct CanonicalCount<N> {
+    Int value;
+}
+```
 
 ## `@where`
 
@@ -122,20 +130,20 @@ Int use_byte<T>(T value);
 `!=` 用来排除某种具体类型形状：
 
 ```c
-@where(T != Box<_>)
+@where(T != _^)
 struct PlainSlot<T> {
     T value;
 }
 ```
 
 `_` 在类型形状里表示匿名占位。它不引入可引用的泛型名字，只表示“这里可以是任意类型实参”。
-例如 `Box<_>` 匹配所有 `Box<T>`，`Vector<_>` 匹配所有元素类型的 `Vector`：
+例如 `_^` 匹配所有 owning pointer 类型，`Vector<_>` 匹配所有元素类型的 `Vector`：
 
 ```c
 @where(T == Vector<_>)
 Int vector_only<T>(T value);
 
-@where(T != Option<_>)
+@where(T != _?)
 struct NonOptional<T> {
     T value;
 }
@@ -147,7 +155,7 @@ struct NonOptional<T> {
 @where(T: Sequence<Element = UInt8>)
 Int count_bytes<T>(T value);
 
-@where(T == Box<_>)
+@where(T == _^)
 Int box_only<T>(T value);
 ```
 
@@ -191,25 +199,25 @@ struct Slot<T> {
 Slot<Int!> slot = Slot<Int!> { value: 1 }
 ```
 
-`Mutable` 只检查顶层 `!`。例如 `Int!` 满足，`Int` 不满足；`Int![3]` 的顶层是数组层，是否满足取决于数组层本身是否带 `!`。
+`Mutable` 只检查顶层 `!`。例如 `Int!` 和 `Int[3]!` 满足，`Int` 和 `Int[3]` 不满足。
 
 ## 与可错返回组合
 
-泛型函数可以返回 `Result<T, E>`。错误类型本身不在第二个类型参数上追加 `?` 或 `!`：
+泛型函数可以返回 `T@E`：
 
 ```c
 @where(T: Numeric)
-Result<T, ParseErr> parse_number<T>(UInt8[]& text);
+T@ParseErr parse_number<T>(UInt8[]& text);
 ```
 
 如果成功值需要可选或可变，把后缀写在 `@` 左侧：
 
 ```c
-Result<T?, ParseErr> parse_optional<T>(UInt8[]& text);
+T?@ParseErr parse_optional<T>(UInt8[]& text);
 ```
 
 ## 使用边界
 
-- 类型泛型参数接受类型；const 泛型参数接受带显式类型的编译期值，例如 `const Int N`。
+- 类型泛型参数接受类型；const 泛型参数接受带显式类型的编译期值，例如 `N: const Int`。
 - 后置 `T id<T> @where(...)` 不支持，约束写在声明之前。
 - 关联类型投影约束使用 `T.[Trait].Name == Type` 这种写法。

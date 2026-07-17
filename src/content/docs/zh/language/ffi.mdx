@@ -76,21 +76,21 @@ Int copied = raw$.get();
 ```c
 Int! value = 0;
 Int!* raw = unsafe {
-    value$.ptr()
+    value$.mut_ptr()
 };
 raw$.set(42);
 ```
 
-## 多元素裸指针
+## 裸 buffer 指针
 
-`T[*]` 也是裸指针，用于可按下标访问的一段连续地址，常见于 C 接口的缓冲区参数：
+`T*` 同时是 C buffer 参数使用的无长度裸连续内存 view：
 
 ```c
-extern public Int read(Int fd, UInt8[*] buf, Int count);
+extern Int read(Int fd, UInt8!* buf, Int count);
 ```
 
-`T*` 不像 C 指针那样用于自由位置移动。需要按位置访问连续内存时使用 `T[*]`。`T[*]` 没有长度；
-如果 Jiang 代码需要保存长度视图，优先封装为 `T[]&` 或 `{ ptr, len }` 风格的 `struct`。
+`T*` 不携带长度，因此下标访问属于 `unsafe`。Jiang 代码需要长度 view 时，优先使用
+`T[]&` 或 `{ ptr, len }` 风格的 `struct`。旧 `T[*]` 只是兼容语法，新代码不再使用。
 
 ## 资源边界
 
@@ -103,7 +103,7 @@ extern public Int read(Int fd, UInt8[*] buf, Int count);
 
 ```c
 struct CBuffer {
-    UInt8[*] data;
+    UInt8!* data;
     Int length;
 
     deinit() {

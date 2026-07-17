@@ -290,12 +290,12 @@ Int value = unsafe {
 };
 ```
 
-## Async Functions and Futures
+## Async Functions and Tasks
 
 An `async` function is a stackless coroutine. Calling it from an async context implicitly suspends
 the caller until the result is available, so the call expression has the declared result type:
 
-```jiang
+```c
 async Int load_page() {
     1
 }
@@ -305,24 +305,43 @@ async Int render() {
 }
 ```
 
-Use `async call(...)` or `async { ... }` to start work eagerly and receive a body-local `Future<T>`.
-Calling `await()` consumes that future. Starting multiple futures before awaiting them preserves
+Use `async call(...)` or `async { ... }` to start work eagerly and receive a body-local `Task<T>`.
+Calling `await()` consumes that Task. Starting multiple Tasks before awaiting them preserves
 concurrent progress even when they are awaited in source order:
 
-```jiang
+```c
 async Int load_both() {
-    Future<Int> left = async load_left();
-    Future<Int> right = async load_right();
+    Task<Int> left = async load_left();
+    Task<Int> right = async load_right();
     left.await() + right.await()
 }
 ```
 
-`Future<T>` cannot appear in parameters, return types, fields, globals, or public ABI. A future that
-leaves scope without being awaited is detached; Jiang 0.4.6 does not provide cancellation.
-`async [WorkerDomain] { ... }` selects an execution domain, while a domain-less async block inherits
-the current domain. Ordinary functions enter async execution with `sync [Domain] { ... }`, which
-blocks until the result is ready. Blocking pending futures is implemented on Darwin in 0.4.6;
-non-Darwin targets report an unsupported backend diagnostic instead of busy-spinning.
+`Task<T>` cannot appear in parameters, return types, fields, globals, or public ABI. `task.await()`
+and `task.cancel()` both consume the Task and are mutually exclusive. Cancellation waits for terminal
+acknowledgement and coroutine-frame cleanup; dropping an unconsumed Task means detach, not cancel.
+A Task that carries a non-static borrow must be consumed before its source leaves scope.
+
+A Domain effect names a `const` value whose type implements `Domain`. Distinct const bindings are
+distinct Domains even when they have the same type and value:
+
+```c
+struct WorkerDomain: Domain<kind = .concurrent> {}
+const WorkerDomain worker = WorkerDomain();
+
+async [worker] Int load_on_worker() {
+    1
+}
+```
+
+`async [worker] { ... }` starts a Task on that Domain. A domain-less async block inherits the current
+Domain. In an async function, `sync [worker] { ... }` is a structured Domain switch: it suspends the
+current coroutine without blocking a worker thread and resumes on the entering Domain afterward.
+The outermost `sync [worker]` in an ordinary function blocks the calling thread until completion.
+
+Low-level async APIs can suspend explicitly with `coroutine.suspend(registration)`. The registration
+callback receives a continuation; call `resume(value)` on completion and register active cancellation
+with `on_cancel(handler)`. A late resume is ignored after cancellation has claimed the operation.
 
 Use `RawFn` when you need an ABI-level function pointer. Use `Fn` for normal callback APIs that may
 accept capturing closures.

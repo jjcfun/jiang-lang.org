@@ -11,7 +11,7 @@ Jiang 使用 `T^` 表达拥有所有权的值，使用 `T&` / `T[]&` 表达不�
 ## 复制、转移和析构
 
 普通 `struct` 和 `union` 默认可以隐式复制。`T^` 是内建资源类型，不能隐式复制；
-显式声明 `Movable` 的命名类型也不能隐式复制。`T&`、`T[*]`、`T*` 和 `T[]&`
+显式声明 `Movable` 的命名类型也不能隐式复制。`T&`、`T*` 和 `T[]&`
 都是非拥有视图，字段中包含这些类型不影响隐式复制。`!` 只是当前类型层级的可变性标记，
 不改变所有权分类。
 
@@ -88,7 +88,7 @@ SliceView b = a; // 允许：T[]& 不拥有资源，不影响隐式复制。
 - `T^` 离开作用域时会析构指向的 `T`，并释放堆存储。
 - `T?` 的自动析构由内部类型决定：`some` 会析构承载值，`none` 不做承载值析构。
 - `struct` 的 `T^` 字段会自动析构。
-- `T&`、`T[*]`、`T*` 和 `T[]&` 字段不会自动释放。
+- `T&`、`T*` 和 `T[]&` 字段不会自动释放。
 - 如果 `struct` 有自定义 `deinit`，先执行自定义 `deinit`，再自动析构拥有所有权的字段。
 
 ## 引用规则
@@ -101,14 +101,15 @@ Int& ref = value$.ref();
 Int copied = ref$.get();
 ```
 
-在局部绑定中，`ref _` 是一种推导借用绑定的简写：
+在局部绑定中，`ref _` 会创建推导 pointee 类型的 shared borrow。standalone mutable borrow
+使用显式 `T!&` 类型和 `mut_ref()`：
 
 ```c
 Int value = 10;
 ref _ ref = value; // 生命周期规则等同于 value$.ref()
 
 Int! mutable_value = 20;
-ref _ mutable_ref = mutable_value; // mutable_ref: Int!&
+Int!& mutable_ref = mutable_value$.mut_ref();
 ```
 
 在可选值和联合的承载值模式中，使用 `ref T name` 借用承载值，
@@ -189,13 +190,21 @@ Int^ make_owner() {
 }
 ```
 
-Jiang 的引用规则不把“共享引用”和“可变引用”设计成两套互斥能力。它关注的是引用是否悬垂；
-数据竞争和更严格的别名规则不属于当前 borrow check 的核心目标。
+Jiang 区分 shared readonly loan 和 unique mutable loan。任意数量的 shared `T&` 可以共存；
+live `T!&` 必须对所有重叠 place 保持独占，且不能隐式复制。任意 reference loan 存活期间，
+与 source 重叠的 storage 都不能被覆盖、move 或 drop。
+
+loan 使用 non-lexical lifetime：最后一次可达使用之后即可结束，因此可以顺序 mutable reborrow。
+struct sibling field 与不同 constant array index 可分别借用；dynamic index 和 subslice 保守视为重叠。
+
+async 调用捕获 borrow 时，body-local `Task` 会持有 loan，直到 `await()` 或 `cancel()` 确认进入终态。
+携带非 static loan 的 Task 不能 detach。Domain scheduling 不会放宽 shared/unique 规则，因此安全引用
+在 serial 与 concurrent Domain 间仍保持 data-race freedom。
 
 ## 生命周期约束
 
-`@life(a > b)` 表示 `a` 的目标生命周期必须长于 `b`。这套规则用于避免悬垂引用；
-它不检查共享/可变别名，也不保证数据竞争安全。
+`@life(a > b)` 表示 `a` 的目标生命周期必须长于 `b`。lifetime annotation 描述跨函数
+source 关系；MIR loan analysis 会在每个调用点另行检查 shared/mutable alias 与 source invalidation。
 
 存储 `T&` 或 `T[]&` 字段时，目标对象的生命周期必须覆盖包含该字段的值。跨函数或存储到字段的关系可以用 `@life(...)` 表达：
 

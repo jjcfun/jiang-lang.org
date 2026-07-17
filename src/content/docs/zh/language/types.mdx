@@ -63,25 +63,24 @@ Int?[2]?[3] nullable_rows;
 
 常见后缀如下：
 
-| 表面语法 | 规范类型名 | 含义 |
+| 表面语法 | 含义 |
 | --- | --- |
-| `T!` | `T` 加可变标记 | 当前层级可变 |
-| `T?` | `Option<T>` | 可选值 |
-| `T^` | `Box<T>` | 拥有所有权的指针 |
-| `T&` | `Ref<T>` | 不拥有所有权的引用 |
-| `T*` | `RawPointer<T>` | 单对象裸指针 |
-| `T[*]` | `ManyPointer<T>` | 多元素裸指针 |
-| `T[*:S]` | `SentinelPointer<T, S>` | 带哨兵值的多元素裸指针 |
-| `T[N]` | `Array<T, N>` | 定长数组 |
-| `T[N:S]` | `SentinelArray<T, N, S>` | 带哨兵值的定长数组 |
-| `T[]` | `Slice<T>` | 不定长数组类型 |
-| `T[]&` | `Ref<Slice<T>>` | 借用切片引用 |
-| `T[:S]` | `SentinelSlice<T, S>` | 带哨兵值的不定长数组类型 |
-| `T[:S]&` | `Ref<SentinelSlice<T, S>>` | 借用哨兵切片引用 |
+| `T!` | 当前 value/place 层可写 |
+| `T?` | 可选值 |
+| `T^` / `T^!` | 只读 / 可写 owning pointer place |
+| `T&` / `T!&` | shared readonly / unique mutable borrow |
+| `T&!` / `T!&!` | 可重绑定的 shared / unique reference slot |
+| `T*` / `T!*` | readonly-pointee / mutable-pointee raw pointer |
+| `T[N]` / `T[N]!` | 只读 / 可写定长数组 place |
+| `T[N:S]` | 带哨兵值 `S` 的定长数组 |
+| `T[]` | 不定长数组类型 |
+| `T[]&` / `T[]!&` | shared readonly / unique mutable borrowed slice |
+| `T[]^` / `T[]^!` | 只读 / 可写 owning slice place |
+| `T[:S]&` | 借用哨兵 slice reference |
 
-这些表面语法都是更短的写法。类型检查时会按规范类型名理解它们；即使用户自己定义了同名类型，也不会改变
-`T?`、`T^`、`T&` 或 `T[]&` 这些语法的含义。日常代码优先使用短语法，讲解类型关系或写
-`extend` / `@where` 时可以使用规范类型名。
+这些表面语法背后的 compiler-owned 名义类型名不再向用户源码开放。声明、`extend`
+target 和 `@where` type pattern 都应使用表面语法。用户自定义的 `Option`、`Result`、`Ref`、
+`Box` 或 `Slice` 只是普通名义类型，不会获得内建语义。
 
 同一层级里 `?` 必须写在 `!` 前面，例如 `Int?!`。`Int!?`、`Int??`、`Int!!` 都应诊断为错误。
 
@@ -103,7 +102,9 @@ _ values = [1, 2, 3];
 | `_ name` | 使用 RHS 类型创建不可变值绑定 |
 | `_! name` | 使用 RHS 类型创建可变值绑定 |
 | `ref _ name` | 借用 RHS place，创建不可重绑定的推导引用 |
-| `ref! _ name` | 借用 RHS place，创建可重绑定的推导引用 slot |
+| `ref _! name` | shared borrow，创建可重绑定的 reference slot |
+| `ref! _ name` | unique mutable borrow，创建不可重绑定的 reference slot |
+| `ref! _! name` | unique mutable borrow，创建可重绑定的 reference slot |
 
 如果新绑定本身需要重新赋值，使用 `_!`：
 
@@ -149,13 +150,14 @@ _ same_ref = existing;  // same_ref: Int&
 // ref _ nested = existing; // 错误：`ref _` 不会对已有引用再次借用。
 ```
 
-如果引用绑定本身需要重新赋值，使用 `ref! _`。这里的 `!` 只作用于绑定最外层，不要求被借用的源值可写：
+在解构和 pattern 中，`ref` / `ref!` 分别选择 shared / unique mutable borrow；
+type placeholder 之后的 `!` 选择可重绑定 reference slot：
 
 ```c
-Int first = 1;
-Int second = 2;
-ref! _ current = first;
-current = second$.ref();
+Int! first = 1;
+Int! second = 2;
+(ref! _ current) = (first);
+(ref! _! rebindable) = (second);
 ```
 
 同一组 `_` 绑定形式也用于解构。承载值模式中需要借用时，使用 `ref T name`：
@@ -179,18 +181,16 @@ if maybe is .some(ref Int item) {
 Bool! flag = true; // 可变绑定槽位，槽位中存放 Bool
 flag = false;
 
-Int[3]! values = [1, 2, 3]; // 可变绑定槽位，槽位中存放 Int[3]
+Int[3]! values = [1, 2, 3]; // 可写 array place
+values[0] = 10;
 values = [4, 5, 6];
-
-Int![3]! mutable_items = [1, 2, 3]; // 可变绑定槽位，槽位中存放 Int![3]
-mutable_items[0] = 10;
-mutable_items = [4, 5, 6];
 ```
 
-例如，`Int! value` 声明的是“可变绑定，值类型为 `Int`”；`Int![]` 中的 `!` 位于数组元素层级，
-因此数组元素类型可变。`Int[]! value` 则是“可变绑定，值类型为 `Int[]`”。
+普通值、定长数组和 owner 只由最外层 place 携带可变性，不存在独立的 `T![N]` 数组元素类型。
+raw pointer 和 borrowed reference 是例外：`*` 或 `&` 之前的 `!` 是 canonical pointee capability。
 
-对于聚合值，成员是否可变由成员自己的类型决定。外层绑定可变，不代表所有字段或元素自动可变。
+对于聚合值，成员只在外层访问 place 和成员声明都提供写能力时才可写。
+readonly outer view 会递归冻结所有可达字段。
 
 ```c
 struct User {
@@ -198,9 +198,12 @@ struct User {
     Int! age;
 }
 
-User user = User(id: 1, age: 18)
+User! user = User(id: 1, age: 18)
 user.age = 19; // 允许
 // user.id = 2; // 编译错误
+
+User& readonly = user$.ref();
+// readonly.age = 20; // 编译错误：shared outer borrow 冻结字段
 ```
 
 赋值、初始化、传参和 `return` 都是把值写入目标位置的场景。这里以目标类型为准，在相同结构位置忽略可变标记，但不会忽略可选层、指针种类、数组长度或字段结构差异。
@@ -220,18 +223,18 @@ Int[_] inferred = [1, 2, 3];
 Int[2][3] matrix = [[1, 2], [3, 4], [5, 6]];
 ```
 
-`T[]` 是 `Slice<T>` 的短写，表示长度在运行时确定的不定长数组类型。裸 `T[]` 不能作为普通值
-单独存放或传递。需要运行时长度的借用切片引用时，使用 `T[]&`，也就是 `Ref<Slice<T>>`：
+`T[]` 表示长度在运行时确定的不定长数组类型。裸 `T[]` 不能作为普通值
+单独存放或传递。需要运行时长度的借用切片引用时，使用 `T[]&`：
 
 ```c
 Int[_] values = [1, 2, 3];
 Int[]& view = values[..];
 ```
 
-`T[]^` 是 `Box<Slice<T>>` 的短写，是拥有所有权的不定长数组 handle；它拥有已初始化 buffer，
+`T[]^` 是拥有所有权的不定长数组 handle；它拥有已初始化 buffer，
 drop 时会析构元素并释放 allocation。
 
-`T[:S]` 是 `SentinelSlice<T, S>` 的短写，表示带哨兵值的不定长数组类型。`T[:S]&` 这类带哨兵值的切片视图额外携带类型层面的哨兵值保证。非字面量哨兵切片
+`T[:S]` 表示带哨兵值的不定长数组类型。`T[:S]&` 这类带哨兵值的切片视图额外携带类型层面的哨兵值保证。非字面量哨兵切片
 不会在赋值给 `T[]&` 时隐式丢掉这个保证；需要普通切片视图时，写成 `value.slice()`
 或 `value$.as(T[]&)`。
 
@@ -239,10 +242,9 @@ drop 时会析构元素并释放 allocation。
 
 指针和引用分成几类：
 
-- `T^`：`Box<T>` 的短写，表示拥有所有权的指针，通常来自 `new T(...)`。
-- `T&`：`Ref<T>` 的短写，表示不拥有所有权的引用。
-- `T*`：`RawPointer<T>` 的短写，用于外部函数边界、二进制接口和低层能力。
-- `T[*]`：`ManyPointer<T>` 的短写，可通过下标访问连续内存元素。
+- `T^` / `T^!`：位于只读 / 可写 owner place 中的 owning pointer。
+- `T&` / `T!&`：shared readonly / unique mutable non-owning borrow。
+- `T*` / `T!*`：readonly-pointee / mutable-pointee raw pointer。
 
 ```c
 Int^ owner = new Int(42);
@@ -252,7 +254,8 @@ unsafe {
 }
 ```
 
-`T^`、`T&` 和 `T*` 在普通值上下文中都不会自动解引用，需要用 `$.get()` 显式读取。成员访问是例外，`owner.member` 会自动穿过 `T^`：
+expected type 为 `T` 时，`T^` 可以自动解引用；`$.get()` 用于显式读取 pointee。
+`T&` 和 `T*` 需要显式读取。成员访问可以自动穿过 `T^`：
 
 ```c
 Int value = 41;
@@ -269,11 +272,10 @@ Int n = box.value;
 
 ## 可选类型
 
-`T?` 是 `Option<T>` 的短写，表示值可能为 `null`：
+`T?` 表示值可能为 `null`：
 
 ```c
 Int? maybe = 42;
-Option<Int> explicit = 42;
 Int? none = null;
 ```
 
@@ -301,14 +303,14 @@ if maybe is .some(value) {
 
 ## 可错返回
 
-`Result<T, E>` 用于函数、方法和函数类型的返回位，表示函数成功时产生 `T`，失败时产生 `E`：
+`T@E` 用于函数、方法和函数类型的返回位，表示函数成功时产生 `T`，失败时产生 `E`：
 
 ```c
 enum Err {
     bad = 1,
 }
 
-Result<Int, Err> ok() {
+Int@Err ok() {
     return 42;
 }
 
@@ -317,7 +319,8 @@ Int main() {
 }
 ```
 
-可错值不会隐式变成 `T`。需要成功值时，要么在同错误类型的 `Result<T, E>` 函数中让错误传播，要么使用 `try expr catch (...) => 备用值` 显式处理错误分支。
+可错值不会隐式变成 `T`。需要成功值时，要么在同错误类型的 `T@E` 函数中让错误传播，
+要么使用 `try expr catch (...) => 备用值` 显式处理错误分支。
 
 ## 数值转换
 

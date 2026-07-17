@@ -83,14 +83,14 @@ Int value = Holder<Int>.only_int();
 `@where` 可以按具体类型形状匹配。`_` 是匿名占位，表示该位置可以是任意类型实参：
 
 ```c
-@where(T == Box<_>)
+@where(T == _^)
 extend <T> Holder<T> {
     public Bool stores_box() {
         true
     }
 }
 
-@where(T != Option<_>)
+@where(T != _?)
 extend <T> Holder<T> {
     public Bool stores_non_optional() {
         true
@@ -104,27 +104,28 @@ extend <T> Holder<T> {
 @where(T: Sequence<Element = UInt8>)
 Int count_bytes<T>(T value);
 
-@where(T == Box<_>)
+@where(T == _^)
 Int box_only<T>(T value);
 ```
 
 扩展目标本身也可以使用匿名占位：
 
 ```c
-extend Ref<_> {
+extend <T> T& {
     public Bool is_reference() {
         true
     }
 }
 
-extend Box<Slice<_>> {
+extend <T> T[]^ {
     public Bool is_owned_slice() {
         true
     }
 }
 ```
 
-这些规范类型名和类型后缀是同一套类型。例如 `UInt8[]^` 会按 `Box<Slice<UInt8>>` 查找关联函数。
+compiler-owned 类型名已隐藏。extension 直接使用表面语法作为 target，包括
+`extend <T> T&` 和 `extend <T> T[]^` 这类泛型 pattern。
 
 ## 跨模块可见性
 

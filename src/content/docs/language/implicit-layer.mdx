@@ -28,7 +28,7 @@ Type operations are written as `Type$.op(...)`:
 ```c
 Int size = Int$.size();
 Int align = Int$.align();
-Int![*] value = Int!$.alloc();
+Int!* value = unsafe { Int!$.alloc() };
 ```
 
 ## Binding Rules
@@ -53,8 +53,10 @@ operation layer, then resolves the following operation.
 
 | Operation | Meaning |
 | --- | --- |
-| `value$.ref()` | returns a `T&` reference |
-| `value$.ptr()` | returns a `T*` single-object raw pointer; requires `unsafe` |
+| `value$.ref()` | returns a shared readonly `T&` borrow |
+| `value$.mut_ref()` | returns a unique mutable `T!&`; requires a writable place |
+| `value$.ptr()` | returns a readonly-pointee `T*`; requires `unsafe` |
+| `value$.mut_ptr()` | returns a mutable-pointee `T!*`; requires a writable place and `unsafe` |
 | `value$.get()` | explicitly reads through `T^`, `T&`, or `T*` |
 | `value$.set(new_value)` | explicitly writes through a `T!*` target |
 | `value$.move()` | transfers ownership and invalidates the source |
@@ -67,8 +69,8 @@ raw pointers, allocation, and low-level casts.
 
 ## Explicit Dereference
 
-`T^`, `T&`, and `T*` do not auto-dereference in ordinary value contexts. Use `$.get()` when you need
-the pointed-to value:
+`T^` can auto-dereference when the expected type is its pointee type. `T&` and `T*` require explicit
+reads; use `$.get()` when you want to state the pointee read directly:
 
 ```c
 Int^ owner = new Int(42);
@@ -106,8 +108,8 @@ Types can enter the implicit operation layer too:
 Int size = Int$.size();
 Int align = Int$.align();
 Int max_align = Int$.max_align();
-Int![*] value = Int!$.alloc();
-Int![*] values = Int!$.alloc_many(10);
+Int!* value = unsafe { Int!$.alloc() };
+Int!* values = unsafe { Int!$.alloc_many(10) };
 ```
 
 These operations query layout information or perform low-level allocation. Layout information is
@@ -118,8 +120,8 @@ also consumed by the backend.
 | `Type$.size()` | type size |
 | `Type$.align()` | ABI alignment |
 | `Type$.max_align()` | maximum Jiang type alignment supported by the default allocator |
-| `Type$.alloc()` | allocates one uninitialized object and returns `Type![*]` |
-| `Type$.alloc_many(n)` | allocates contiguous array storage and returns `Type![*]` |
+| `Type$.alloc()` | allocates one uninitialized object and returns `Type!*` |
+| `Type$.alloc_many(n)` | allocates contiguous array storage and returns `Type!*` |
 
 ## Casts
 

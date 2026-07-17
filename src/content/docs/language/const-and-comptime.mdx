@@ -103,17 +103,20 @@ there is no separate `#if` language.
 Const generic parameters let a declaration receive a compile-time value:
 
 ```c
-struct StaticCount<const Int N> {
+struct StaticCount<N: const Int> {
     Int value;
 }
 
-Int const_value<const Int N>() {
+Int const_value<N: const Int>() {
     N
 }
 ```
 
 The parameter name is a value-level name. It can appear in expressions where a compile-time value is
 required; it is not a type name.
+
+`@where(N: const Int)` is the canonical constraint form. The inline `N: const Int` spelling lowers
+to the same predicate.
 
 ## Current Limits
 

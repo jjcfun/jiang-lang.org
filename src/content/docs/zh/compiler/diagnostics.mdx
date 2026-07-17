@@ -57,10 +57,10 @@ Int! count = 0;
 count = count + 1;
 ```
 
-对于数组，元素层级和外层绑定槽位是分开的：
+定长数组使用一个可写 aggregate place：
 
 ```c
-Int![3] values = [1, 2, 3];
+Int[3]! values = [1, 2, 3];
 values[0] = 10;
 ```
 
