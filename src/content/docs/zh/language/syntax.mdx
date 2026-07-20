@@ -109,7 +109,7 @@ Int add(Int left, Int right) {
 
 ```c
 Int main() {
-    Int! total = 0;
+    Int total! = 0;
 
     for i in 0..10 {
         total = total + i;
@@ -124,7 +124,7 @@ Int main() {
 ```c
 _ answer = 42;
 _ name = "Jiang";
-Int! count = 0;
+Int count! = 0;
 ```
 
 语句通常以分号结束。`if`、`switch`、`while`、`for` 和代码块这类控制结构自身带 `{ ... }`，不在结构后额外加分号。
@@ -201,7 +201,7 @@ if maybe is .some(value) {
 如果解包后的绑定本身需要可变，显式写出承载值类型和 `!`：
 
 ```c
-if maybe is .some(Int! value) {
+if maybe is .some(Int value!) {
     value = value + 1;
 }
 ```

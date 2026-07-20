@@ -12,9 +12,8 @@ This chapter explains how resources move, when they are destroyed, and how refer
 
 Plain `struct` and `union` types are implicitly copyable by default. `T^` is a built-in
 resource type and cannot be implicitly copied. Nominal types that explicitly declare `Movable` also
-cannot be implicitly copied. `T&`, `T*`, and `T[]&` are non-owning views; fields with these
-types do not affect implicit copy. `!` is the mutability marker for the current type layer and does
-not change ownership classification.
+cannot be implicitly copied. `T&`, `T&!`, `T*`, `T*!`, and `T[]&` are non-owning views; fields with
+these types do not affect ownership classification. Binding mutability is written after the name.
 
 `T?` follows the ownership classification of its payload type. `Int?` is implicitly copyable, while
 `Int^?` contains an owned payload, so it is `Movable` and must be transferred with `$.move()`.
@@ -91,15 +90,18 @@ Int& ref = value$.ref();
 Int copied = ref$.get();
 ```
 
-For local bindings, `ref _` creates a shared borrow with an inferred pointee type. A standalone
-mutable borrow is written with an explicit `T!&` type and `mut_ref()`:
+For local bindings, `ref _` creates a shared borrow with an inferred pointee type. Use `ref!` or
+`mut_ref()` to create a unique mutable `T&!` borrow from a writable place:
 
 ```c
 Int value = 10;
 ref _ ref = value; // same lifetime rule as value$.ref()
 
-Int! mutable_value = 20;
-Int!& mutable_ref = mutable_value$.mut_ref();
+Int first! = 20;
+ref! _ mutable_ref = first;
+
+Int second! = 30;
+Int&! another_mutable_ref = second$.mut_ref();
 ```
 
 Inside optional and union payload patterns, use `ref T name` to borrow the payload instead of
@@ -182,7 +184,7 @@ Int^ make_owner() {
 ```
 
 Jiang distinguishes shared readonly and unique mutable loans. Any number of non-overlapping or
-shared `T&` loans may coexist. A live `T!&` loan must be exclusive for every overlapping place, and
+shared `T&` loans may coexist. A live `T&!` loan must be exclusive for every overlapping place, and
 cannot be implicitly copied. While any reference loan is live, overlapping source storage cannot be
 overwritten, moved, or dropped.
 

@@ -35,16 +35,15 @@ Int[3] c = [1, 2, 3];
 
 ## 数组可变性
 
-定长数组只有一个 aggregate place capability。`T[N]` 只读，`T[N]!` 同时允许写元素和替换
-整个数组；Jiang 不定义独立的 `T![N]` 形式：
+数组类型不编码绑定可变性。需要写入元素或替换整个数组时，把 `!` 写在绑定名后：
 
 ```c
-Int[_]! values = [1, 2, 3];
+Int[_] values! = [1, 2, 3];
 values[1] = 4;
 values = [4, 5, 6];
 
 // 拥有所有权的指针绑定本身可变
-Int[_]^! owner = new [1, 2, 3];
+Int[_]^ owner! = new [1, 2, 3];
 owner = new [4, 5, 6];
 ```
 
@@ -118,5 +117,5 @@ Int length;
 UInt8 first = unsafe { data[0] };
 ```
 
-raw pointer 下标访问属于 `unsafe`，因为指针不携带长度。需要表达运行时长度借用 view 时，
-优先使用 `T[]&`。旧 `T[*]` 写法只是兼容语法。
+raw pointer 下标访问属于 `unsafe`，因为指针不携带长度。`T*` 支持读取，`T*!` 支持读写。
+需要表达运行时长度借用 view 时优先使用 `T[]&`；旧 `T[*]` 和 `T[*:S]` 类型已经移除。

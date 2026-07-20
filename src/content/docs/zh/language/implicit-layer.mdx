@@ -27,7 +27,7 @@ Int copied = ref$.get();
 ```c
 Int size = Int$.size();
 Int align = Int$.align();
-Int!* value = unsafe { Int!$.alloc() };
+Int*! value = unsafe { Int$.alloc() };
 ```
 
 ## 绑定规则
@@ -52,11 +52,11 @@ Int raw = (left + right)$.as(Int);
 | 操作 | 含义 |
 | --- | --- |
 | `value$.ref()` | 返回 shared readonly `T&` borrow |
-| `value$.mut_ref()` | 返回 unique mutable `T!&`，要求可写 place |
-| `value$.ptr()` | 返回 readonly-pointee `T*`，需要 `unsafe` |
-| `value$.mut_ptr()` | 返回 mutable-pointee `T!*`，要求可写 place 和 `unsafe` |
-| `value$.get()` | 显式读取 `T^` / `T&` / `T*` 指向的值 |
-| `value$.set(new_value)` | 显式写入 `T!*` 指向的目标 |
+| `value$.mut_ref()` | 返回 unique mutable `T&!`，要求可写 place |
+| `value$.ptr()` | 返回只读 `T*`，需要 `unsafe` |
+| `value$.mut_ptr()` | 返回可写 `T*!`，要求可写 place 和 `unsafe` |
+| `value$.get()` | 显式读取 `T^` / `T&` / `T&!` / `T*` / `T*!` 指向的值 |
+| `value$.set(new_value)` | 显式写入 `T&!` 或 `T*!` 指向的目标 |
 | `value$.move()` | 显式转移所有权，源变量随后失效 |
 | `value$.addr()` | 获取当前值的裸指针，需要 `unsafe` |
 | `value$.dealloc()` | 释放默认堆分配器上的对象，需要 `unsafe` |
@@ -105,8 +105,8 @@ Int value = a$.get(); // 错误：a 已经被转移。
 Int size = Int$.size();
 Int align = Int$.align();
 Int max_align = Int$.max_align();
-Int!* value = unsafe { Int!$.alloc() };
-Int!* values = unsafe { Int!$.alloc_many(10) };
+Int*! value = unsafe { Int$.alloc() };
+Int*! values = unsafe { Int$.alloc(10) };
 ```
 
 这些操作用于查询布局信息或执行底层分配。布局相关信息也会被后端使用。
@@ -116,8 +116,8 @@ Int!* values = unsafe { Int!$.alloc_many(10) };
 | `Type$.size()` | 类型大小 |
 | `Type$.align()` | ABI 对齐 |
 | `Type$.max_align()` | 默认分配器保证支持的最大 Jiang 类型对齐 |
-| `Type$.alloc()` | 分配一个未初始化对象，返回 `Type!*` |
-| `Type$.alloc_many(n)` | 分配连续数组存储，返回 `Type!*` |
+| `Type$.alloc()` | 分配一个未初始化对象，返回 `Type*!` |
+| `Type$.alloc(n)` | 分配 `n` 个未初始化对象的连续存储，返回 `Type*!` |
 
 ## 强制转换
 

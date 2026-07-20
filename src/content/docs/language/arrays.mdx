@@ -35,11 +35,11 @@ Int[3] c = [1, 2, 3];
 
 ## Mutability
 
-Fixed arrays use one aggregate place capability. `T[N]` is readonly and `T[N]!` allows both element
-writes and replacement of the complete array. Jiang does not define a separate `T![N]` form:
+Array types do not encode binding mutability. Put `!` after the binding name to allow element writes
+and replacement of the complete array:
 
 ```c
-Int[_]! values = [1, 2, 3];
+Int[_] values! = [1, 2, 3];
 values[1] = 4;
 values = [4, 5, 6];
 ```
@@ -105,5 +105,6 @@ Int length;
 UInt8 first = unsafe { data[0] };
 ```
 
-Raw-pointer indexing is unsafe because the pointer carries no length. Use `T[]&` when Jiang code
-needs a borrowed length-bearing view. The old `T[*]` spelling is compatibility syntax only.
+Raw-pointer indexing is unsafe because the pointer carries no length. `T*` supports reads and `T*!`
+supports reads and writes. Use `T[]&` when Jiang code needs a borrowed length-bearing view; the old
+`T[*]` and `T[*:S]` types have been removed.

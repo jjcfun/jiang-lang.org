@@ -38,7 +38,7 @@ Type arguments may include suffixes:
 
 ```c
 Pair<Int?, UInt8[]&> maybe_pair;
-Pair<Int!, Int[3]^> mutable_and_owner;
+Pair<Int&!, Int[3]^> mutable_ref_and_owner;
 ```
 
 ## Const Generic Parameters
@@ -187,7 +187,7 @@ Int count<T>(T value);
 
 ## Mutable Generic Parameters
 
-Top-level mutability can be expressed through a `Mutable` bound:
+Use the built-in `Mutable` bound when a type parameter must carry a type-level write capability:
 
 ```c
 @where(T: Mutable)
@@ -195,8 +195,11 @@ struct Slot<T> {
     T value;
 }
 
-Slot<Int!> slot = Slot<Int!> { value: 1 }
+Slot<Int*!> slot;
 ```
+
+`Mutable` currently matches `T&!` and `T*!`. Binding mutability such as `Int value!` is not a type
+argument and therefore is not checked by generic bounds.
 
 ## Errorable Returns
 

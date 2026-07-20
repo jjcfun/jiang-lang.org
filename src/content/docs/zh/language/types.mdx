@@ -65,29 +65,28 @@ Int?[2]?[3] nullable_rows;
 
 | 表面语法 | 含义 |
 | --- | --- |
-| `T!` | 当前 value/place 层可写 |
 | `T?` | 可选值 |
-| `T^` / `T^!` | 只读 / 可写 owning pointer place |
-| `T&` / `T!&` | shared readonly / unique mutable borrow |
-| `T&!` / `T!&!` | 可重绑定的 shared / unique reference slot |
-| `T*` / `T!*` | readonly-pointee / mutable-pointee raw pointer |
-| `T[N]` / `T[N]!` | 只读 / 可写定长数组 place |
+| `T^` | owning pointer |
+| `T&` / `T&!` | shared reference / 唯一可变引用 |
+| `T*` / `T*!` | 只读 / 可写 raw pointer |
+| `T[N]` | 定长数组 |
 | `T[N:S]` | 带哨兵值 `S` 的定长数组 |
 | `T[]` | 不定长数组类型 |
-| `T[]&` / `T[]!&` | shared readonly / unique mutable borrowed slice |
-| `T[]^` / `T[]^!` | 只读 / 可写 owning slice place |
+| `T[]&` | borrowed slice |
+| `T[]^` | owning slice |
 | `T[:S]&` | 借用哨兵 slice reference |
 
 这些表面语法背后的 compiler-owned 名义类型名不再向用户源码开放。声明、`extend`
 target 和 `@where` type pattern 都应使用表面语法。用户自定义的 `Option`、`Result`、`Ref`、
 `Box` 或 `Slice` 只是普通名义类型，不会获得内建语义。
 
-同一层级里 `?` 必须写在 `!` 前面，例如 `Int?!`。`Int!?`、`Int??`、`Int!!` 都应诊断为错误。
+类型级 `!` 只允许用于 `T&!` 和 `T*!`。`Int!`、`T^!`、`T[]!`、`T?!`、`T!&` 都是非法
+类型。变量、参数、全局和字段是否可重新赋值，统一在绑定名后写 `!`。
 
 ## 类型推导
 
-`_` 是右侧表达式类型的占位符。局部绑定会先计算初始化表达式的自然类型，忽略来源绑定携带的
-最外层可变性，然后应用 `_` 后面写出的绑定后缀：
+`_` 是右侧表达式类型的占位符。编译器会推导初始化表达式的自然类型；如果新绑定需要
+重新赋值，把 `!` 写在新名字后面：
 
 ```c
 _ answer = 42;
@@ -95,21 +94,21 @@ _ name = "Jiang";
 _ values = [1, 2, 3];
 ```
 
-`_` 后面的后缀属于新绑定，不属于右侧表达式：
+下面这些声明形式把类型推导与绑定可变性分开表达：
 
 | 绑定形式 | 含义 |
 | --- | --- |
 | `_ name` | 使用 RHS 类型创建不可变值绑定 |
-| `_! name` | 使用 RHS 类型创建可变值绑定 |
+| `_ name!` | 使用 RHS 类型创建可变值绑定 |
 | `ref _ name` | 借用 RHS place，创建不可重绑定的推导引用 |
-| `ref _! name` | shared borrow，创建可重绑定的 reference slot |
-| `ref! _ name` | unique mutable borrow，创建不可重绑定的 reference slot |
-| `ref! _! name` | unique mutable borrow，创建可重绑定的 reference slot |
+| `ref! _ name` | unique mutable borrow，创建不可重绑定的 reference binding |
+| `ref _ name!` | shared borrow，创建可重绑定的 reference binding |
+| `ref! _ name!` | unique mutable borrow，创建可重绑定的 reference binding |
 
-如果新绑定本身需要重新赋值，使用 `_!`：
+如果新绑定本身需要重新赋值，把 `!` 写在名字后：
 
 ```c
-_! count = 0;
+_ count! = 0;
 count = count + 1;
 ```
 
@@ -122,12 +121,12 @@ _ owner = make_value(); // owner: Int^
 Int copied = make_value()$.get();
 ```
 
-右侧绑定最外层的可变性会被刻意忽略。`_` 描述被绑定值的类型；`_` 后面的 `!` 描述新绑定是否可变：
+绑定可变性不属于值类型，因此从可变绑定复制值时，新绑定不会自动变成可变：
 
 ```c
-Int! source = 1;
+Int source! = 1;
 _ copied = source;   // 不可变绑定，值类型是 Int
-_! mutable = source; // 可变绑定，值类型是 Int
+_ mutable! = source; // 可变绑定，值类型是 Int
 ```
 
 使用 `ref _` 可以从 place expression 推导出借用引用绑定：
@@ -137,8 +136,8 @@ Int value = 1;
 ref _ borrowed = value; // borrowed: Int&
 Int copied = borrowed$.get();
 
-Int! mutable_value = 2;
-ref _ mutable_ref = mutable_value; // mutable_ref: Int!&
+Int mutable_value! = 2;
+ref! _ mutable_ref = mutable_value; // mutable_ref: Int&!
 ```
 
 `ref _` 是 binding mode。它会主动借用右侧 place，并推导被引用的类型。右侧必须是可以被借用的
@@ -151,43 +150,44 @@ _ same_ref = existing;  // same_ref: Int&
 ```
 
 在解构和 pattern 中，`ref` / `ref!` 分别选择 shared / unique mutable borrow；
-type placeholder 之后的 `!` 选择可重绑定 reference slot：
+名字后的 `!` 只让新绑定可重新赋值：
 
 ```c
-Int! first = 1;
-Int! second = 2;
+Int first! = 1;
+Int second! = 2;
 (ref! _ current) = (first);
-(ref! _! rebindable) = (second);
+(ref! _ rebindable!) = (second);
 ```
 
 同一组 `_` 绑定形式也用于解构。承载值模式中需要借用时，使用 `ref T name`：
 
 ```c
-(ref _ left, _! right) = pair;
+(ref _ left, _ right!) = pair;
 
 if maybe is .some(ref Int item) {
     use(item);
 }
 ```
 
-推导只决定最外层绑定。数组元素、元组元素、联合携带值或结构体字段如果需要可变性，要在对应类型位置显式写出 `!`。
+解构出的每个绑定和结构体的每个字段都在自己的名字后声明 `!`；可变性不会从外层类型自动传播。
 
-## 分层可变性
+## 绑定可变性
 
-`!` 标记当前层级可变。在绑定声明里，最外层的 `!` 标记绑定槽位本身，不属于槽位中存放的值类型。
-进入复合类型内部后，`!` 才属于对应的嵌套值类型：
+绑定名后的 `!` 表示这个存储位置可以被重新赋值。它是绑定元数据，不属于槽位中存放的类型：
 
 ```c
-Bool! flag = true; // 可变绑定槽位，槽位中存放 Bool
+Bool flag! = true; // 可变绑定，槽位中存放 Bool
 flag = false;
 
-Int[3]! values = [1, 2, 3]; // 可写 array place
+Int[3] values! = [1, 2, 3]; // 可写 array binding
 values[0] = 10;
 values = [4, 5, 6];
 ```
 
-普通值、定长数组和 owner 只由最外层 place 携带可变性，不存在独立的 `T![N]` 数组元素类型。
-raw pointer 和 borrowed reference 是例外：`*` 或 `&` 之前的 `!` 是 canonical pointee capability。
+绑定可变性不进入函数签名。`foo(Int value!)` 与 `foo(Int value)` 的参数类型相同；前者只允许
+函数体重新赋值参数槽。`foo(Int&! value)` 则要求唯一可变引用，这项能力属于类型并进入签名。
+
+语言没有 `unique` 修饰符；`unique` 是普通标识符，唯一可变能力完全由 `T&!` 表达。
 
 对于聚合值，成员只在外层访问 place 和成员声明都提供写能力时才可写。
 readonly outer view 会递归冻结所有可达字段。
@@ -195,10 +195,10 @@ readonly outer view 会递归冻结所有可达字段。
 ```c
 struct User {
     Int id;
-    Int! age;
+    Int age!;
 }
 
-User! user = User(id: 1, age: 18)
+User user! = User(id: 1, age: 18)
 user.age = 19; // 允许
 // user.id = 2; // 编译错误
 
@@ -206,7 +206,8 @@ User& readonly = user$.ref();
 // readonly.age = 20; // 编译错误：shared outer borrow 冻结字段
 ```
 
-赋值、初始化、传参和 `return` 都是把值写入目标位置的场景。这里以目标类型为准，在相同结构位置忽略可变标记，但不会忽略可选层、指针种类、数组长度或字段结构差异。
+绑定名后的 `!` 不参与值类型的兼容性判断。`T&!` 与 `T*!` 的能力则属于类型，传参和
+`return` 时不会被忽略。
 
 ## 数组和切片
 
@@ -242,9 +243,9 @@ drop 时会析构元素并释放 allocation。
 
 指针和引用分成几类：
 
-- `T^` / `T^!`：位于只读 / 可写 owner place 中的 owning pointer。
-- `T&` / `T!&`：shared readonly / unique mutable non-owning borrow。
-- `T*` / `T!*`：readonly-pointee / mutable-pointee raw pointer。
+- `T^`：owning pointer。
+- `T&` / `T&!`：shared readonly / unique mutable non-owning reference。
+- `T*` / `T*!`：只读 / 可写 raw pointer。
 
 ```c
 Int^ owner = new Int(42);

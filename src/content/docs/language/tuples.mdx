@@ -24,7 +24,7 @@ print(result[1]);
 Destructuring bindings can choose mutability:
 
 ```c
-(_ x, _! y) = split(41);
+(_ x, _ y!) = split(41);
 y = y + 1;
 ```
 
@@ -36,8 +36,8 @@ y = y + 1;
 (Int) add(Int a, Int b);
 Int add(Int a, Int b);
 
-(Int! x) = add(1, 2);
-Int! x = add(1, 2);
+(Int x!) = add(1, 2);
+Int x! = add(1, 2);
 ```
 
 ## Unit

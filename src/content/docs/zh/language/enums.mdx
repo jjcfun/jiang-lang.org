@@ -121,10 +121,10 @@ if value is .int_value(_ n) {
 }
 ```
 
-绑定可以显式写 `_`，也可以写 `_!` 创建可变绑定：
+绑定可以显式写 `_`；需要可变绑定时，把 `!` 写在名字后：
 
 ```c
-if value is .int_value(_! n) {
+if value is .int_value(_ n!) {
     n = n + 1;
 }
 ```
@@ -150,8 +150,8 @@ Int first(Node node) {
 ```
 
 当承载值较大、不可复制，或者只想检查而不想转移承载值时，应使用 `ref` 绑定。
-pattern 中的 `ref! Int value` 会创建 unique mutable borrow。如果结果 reference slot 本身需要
-可重绑定，写成 `ref Int! value` 或 `ref! Int! value`。
+pattern 中的 `ref! Int value` 会创建 unique mutable `Int&!` borrow。如果结果 reference binding
+本身需要重新赋值，写成 `ref Int value!` 或 `ref! Int value!`。
 
 可选值使用 `.some(...)` / `.none` 模式：
 

@@ -11,9 +11,8 @@ Jiang 使用 `T^` 表达拥有所有权的值，使用 `T&` / `T[]&` 表达不�
 ## 复制、转移和析构
 
 普通 `struct` 和 `union` 默认可以隐式复制。`T^` 是内建资源类型，不能隐式复制；
-显式声明 `Movable` 的命名类型也不能隐式复制。`T&`、`T*` 和 `T[]&`
-都是非拥有视图，字段中包含这些类型不影响隐式复制。`!` 只是当前类型层级的可变性标记，
-不改变所有权分类。
+显式声明 `Movable` 的命名类型也不能隐式复制。`T&`、`T&!`、`T*`、`T*!` 和 `T[]&`
+都是非拥有视图，字段中包含这些类型不改变所有权分类。绑定可变性写在名字后。
 
 `T?` 的所有权分类跟随内部类型。`Int?` 可以像普通值一样隐式复制；`Int^?` 包含拥有
 所有权的承载值，因此是 `Movable`，不能隐式复制，转移时也必须写 `$.move()`。
@@ -102,14 +101,17 @@ Int copied = ref$.get();
 ```
 
 在局部绑定中，`ref _` 会创建推导 pointee 类型的 shared borrow。standalone mutable borrow
-使用显式 `T!&` 类型和 `mut_ref()`：
+使用 `ref!` 或 `mut_ref()` 从可写 place 创建唯一可变 `T&!` 借用：
 
 ```c
 Int value = 10;
 ref _ ref = value; // 生命周期规则等同于 value$.ref()
 
-Int! mutable_value = 20;
-Int!& mutable_ref = mutable_value$.mut_ref();
+Int first! = 20;
+ref! _ mutable_ref = first;
+
+Int second! = 30;
+Int&! another_mutable_ref = second$.mut_ref();
 ```
 
 在可选值和联合的承载值模式中，使用 `ref T name` 借用承载值，
@@ -191,7 +193,7 @@ Int^ make_owner() {
 ```
 
 Jiang 区分 shared readonly loan 和 unique mutable loan。任意数量的 shared `T&` 可以共存；
-live `T!&` 必须对所有重叠 place 保持独占，且不能隐式复制。任意 reference loan 存活期间，
+live `T&!` 必须对所有重叠 place 保持独占，且不能隐式复制。任意 reference loan 存活期间，
 与 source 重叠的 storage 都不能被覆盖、move 或 drop。
 
 loan 使用 non-lexical lifetime：最后一次可达使用之后即可结束，因此可以顺序 mutable reborrow。

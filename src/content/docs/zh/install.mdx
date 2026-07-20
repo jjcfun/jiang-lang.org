@@ -68,17 +68,14 @@ bash ./script/install_llvm.sh
 脚本会把 Jiang 托管的 LLVM 22 工具链安装到
 `$JIANG_HOME/toolchains/llvm/<version>/<host>`。未设置 `JIANG_HOME` 时使用 `~/.jiang`。
 
-使用已安装的自举编译器构建下一代编译器：
+使用已安装的 0.4.7 发布版构建并验证编译器：
 
 ```bash
-VERIFY=full bash ./script/build_next.sh
-```
-
-0.4.7 release 分支使用对应的 `0.4.7-bootstrap` 过渡编译器。可以指向 bootstrap
-worktree 或已安装的 bootstrap artifact：
-
-```bash
-BOOTSTRAP_BIN=$HOME/.jiang/versions/0.4.7-bootstrap/bin/jiangc BOOTSTRAP_DEPTH=next VERIFY=full bash ./script/build_next.sh
+BOOTSTRAP_RELEASE_VERSION=0.4.7 \
+BOOTSTRAP_BIN="$HOME/.jiang/versions/0.4.7/bin/jiangc" \
+BOOTSTRAP_DEPTH=stable \
+VERIFY=full \
+bash ./script/build_next.sh
 ```
 
 ## 下一步

@@ -225,7 +225,7 @@ Int count_bytes<T>(T value);
 标准预导入模块提供一组常用 trait / 约束名，例如：
 
 - `Numeric`：数值类型约束。
-- `Mutable`：顶层 `!` 可变性约束。
+- `Mutable`：匹配 `T&!` 和 `T*!` 这类类型级写能力。
 - `Hashable`、`Equatable`：哈希和相等比较。
 - `FromStringLiteral`：允许目标类型从字符串字面量初始化。
 - `Iterator` / `Sequence`：自定义 `for in` 遍历。

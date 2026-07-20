@@ -84,17 +84,18 @@ print(heap_point.x);
 
 ## Field Mutability
 
-A field is writable only when both the outer access place and the field declaration are writable.
-A readonly value, `T&`, or readonly owner recursively freezes reachable fields:
+A field is writable only when both the access path and the field declaration are writable. An
+immutable binding, a shared `T&`, or another access path without write capability freezes reachable
+fields:
 
 ```c
 struct User {
     Int id;
-    Int! age;
+    Int age!;
     UInt8[]&? nick_name;
 }
 
-User! user = User(id: 123, age: 18)
+User user! = User(id: 123, age: 18)
 user.age = user.age + 1;
 // user.id = 200; // error
 
@@ -139,7 +140,7 @@ compiler-provided field constructor is not used.
 
 ```c
 struct Buffer {
-    UInt8[*] data;
+    UInt8* data;
 
     deinit() {
         unsafe {
@@ -173,7 +174,7 @@ Int b = u.value();
 ```
 
 The shorthand `self` is a readonly `Self&` receiver. A method that writes mutable fields declares
-`Self!& self` explicitly; borrow checking creates a unique mutable reborrow at the call site.
+`Self&! self` explicitly; borrow checking creates a unique mutable reborrow at the call site.
 
 ## Local Declarations
 

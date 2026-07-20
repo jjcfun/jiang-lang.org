@@ -1,6 +1,6 @@
 ---
 title: FFI & External Interface
-description: Extern declarations, C interop, single-object raw pointers, many raw pointers, and ABI usage.
+description: Extern declarations, C interop, raw pointers, and ABI usage.
 sidebar:
   order: 17
 ---
@@ -11,8 +11,8 @@ Use `extern` declarations to call external symbols such as C library functions o
 
 ```c
 extern {
-    public Int puts(UInt8[*:0] text);
-    public Int open(UInt8[*:0] path, Int options);
+    public Int puts(UInt8* text);
+    public Int open(UInt8* path, Int options);
     public Int errno;
 }
 ```
@@ -20,23 +20,23 @@ extern {
 Single declarations can use top-level modifiers:
 
 ```c
-extern public Int puts(UInt8[*:0] text);
+extern public Int puts(UInt8* text);
 public extern Int errno;
 ```
 
 ## C Strings
 
-C-style string pointers use sentinel many pointers such as `UInt8[*:0]`. A string literal in that
-context can be emitted as null-terminated read-only data:
+C APIs represent strings as `UInt8*`. A string literal passed in that context is emitted as
+null-terminated read-only data:
 
 ```c
-extern public Int puts(UInt8[*:0] text);
+extern public Int puts(UInt8* text);
 
 puts("hello from Jiang");
 ```
 
-Borrowed sentinel string views use `UInt8[:0]&`. Use `$.ptr()` when a C API needs the sentinel
-many pointer. Use `view.slice()` or `view$.as(UInt8[]&)` when Jiang code needs to treat a
+Borrowed sentinel string views use `UInt8[:0]&`. Use `$.ptr()` when a C API needs a raw pointer.
+Use `view.slice()` or `view$.as(UInt8[]&)` when Jiang code needs to treat a
 non-literal sentinel view as a plain byte slice:
 
 ```c
@@ -51,12 +51,12 @@ UInt8[]& bytes = view.slice();
 When a C API needs a pointer plus a length, model the pointer and length explicitly:
 
 ```c
-extern public Int write(Int fd, UInt8[*] buf, Int count);
+extern public Int write(Int fd, UInt8* buf, Int count);
 ```
 
 ## Raw Pointers
 
-`T*` is a single-object raw pointer for FFI, ABI, and low-level code:
+`T*` is a raw pointer for FFI, ABI, and low-level code:
 
 ```c
 Int value = 42;
@@ -69,8 +69,8 @@ Int copied = raw$.get();
 Writing through a single-object raw pointer requires a mutable pointee:
 
 ```c
-Int! value = 0;
-Int!* raw = unsafe {
+Int value! = 0;
+Int*! raw = unsafe {
     value$.mut_ptr()
 };
 raw$.set(42);
@@ -81,12 +81,12 @@ raw$.set(42);
 `T*` is also the unbounded raw contiguous-memory view used by C buffer parameters:
 
 ```c
-extern Int read(Int fd, UInt8!* buf, Int count);
+extern Int read(Int fd, UInt8*! buf, Int count);
 ```
 
-Indexing `T*` is unsafe because it carries no length. Wrap it with a length field or use `T[]&` when
-Jiang code needs a borrowed length-bearing view. The old `T[*]` spelling is compatibility syntax
-and should not be used by new code.
+Indexing raw pointers is unsafe because they carry no length. `T*` can be indexed for reads, while
+`T*!` also permits writes. Wrap the pointer with a length field or use `T[]&` when Jiang code needs a
+borrowed length-bearing view. `T[*]` and `T[*:S]` have been removed.
 
 ## Resource Boundaries
 
@@ -94,7 +94,7 @@ When wrapping external resources, make ownership explicit:
 
 ```c
 struct CBuffer {
-    UInt8!* data;
+    UInt8*! data;
     Int length;
 
     deinit() {

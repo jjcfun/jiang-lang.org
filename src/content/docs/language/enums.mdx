@@ -114,10 +114,10 @@ if value is .int_value(_ n) {
 }
 ```
 
-Use `_!` for a mutable inferred binding:
+Put `!` after the name for a mutable inferred binding:
 
 ```c
-if value is .int_value(_! n) {
+if value is .int_value(_ n!) {
     n = n + 1;
 }
 ```
@@ -143,8 +143,8 @@ Int first(Node node) {
 ```
 
 This matters when the payload is large, non-copyable, or should be inspected without moving it.
-In patterns, `ref! Int value` creates a unique mutable borrow. Write `ref Int! value` or
-`ref! Int! value` when the resulting reference slot itself must be rebindable.
+In patterns, `ref! Int value` creates a unique mutable `Int&!` borrow. Write `ref Int value!` or
+`ref! Int value!` when the resulting reference binding itself must be reassignable.
 
 Optional values use `.some(...)` and `.none`:
 

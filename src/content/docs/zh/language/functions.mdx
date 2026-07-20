@@ -260,19 +260,11 @@ RawFn<Int, User&> get_value = User.value;
 Int value = get_value(user$.ref());
 ```
 
-`unsafe` 和 `async` 可以写在 `RawFn<...>` 或 `Fn<...>` 的返回类型前，表示调用这个值需要
-对应上下文。它们不修饰返回值类型本身，而是修饰外层 callable 类型：
+`unsafe` 可以写在 `RawFn<...>` 或 `Fn<...>` 的返回类型前，表示调用这个值需要对应上下文。
+它不修饰返回值类型本身，而是修饰外层 callable 类型：
 
 ```c
-Fn<async Bool>[]& callbacks;
 RawFn<unsafe Int, Int>[]& unsafe_callbacks;
-```
-
-`Fn<async Bool>[]&` 表示“元素为异步闭包值的切片引用”。如果要表示“异步 callable 返回切片引用”，
-应写成：
-
-```c
-Fn<async Bool[]&> load_callbacks;
 ```
 
 调用带 `unsafe` effect 的函数需要显式 effect context：
@@ -297,6 +289,9 @@ async Int render() {
     load_page() + 1
 }
 ```
+
+0.4.7 的 async 能力属于具名函数和直接调用；async `Fn` 值与 async 闭包尚未进入受支持的
+callable value API。
 
 使用 `async call(...)` 或 `async { ... }` 可以立即启动任务并得到 body-local `Task<T>`。
 调用 `await()` 会消费该 Task。先启动多个 Task，再按源码顺序等待，仍然可以保持并发推进：

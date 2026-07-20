@@ -90,7 +90,7 @@ Blocks contain declarations, destructuring statements, assignments, call stateme
 
 ```c
 Int main() {
-    Int! total = 0;
+    Int total! = 0;
 
     for i in 0..10 {
         total = total + i;
@@ -170,7 +170,7 @@ if maybe is .some(value) {
 Mutable payload bindings write the payload type explicitly:
 
 ```c
-if maybe is .some(Int! value) {
+if maybe is .some(Int value!) {
     value = value + 1;
 }
 ```

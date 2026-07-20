@@ -24,8 +24,8 @@ These docs are written as a practical guide first. They describe the language as
 
 Jiang 0.4.7 adds a multithreaded coroutine runtime on macOS, serial and concurrent Domains,
 eager body-local Tasks with explicit cancellation, canonical const constraints, and
-shared-readonly / unique-mutable borrow checking. Compiler-owned type names are hidden from source;
-use surface forms such as `T?`, `T@E`, `T&`, `T^`, and `T[]&`.
+shared-readonly / unique-mutable borrow checking. Write mutable bindings as `T name!`; use `T&!` for
+a unique mutable reference and `T*!` for a writable raw pointer.
 
 ## Start Here
 
@@ -54,7 +54,8 @@ use surface forms such as `T?`, `T@E`, `T&`, `T^`, and `T[]&`.
 
 ## Project Status
 
-The Jiang compiler has reached an initial stable self-hosting milestone: the release compiler is produced from Jiang source and verified by smoke and language tests.
+The Jiang compiler has reached an initial stable self-hosting milestone: the release compiler is
+produced from Jiang source and verified by the full language test suite.
 
 The next priorities are broader language tests, release packaging polish, package/module ergonomics,
 backend coverage, and runtime coverage. `#asm` is primarily for runtime code, system calls, and

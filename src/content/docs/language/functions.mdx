@@ -266,20 +266,11 @@ RawFn<Int, User&> get_value = User.value;
 Int value = get_value(user$.ref());
 ```
 
-`unsafe` and `async` can be written before the return type inside `RawFn<...>` or `Fn<...>` to mark
-the context required to call the value. They describe the outer callable type, not the return value
-itself:
+`unsafe` can be written before the return type inside `RawFn<...>` or `Fn<...>` to mark the context
+required to call the value. It describes the outer callable type, not the return value itself:
 
 ```c
-Fn<async Bool>[]& callbacks;
 RawFn<unsafe Int, Int>[]& unsafe_callbacks;
-```
-
-`Fn<async Bool>[]&` means a borrowed slice whose elements are async closure values. To describe an
-async callable that returns a borrowed slice, write:
-
-```c
-Fn<async Bool[]&> load_callbacks;
 ```
 
 Calling a function with the `unsafe` effect requires an explicit effect context:
@@ -304,6 +295,9 @@ async Int render() {
     load_page() + 1
 }
 ```
+
+In 0.4.7, async behavior belongs to named functions and direct calls. Async `Fn` values and async
+closures are not yet part of the supported callable-value API.
 
 Use `async call(...)` or `async { ... }` to start work eagerly and receive a body-local `Task<T>`.
 Calling `await()` consumes that Task. Starting multiple Tasks before awaiting them preserves

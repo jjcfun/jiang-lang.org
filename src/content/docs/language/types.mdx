@@ -59,17 +59,15 @@ Common suffix forms:
 
 | Surface syntax | Meaning |
 | --- | --- |
-| `T!` | current value/place layer is mutable |
 | `T?` | optional value |
-| `T^` / `T^!` | readonly / writable owning pointer place |
-| `T&` / `T!&` | shared readonly / unique mutable borrow |
-| `T&!` / `T!&!` | rebindable shared / unique reference slot |
-| `T*` / `T!*` | readonly-pointee / mutable-pointee raw pointer |
-| `T[N]` / `T[N]!` | readonly / writable fixed-size array place |
+| `T^` | owning pointer |
+| `T&` / `T&!` | shared reference / unique mutable reference |
+| `T*` / `T*!` | readonly / writable raw pointer |
+| `T[N]` | fixed-size array |
 | `T[N:S]` | fixed-size array with sentinel value `S` |
 | `T[]` | unsized array type |
-| `T[]&` / `T[]!&` | shared readonly / unique mutable borrowed slice |
-| `T[]^` / `T[]^!` | readonly / writable owning slice place |
+| `T[]&` | borrowed slice |
+| `T[]^` | owning slice |
 | `T[:S]&` | borrowed sentinel slice reference |
 
 Compiler-owned nominal names behind these forms are not available to user source. Always use the
@@ -77,13 +75,14 @@ surface syntax in declarations, `extend` targets, and `@where` type patterns. A 
 named `Option`, `Result`, `Ref`, `Box`, or `Slice` is an ordinary nominal type and receives no
 built-in behavior.
 
-Within one layer, `?` must come before `!`: write `Int?!`, not `Int!?`, `Int??`, or `Int!!`.
+Type-level `!` is deliberately narrow: it is valid only in `T&!` and `T*!`. Forms such as `Int!`,
+`T^!`, `T[]!`, `T?!`, and `T!&` are invalid. Mutability for a variable, parameter, global, or field
+is written after its binding name instead.
 
 ## Type Inference
 
-Use `_` as a placeholder for the right-hand side type. In a local binding, the compiler first
-computes the initializer's natural type, ignores any outer mutability carried by the source binding,
-and then applies the binding suffixes written after `_`:
+Use `_` as a placeholder for the right-hand side type. The compiler infers the initializer's natural
+type; add `!` after the new name when that binding must be reassignable:
 
 ```c
 _ answer = 42;
@@ -91,21 +90,21 @@ _ name = "Jiang";
 _ values = [1, 2, 3];
 ```
 
-The suffixes after `_` belong to the new binding, not to the right-hand side:
+The declaration forms below keep type inference and binding mutability separate:
 
 | Binding pattern | Meaning |
 | --- | --- |
 | `_ name` | bind a new immutable value with the RHS type |
-| `_! name` | bind a new mutable value with the RHS type |
+| `_ name!` | bind a new mutable value with the RHS type |
 | `ref _ name` | borrow the RHS place and bind an immutable inferred reference |
-| `ref _! name` | shared borrow with a rebindable reference slot |
-| `ref! _ name` | unique mutable borrow with an immutable reference slot |
-| `ref! _! name` | unique mutable borrow with a rebindable reference slot |
+| `ref! _ name` | unique mutable borrow with an immutable reference binding |
+| `ref _ name!` | shared borrow with a rebindable reference binding |
+| `ref! _ name!` | unique mutable borrow with a rebindable reference binding |
 
-Use `_!` when the new binding itself must be reassignable:
+Put `!` after the name when the new binding itself must be reassignable:
 
 ```c
-_! count = 0;
+_ count! = 0;
 count = count + 1;
 ```
 
@@ -118,13 +117,13 @@ _ owner = make_value();  // owner: Int^
 Int copied = make_value()$.get();
 ```
 
-The right-hand side binding's outer mutability is intentionally ignored. `_` describes the type of
-the value being bound; `!` after `_` describes whether the new binding is mutable:
+Binding mutability is not part of the value type, so copying from a mutable binding does not make the
+new binding mutable:
 
 ```c
-Int! source = 1;
+Int source! = 1;
 _ copied = source;     // immutable binding, value type Int
-_! mutable = source;   // mutable binding, value type Int
+_ mutable! = source;   // mutable binding, value type Int
 ```
 
 Use `ref _` to infer a borrowed reference binding from a place expression:
@@ -134,8 +133,8 @@ Int value = 1;
 ref _ borrowed = value;  // borrowed: Int&
 Int copied = borrowed$.get();
 
-Int! mutable_value = 2;
-ref _ mutable_ref = mutable_value; // mutable_ref: Int!&
+Int mutable_value! = 2;
+ref! _ mutable_ref = mutable_value; // mutable_ref: Int&!
 ```
 
 `ref _` is a binding mode. It actively borrows the right-hand side place and infers the referenced
@@ -149,44 +148,47 @@ _ same_ref = existing;   // same_ref: Int&
 ```
 
 Inside destructuring and patterns, `ref` versus `ref!` selects shared versus unique mutable borrow;
-the `!` after the type placeholder selects a rebindable reference slot:
+the `!` after the name only makes the new binding reassignable:
 
 ```c
-Int! first = 1;
-Int! second = 2;
+Int first! = 1;
+Int second! = 2;
 (ref! _ current) = (first);
-(ref! _! rebindable) = (second);
+(ref! _ rebindable!) = (second);
 ```
 
-The same `_` binding patterns are used inside destructuring. Use `ref T name` when borrowing a
-payload pattern:
+The same binding forms are used inside destructuring. Use `ref T name` when borrowing a payload
+pattern:
 
 ```c
-(ref _ left, _! right) = pair;
+(ref _ left, _ right!) = pair;
 
 if maybe is .some(ref Int item) {
     use(item);
 }
 ```
 
-## Layered Mutability
+## Binding Mutability
 
-`!` marks the mutability of the current layer. In a binding declaration, the outermost `!` marks the
-binding slot itself, not the value type stored in that slot. Inside a compound type, `!` is part of
-that nested value type:
+Put `!` after a binding name to allow assignments to that storage location. This is metadata about
+the binding, not part of the stored type:
 
 ```c
-Bool! flag = true;     // mutable binding slot containing Bool
+Bool flag! = true;     // mutable binding containing Bool
 flag = false;
 
-Int[3]! values = [1, 2, 3]; // writable array place
+Int[3] values! = [1, 2, 3]; // writable array binding
 values[0] = 10;
 values = [4, 5, 6];
 ```
 
-For ordinary values, fixed arrays, and owners, only the outer place carries mutability. There is no
-separate `T![N]` array-element type. Raw pointers and borrowed references are the exceptions: the
-`!` before `*` or `&` is canonical pointee capability.
+Binding mutability does not enter a function signature. `foo(Int value!)` and `foo(Int value)` have
+the same parameter type; the first form merely lets the function body reassign its local parameter.
+By contrast, `foo(Int&! value)` requires a unique mutable reference, so that capability is part of
+the signature.
+
+There is no `unique` modifier. `unique` is an ordinary identifier; `T&!` alone expresses the
+unique mutable capability.
 
 For aggregate values, a member is writable only when both the outer access place and the member
 declaration provide write capability. A readonly outer view recursively freezes reachable fields.
@@ -194,10 +196,10 @@ declaration provide write capability. A readonly outer view recursively freezes 
 ```c
 struct User {
     Int id;
-    Int! age;
+    Int age!;
 }
 
-User! user = User(id: 1, age: 18)
+User user! = User(id: 1, age: 18)
 user.age = 19;
 // user.id = 2; // error
 

@@ -16,18 +16,14 @@ return x;
 
 块表达式是主要例外之一，块的最后一个表达式可以作为块的值。
 
-## 类型层级顺序
+## 类型后缀
 
-类型后缀是分层的。optional 和 mutable 标记建议使用规范顺序：
-
-```c
-Int?! value;
-```
-
-同一层级不要重复标记：
+类型级 `!` 只允许用于 reference 和 raw pointer：`T&!` 是唯一可变引用，`T*!` 是可写
+raw pointer。其他类型级写法都是非法的：
 
 ```c
-Int?? value; // 非法
+Int! value;  // 非法：应把 ! 写在绑定名后
+Int?! value; // 非法
 Int!! value; // 非法
 ```
 
@@ -49,18 +45,17 @@ Float result = Float(two) + f;
 
 ## 可变性
 
-`!` 标记某一层级可变。在绑定声明的最外层，它标记绑定槽位；绑定需要带最外层 `!`，
-才能重新赋值：
+变量、参数、全局或字段需要重新赋值时，把 `!` 写在绑定名后：
 
 ```c
-Int! count = 0;
+Int count! = 0;
 count = count + 1;
 ```
 
-定长数组使用一个可写 aggregate place：
+定长数组也使用相同规则：
 
 ```c
-Int[3]! values = [1, 2, 3];
+Int[3] values! = [1, 2, 3];
 values[0] = 10;
 ```
 

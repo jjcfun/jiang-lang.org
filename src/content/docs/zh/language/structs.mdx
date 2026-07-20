@@ -81,17 +81,17 @@ print("x=%d y=%d", heap_point.x, heap_point.y);
 
 ## 字段可变性
 
-字段只在外层访问 place 和字段声明都可写时才能写入。readonly value、`T&` 或 readonly owner
-会递归冻结可达字段：
+字段只在访问路径和字段声明都可写时才能写入。不可变绑定、shared `T&` 或其他不具备写能力的
+访问路径会冻结可达字段：
 
 ```c
 struct User {
     Int id;
-    Int! age;
+    Int age!;
     UInt8[]&? nick_name;
 }
 
-User! user = User(id: 123, age: 18)
+User user! = User(id: 123, age: 18)
 user.age = user.age + 1;
 // user.id = 200; // 编译错误：字段自身不可变
 
@@ -143,7 +143,7 @@ Point^ p3 = new Point(4, 5);
 
 ```c
 struct Buffer {
-    UInt8[*] data;
+    UInt8* data;
 
     deinit() {
         unsafe {
@@ -178,7 +178,7 @@ User u = User(id: 42)
 Int b = u.value();
 ```
 
-简写 `self` 是 readonly `Self&` receiver。需要修改可写字段时，显式声明 `Self!& self`；
+简写 `self` 是 readonly `Self&` receiver。需要修改可写字段时，显式声明 `Self&! self`；
 borrow checker 会在调用点建立 unique mutable reborrow。
 
 ## 局部声明

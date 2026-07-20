@@ -5,30 +5,26 @@ sidebar:
   order: 10
 ---
 
-Jiang separates ownership, borrow kind, pointee capability, and binding mutability. Resource
+Jiang separates ownership, borrow capability, raw-pointer capability, and binding mutability. Resource
 movement and lifetime rules are covered in [Ownership, Borrowing & Lifetimes](/language/ownership/).
 
 ## Pointer and Reference Forms
 
-- `T^`: an owning pointer in a readonly owner place.
-- `T^!`: a writable owner place; it can replace the owner and mutate writable pointee fields.
+- `T^`: an owning pointer.
 - `T&`: a shared readonly non-owning borrow.
-- `T!&`: a unique mutable non-owning borrow. It cannot be implicitly copied.
-- `T&!`: a rebindable reference slot that contains a shared borrow.
-- `T!&!`: a rebindable reference slot that contains a unique mutable borrow.
-- `T*`: a readonly-pointee raw pointer for FFI, ABI, and low-level code.
-- `T!*`: a mutable-pointee raw pointer.
-- `T*!` / `T!*!`: rebindable raw-pointer places without / with pointee write capability.
-- `T[]&` / `T[]!&`: shared readonly / unique mutable borrowed slices.
-- `T[]^` / `T[]^!`: readonly / writable owning-slice places.
+- `T&!`: a unique mutable non-owning borrow. It cannot be implicitly copied.
+- `T*`: a readonly raw pointer for FFI, ABI, and low-level code.
+- `T*!`: a writable raw pointer.
+- `T[]&`: a borrowed slice.
+- `T[]^`: an owning slice.
 - `T[:S]&`: a borrowed sentinel slice whose sentinel value is `S`.
 
 Only `T^` and `T[]^` express language-level ownership. Compiler-owned names behind these forms are
 not available to user source; use the surface syntax directly.
 
-The `!` before `&` or `*` belongs to the pointee capability. The outermost `!` belongs to the current
-binding/place. For example, `T!&` is a unique mutable borrow, while `T&!` is a rebindable slot holding
-a shared readonly borrow.
+Type-level `!` is supported only after `&` or `*`: `T&!` and `T*!`. A `!` after a binding name has a
+different purpose—it lets that variable, parameter, global, or field be reassigned and does not
+change its type.
 
 ## Creating Borrows and Raw Pointers
 
@@ -36,21 +32,21 @@ a shared readonly borrow.
 Int value = 123;
 Int& shared = value$.ref();
 
-Int! mutable_value = 123;
-Int!& unique = mutable_value$.mut_ref();
+Int mutable_value! = 123;
+Int&! unique = mutable_value$.mut_ref();
 
 Int* raw = unsafe {
     value$.ptr()
 };
 
-Int!* mutable_raw = unsafe {
+Int*! mutable_raw = unsafe {
     mutable_value$.mut_ptr()
 };
 ```
 
 `ref()` and `ptr()` never manufacture write capability. The mutable forms are `mut_ref()` and
-`mut_ptr()`, and they require a writable source place. Raw-pointer creation and access remain
-inside `unsafe`.
+`mut_ptr()`, and they require a writable source place. Raw-pointer creation, casts, and indexing
+remain inside `unsafe`.
 
 ## Dereference and Member Access
 
@@ -80,34 +76,36 @@ References and raw pointers use `$.get()` for explicit reads. Writing requires a
 borrow or mutable-pointee raw pointer:
 
 ```c
-Int! value = 0;
-Int!& ref = value$.mut_ref();
+Int value! = 0;
+Int&! ref = value$.mut_ref();
 ref$.set(41);
 
 unsafe {
-    Int!* raw = value$.mut_ptr();
+    Int*! raw = value$.mut_ptr();
     raw$.set(42);
 }
 ```
 
 ## Raw Pointer Indexing
 
-`T*` is also the unbounded raw contiguous-memory view. The old `T[*]` and `T[*:S]` spellings are
-legacy compatibility syntax and should not be used by new code. Indexing is always unsafe because
-the pointer carries no length:
+`T*` and `T*!` can point into contiguous memory, but carry neither a length nor a sentinel guarantee.
+The old `T[*]` and `T[*:S]` types have been removed. Indexing is always unsafe:
 
 ```c
 unsafe {
     UInt8* bytes = source$.ptr();
     UInt8 first = bytes[0];
 
-    UInt8!* output = destination$.mut_ptr();
+    UInt8*! output = destination$.mut_ptr();
     output[1] = 42;
 }
 ```
 
 Use `T[]&` when the API should carry a runtime length, and `T[:S]&` when it should carry a sentinel
 guarantee.
+
+`Void*` and `Void*!` cannot be dereferenced or indexed because they have no element type. Cast to a
+concrete raw-pointer type before accessing memory.
 
 ## Implicit Operation Layer
 

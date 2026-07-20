@@ -16,18 +16,14 @@ return x;
 
 Blocks used as expressions are the main place where the final expression may carry the value of the block.
 
-## Type Layer Order
+## Type Suffixes
 
-Type suffixes are layered. Write optional and mutable markers in their canonical order:
-
-```c
-Int?! value;
-```
-
-Avoid duplicate flags in the same layer:
+Type-level `!` is valid only on references and raw pointers: `T&!` is a unique mutable reference and
+`T*!` is a writable raw pointer. Other type-level forms are invalid:
 
 ```c
-Int?? value; // invalid
+Int! value;  // invalid: put ! after the binding name
+Int?! value; // invalid
 Int!! value; // invalid
 ```
 
@@ -49,18 +45,17 @@ Float result = Float(two) + f;
 
 ## Mutability
 
-`!` marks the mutability of one layer. On the outermost layer of a binding declaration, it marks the
-binding slot, so the binding must use outer `!` before it can be reassigned:
+Put `!` after a binding name when that variable, parameter, global, or field must be reassigned:
 
 ```c
-Int! count = 0;
+Int count! = 0;
 count = count + 1;
 ```
 
-Fixed arrays use one writable aggregate place:
+The same rule applies to fixed arrays:
 
 ```c
-Int[3]! values = [1, 2, 3];
+Int[3] values! = [1, 2, 3];
 values[0] = 10;
 ```
 

@@ -5,29 +5,25 @@ sidebar:
   order: 10
 ---
 
-Jiang 将所有权、借用种类、pointee 写能力和 binding 可变性分开表达。资源转移和生命周期
+Jiang 将所有权、借用能力、raw pointer 写能力和 binding 可变性分开表达。资源转移和生命周期
 规则见[所有权、借用与生命周期](/zh/language/ownership/)。
 
 ## 指针和引用形式
 
-- `T^`：位于只读 owner place 中的 owning pointer。
-- `T^!`：可写 owner place，可替换 owner，也可修改 pointee 的可写字段。
+- `T^`：owning pointer。
 - `T&`：shared readonly non-owning borrow。
-- `T!&`：unique mutable non-owning borrow，不能隐式复制。
-- `T&!`：可重绑定、内部保存 shared borrow 的 reference slot。
-- `T!&!`：可重绑定、内部保存 unique mutable borrow 的 reference slot。
-- `T*`：readonly-pointee raw pointer，用于 FFI、ABI 和底层代码。
-- `T!*`：mutable-pointee raw pointer。
-- `T*!` / `T!*!`：可重绑定的 raw-pointer place，分别不具有 / 具有 pointee 写能力。
-- `T[]&` / `T[]!&`：shared readonly / unique mutable borrowed slice。
-- `T[]^` / `T[]^!`：只读 / 可写 owning-slice place。
+- `T&!`：unique mutable non-owning borrow，不能隐式复制。
+- `T*`：只读 raw pointer，用于 FFI、ABI 和底层代码。
+- `T*!`：可写 raw pointer。
+- `T[]&`：borrowed slice。
+- `T[]^`：owning slice。
 - `T[:S]&`：哨兵值为 `S` 的 borrowed sentinel slice。
 
 只有 `T^` 和 `T[]^` 表达语言级所有权。这些形式背后的 compiler-owned 类型名不向用户源码
 开放，直接使用表面语法即可。
 
-`&` 或 `*` 之前的 `!` 属于 pointee capability，最外层 `!` 属于当前 binding/place。
-因此 `T!&` 是 unique mutable borrow，`T&!` 则是保存 shared readonly borrow 的可重绑定 slot。
+类型级 `!` 只支持写在 `&` 或 `*` 之后，也就是 `T&!` 和 `T*!`。绑定名后的 `!` 含义不同：
+它只允许变量、参数、全局或字段被重新赋值，不改变类型。
 
 ## 创建借用和裸指针
 
@@ -35,20 +31,20 @@ Jiang 将所有权、借用种类、pointee 写能力和 binding 可变性分开
 Int value = 123;
 Int& shared = value$.ref();
 
-Int! mutable_value = 123;
-Int!& unique = mutable_value$.mut_ref();
+Int mutable_value! = 123;
+Int&! unique = mutable_value$.mut_ref();
 
 Int* raw = unsafe {
     value$.ptr()
 };
 
-Int!* mutable_raw = unsafe {
+Int*! mutable_raw = unsafe {
     mutable_value$.mut_ptr()
 };
 ```
 
 `ref()` 和 `ptr()` 不会制造写能力。可变形式是 `mut_ref()` 和 `mut_ptr()`，且要求可写 source place。
-raw pointer 的创建与访问仍位于 `unsafe` 边界内。
+raw pointer 的创建、转换和下标访问仍位于 `unsafe` 边界内。
 
 ## 解引用与成员访问
 
@@ -78,32 +74,35 @@ reference 和 raw pointer 使用 `$.get()` 显式读取。写入要求 unique mu
 mutable-pointee raw pointer：
 
 ```c
-Int! value = 0;
-Int!& ref = value$.mut_ref();
+Int value! = 0;
+Int&! ref = value$.mut_ref();
 ref$.set(41);
 
 unsafe {
-    Int!* raw = value$.mut_ptr();
+    Int*! raw = value$.mut_ptr();
     raw$.set(42);
 }
 ```
 
 ## 裸指针下标
 
-`T*` 同时表示无长度的裸连续内存 view。旧 `T[*]` / `T[*:S]` 写法只是兼容语法，新代码
-不再使用。由于指针不携带长度，下标访问始终属于 `unsafe`：
+`T*` 和 `T*!` 可以指向连续内存，但都不携带长度或 sentinel 保证。旧 `T[*]` / `T[*:S]`
+类型已经移除。下标访问始终属于 `unsafe`：
 
 ```c
 unsafe {
     UInt8* bytes = source$.ptr();
     UInt8 first = bytes[0];
 
-    UInt8!* output = destination$.mut_ptr();
+    UInt8*! output = destination$.mut_ptr();
     output[1] = 42;
 }
 ```
 
 API 需要携带运行时长度时使用 `T[]&`；需要哨兵保证时使用 `T[:S]&`。
+
+`Void*` 和 `Void*!` 没有元素类型，不能解引用或下标访问；需要先转换成具有具体元素类型的
+raw pointer。
 
 ## 隐式操作层
 
