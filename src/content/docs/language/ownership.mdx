@@ -196,9 +196,9 @@ Domains.
 
 ## Lifetime Annotations
 
-Nominal `struct` and `union` types declare their public lifetime shape with `@region`. Each declared
-region must be bound directly to at least one field or union payload lifetime slot. A single-slot
-field uses `@life(a)`:
+Borrowing `struct` and `union` types declare their named lifetime regions with `@region`. Every
+declared region must be used by at least one borrowed field or union payload. A field with one
+lifetime uses `@life(a)`:
 
 ```c
 @region(a)
@@ -209,17 +209,17 @@ struct ByteView {
 }
 ```
 
-List public regions in stable Shape order. A clause such as `@region(a, b, b: a)` means `a`
-outlives `b`. Constraint endpoints must be declared in the same annotation, and the same constraint
-target cannot appear twice. Coverage cycles are valid: `@region(a, b, b: a, a: b)` makes the two
-regions cover each other. Every declared region must be used by an actual field or payload slot.
+Declaration order matters when the type is used with positional lifetime bindings. A clause such as
+`@region(a, b, b: a)` means `a` must live at least as long as `b`. Both names must be declared in the
+same annotation, and the same name cannot be constrained twice. Mutual constraints are allowed:
+`@region(a, b, b: a, a: b)` gives `a` and `b` the same lifetime requirement.
 
-Multi-region fields can bind by Shape position, as in `@life(a, b)`, or by the names exposed by the
-field type, as in `@life(left: a, right: b)`. The two forms cannot be mixed. Every target must be
-bound exactly once, and field bindings cannot use `self` as a source.
+Fields with several lifetimes can bind them in declaration order, as in `@life(a, b)`, or by names
+provided by the field type, as in `@life(left: a, right: b)`. The two forms cannot be mixed. Every
+name must be bound exactly once, and field bindings cannot use `self`.
 
-Functions and methods use `target: source`. The source on the right outlives and covers the target
-on the left:
+Functions and methods use `target: source`: a borrow named on the right must live long enough for
+the value named on the left:
 
 ```c
 @life(return: data)
@@ -228,15 +228,14 @@ UInt8[]& first_two(UInt8[]& data) {
 }
 ```
 
-When a function with a non-empty return lifetime Shape omits `@life`, a readonly `self` or
-`Self&! self` reference receiver with a non-empty Shape takes priority. Without that receiver rule,
-the complete Shape of the only lifetime-bearing, user-visible parameter becomes the return source.
-One multi-region parameter is still one parameter root. This is signature elision, not inference
-from the function body:
+When a returned value contains a borrow and `@life` is omitted, a readonly `self` or `Self&! self`
+receiver is the default source. Without such a receiver, the only parameter that carries borrowed
+data becomes the default source. A parameter that carries several lifetimes still counts as one
+parameter. This rule depends only on the function declaration, not on which branch the body returns:
 
 ```c
 Int& first(Int& value) {
-    return value; // default contract: @life(return: value)
+    return value; // defaults to @life(return: value)
 }
 
 struct Pair {
@@ -247,17 +246,17 @@ struct Pair {
         if use_left {
             return self.left$.ref();
         }
-        return self.right$.ref(); // default contract: @life(return: self)
+        return self.right$.ref(); // defaults to @life(return: self)
     }
 }
 ```
 
-A by-value `Self self` receiver has no priority; it participates in the ordinary unique-root rule.
-If there are zero lifetime-bearing input roots, write `@life()` to confirm that the result carries
-no parameter borrow. If there are two or more roots, or the unique root has an incompatible Shape,
-write an explicit contract. Any explicit `@life(...)` completely replaces the implicit return
-contract. Each target must be unique; use `&` to take the common shortest region of same-shaped
-sources:
+A by-value `Self self` receiver has no priority and is treated like an ordinary parameter. If no
+parameter carries borrowed data, write `@life()` to confirm that the result does not borrow from a
+parameter. If several parameters carry borrowed data, or the source and result have different
+lifetime positions, write `@life` explicitly. An explicit annotation defines all allowed lifetime
+relationships; no default relationship is added. Each left-hand name may appear only once. Use `&`
+when the result may borrow from either of several compatible sources:
 
 ```c
 @life(return: left & right)
@@ -269,16 +268,15 @@ Int& pick(Int& left, Int& right, Bool use_left) {
 }
 ```
 
-Parameter targets describe their complete declaration Shapes, not the parameter stack slots.
-`@life(left: right)` requires `right` to cover `left` by Shape position in the function body and at
-each call site:
+Parameter-to-parameter relationships use the same syntax. `@life(left: right)` means every borrowed
+part of `right` must live long enough for the corresponding borrowed part of `left`:
 
 ```c
 @life(left: right)
 () relate(Int& left, Int& right) {}
 ```
 
-For a multi-slot return, map the complete `return` target once with a product expression:
+When a result carries several lifetimes, map the complete `return` once with a tuple expression:
 
 ```c
 @region(a, b)
@@ -296,12 +294,12 @@ PairRef make_pair(Int& left, Int& right) {
 }
 ```
 
-Do not split that mapping into `return.a` and `return.b`, repeat the same target, or use positional
-paths such as `value[0]` in a lifetime contract. Tuple elements and `Fn` / `RawFn` result and
-parameter positions must be named before a contract can refer to them. `@life()` is the explicit
-empty callable contract.
+Do not split that mapping into `return.a` and `return.b`, repeat the same left-hand name, or use
+positional paths such as `value[0]`. Tuple elements and `Fn` / `RawFn` result and parameter positions
+must be named before `@life` can refer to them. `@life()` explicitly states that there are no
+lifetime relationships to parameters.
 
-For example, a callable sub-contract uses its declared result and parameter names:
+For example, a callable relationship uses its declared result and parameter names:
 
 ```c
 @life(callback.result: callback.value, return: value)

@@ -189,8 +189,8 @@ shared/unique 规则，因此安全引用在 serial 与 concurrent Domain 间仍
 
 ## 生命周期约束
 
-nominal `struct` / `union` 使用 `@region` 声明公开 lifetime Shape。每个 region 都必须直接
-绑定到至少一个字段或 union payload 的 lifetime slot。单-slot 字段使用 `@life(a)`：
+包含借用的 `struct` / `union` 使用 `@region` 声明具名 lifetime region。每个 region 都必须
+用于至少一个借用字段或 union payload。只有一个 lifetime 的字段使用 `@life(a)`：
 
 ```c
 @region(a)
@@ -201,16 +201,15 @@ struct ByteView {
 }
 ```
 
-public region 按稳定 Shape 顺序声明。`@region(a, b, b: a)` 表示 `a` outlives `b`。
-约束两端必须在同一 annotation 中声明，同一个 constraint target 不能出现两次。coverage
-允许成环：`@region(a, b, b: a, a: b)` 表示两个 region 互相覆盖。每个 region 都必须被
-实际字段或 payload slot 使用。
+使用位置绑定时，region 的声明顺序有意义。`@region(a, b, b: a)` 表示 `a` 至少要和 `b`
+活得一样久。关系两端必须在同一个 annotation 中声明，同一个名字不能被约束两次。
+允许相互约束：`@region(a, b, b: a, a: b)` 表示 `a` 和 `b` 的生命周期要求相同。
 
-多-region 字段可以按 Shape 位置写 `@life(a, b)`，也可以按字段类型公开的名字写
-`@life(left: a, right: b)`。两种模式不能混用，每个 target 必须恰好绑定一次；
-字段 binding 不能使用 `self` source。
+具有多个 lifetime 的字段可以按声明顺序写 `@life(a, b)`，也可以使用字段类型提供的名字，
+写成 `@life(left: a, right: b)`。两种形式不能混用，每个名字必须恰好绑定一次；
+字段绑定不能使用 `self`。
 
-函数和方法统一使用 `target: source`，右侧 source 覆盖左侧 target：
+函数和方法统一使用 `target: source`：右侧名字代表的借用必须比左侧名字代表的值活得更久：
 
 ```c
 @life(return: data)
@@ -219,14 +218,13 @@ UInt8[]& first_two(UInt8[]& data) {
 }
 ```
 
-函数返回 Shape 非空但省略 `@life` 时，Shape 非空的 readonly `self` / `Self&! self`
-reference receiver 优先成为默认来源。没有 receiver 特例时，只有恰好一个用户可见参数 root
-携带 lifetime，才使用该参数的完整 Shape；单个多-region 参数仍只算一个 root。这是
-signature elision，不是从函数体推断：
+返回值包含借用但省略 `@life` 时，readonly `self` / `Self&! self` receiver 默认作为来源。
+没有这种 receiver 时，如果只有一个参数携带借用，就默认使用该参数。一个参数即使携带多个
+lifetime，也仍然只算一个参数。这条规则只根据函数声明确定，不会分析函数体选择了哪个分支：
 
 ```c
 Int& first(Int& value) {
-    return value; // 默认契约：@life(return: value)
+    return value; // 默认等价于 @life(return: value)
 }
 
 struct Pair {
@@ -237,15 +235,15 @@ struct Pair {
         if use_left {
             return self.left$.ref();
         }
-        return self.right$.ref(); // 默认契约：@life(return: self)
+        return self.right$.ref(); // 默认等价于 @life(return: self)
     }
 }
 ```
 
-`Self self` 按值 receiver 不享受优先级，只参与普通的唯一 root 规则。零个非空输入 root 时，
-必须用 `@life()` 确认返回值不携带参数 borrow；存在两个或更多 root，或唯一 root 与 return
-Shape 不兼容时，必须显式声明。任意显式 `@life(...)` 都完全替换 implicit return contract。
-每个 target 必须唯一；同 Shape 的多个候选来源使用 `&` 逐位取得共同最短 region：
+`Self self` 按值 receiver 不享受优先级，和普通参数一样处理。没有参数携带借用时，必须用
+`@life()` 确认返回值不借用参数；有多个参数携带借用，或者来源与返回值的 lifetime 位置不一致
+时，必须显式写 `@life`。显式 annotation 会定义全部允许的 lifetime 关系，不再补充默认关系。
+同一个左侧名字只能出现一次；返回值可能借用多个兼容来源时，使用 `&`：
 
 ```c
 @life(return: left & right)
@@ -257,15 +255,15 @@ Int& pick(Int& left, Int& right, Bool use_left) {
 }
 ```
 
-参数 target 表示参数声明的完整 Shape，不是参数栈槽。`@life(left: right)` 要求 `right`
-按 Shape 位置覆盖 `left`，函数体检查和每个调用点都必须满足：
+参数之间也使用相同语法。`@life(left: right)` 表示 `right` 中每个借用部分都必须比 `left`
+中对应的借用部分活得更久：
 
 ```c
 @life(left: right)
 () relate(Int& left, Int& right) {}
 ```
 
-多-slot 返回值必须把完整 `return` target 一次映射到 product expression：
+返回值包含多个 lifetime 时，使用元组表达式一次映射完整的 `return`：
 
 ```c
 @region(a, b)
@@ -283,11 +281,11 @@ PairRef make_pair(Int& left, Int& right) {
 }
 ```
 
-不能把它拆成 `return.a` / `return.b` 多条映射，也不能重复同一个 target。lifetime contract
-不支持 `value[0]` 位置路径；tuple 元素和 `Fn` / `RawFn` 的 result/参数位置必须命名后才能引用。
-`@life()` 表示显式空 callable contract。
+不能把它拆成 `return.a` / `return.b` 多条映射，也不能重复同一个左侧名字。`@life` 不支持
+`value[0]` 位置路径；tuple 元素和 `Fn` / `RawFn` 的 result/参数位置必须命名后才能引用。
+`@life()` 明确表示没有来自参数的 lifetime 关系。
 
-callable 子契约使用它声明的 result 和参数名：
+callable 的 lifetime 关系使用它声明的 result 和参数名：
 
 ```c
 @life(callback.result: callback.value, return: value)
