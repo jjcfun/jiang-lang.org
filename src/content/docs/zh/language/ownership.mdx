@@ -10,85 +10,68 @@ Jiang 使用 `T^` 表达拥有所有权的值，使用 `T&` / `T[]&` 表达不�
 
 ## 复制、转移和析构
 
-普通 `struct` 和 `union` 默认可以隐式复制。`T^` 是内建资源类型，不能隐式复制；
-显式声明 `Movable` 的命名类型也不能隐式复制。`T&`、`T&!`、`T*`、`T*!` 和 `T[]&`
-都是非拥有视图，字段中包含这些类型不改变所有权分类。绑定可变性写在名字后。
+`Movable` 是默认 auto trait：除非 nominal type 用 `!Movable` 显式退出，否则值可以改变
+storage address。`!Movable` 值必须直接初始化到最终 place，不能按值传参、返回、赋给新 place、
+捕获或 move。直接 `Task<T>` 和 `Mutex<T>` 用这条规则保持地址稳定。
 
-`T?` 的所有权分类跟随内部类型。`Int?` 可以像普通值一样隐式复制；`Int^?` 包含拥有
-所有权的承载值，因此是 `Movable`，不能隐式复制，转移时也必须写 `$.move()`。
+`Copyable` 继承 `Movable`，决定普通按值使用执行 copy 还是 move。标量、enum、shared reference、
+raw pointer 和 `RawFn` 默认 Copyable。用户定义的 `struct` / `union` 不默认 Copyable；
+只有显式实现 `Copyable` 且所有字段或 payload 都 Copyable 时才能复制。带自定义 `deinit`
+的类型不能实现 `Copyable`。
 
-拥有所有权的值只能有一个当前所有者。把 `T^` 赋给另一个变量时，必须显式写 `$.move()`：
+非 Copyable、但 Movable 的值在赋值、传参、返回和 capture 时默认 move：
 
 ```c
 Int^ a = new Int(42);
-Int^ b = a$.move();
+Int^ b = a;
 
 Int value = b$.get();
 ```
 
-不能隐式复制或隐式转移所有权：
+move 后源变量失效：
 
 ```c
 Int^ a = new Int(42);
-Int^ b = a; // 错误：T^ 不能隐式复制，也不能通过普通赋值隐式转移。
-```
-
-显式转移使用 `value$.move()`：
-
-```c
-Buffer^ a = new Buffer();
-Buffer^ b = a$.move();
-
-// a 已经失效，后续不能读取、写入、调用方法或再次转移。
-```
-
-转移之后继续使用源变量会报错：
-
-```c
-Int^ a = new Int(1);
-Int^ b = a$.move();
+Int^ b = a;
 Int value = a$.get(); // 错误：a 已经被转移。
 ```
 
-普通值仍然可以复制：
+`$.move()` 仍可作为显式写法，也可以强制 move 一个 Copyable 值：
 
 ```c
 Int a = 1;
 Int b = a;
-Int c = a + b;
+Int c = b$.move();
+Int invalid = b; // 错误：显式 move 已使 b 失效。
 ```
 
-直接或间接包含 `Movable` 字段的命名类型必须显式声明 `Movable`，并且不能隐式复制：
+普通值类型需要显式声明 Copyable：
 
 ```c
-struct Box: Movable {
+struct Point: Copyable {
+    Int x;
+    Int y;
+}
+
+Point a = Point(x: 1, y: 2);
+Point b = a; // copy
+```
+
+普通资源 struct 可以移动但不能复制，因此普通赋值会直接转移：
+
+```c
+struct Box {
     Int^ value;
 }
 
-Box a = Box(value: new Int(1))
-Box b = a; // 错误：Box 是 Movable，不能隐式复制。
-Box c = a$.move();
+Box a = Box(value: new Int(1));
+Box b = a; // move；a 随后失效
 ```
 
-非拥有视图字段不会让类型变成 `Movable`：
-
-```c
-struct SliceView {
-    UInt8[]& data;
-}
-
-SliceView a = SliceView(data: "abc")
-SliceView b = a; // 允许：T[]& 不拥有资源，不影响隐式复制。
-```
-
-析构规则：
-
-- 只有 `Movable` 类型会自动析构。
-- `T^` 离开作用域时会析构指向的 `T`，并释放堆存储。
-- `T?` 的自动析构由内部类型决定：`some` 会析构承载值，`none` 不做承载值析构。
-- `struct` 的 `T^` 字段会自动析构。
-- `T&`、`T*` 和 `T[]&` 字段不会自动释放。
-- 如果 `struct` 有自定义 `deinit`，先执行自定义 `deinit`，再自动析构拥有所有权的字段。
+runtime 析构取决于 ownership、字段、payload 和自定义 `deinit`，不由 `Movable` 标记开启。
+`T^` 会先析构 pointee，再释放堆存储。tuple、array、optional、errorable、struct 和 union
+会递归析构拥有的内容。`T&`、`T*`、`T[]&` 等非拥有视图不会释放目标。自定义 `deinit`
+先执行，随后字段按声明逆序析构。
 
 ## 引用规则
 
@@ -199,54 +182,73 @@ live `T&!` 必须对所有重叠 place 保持独占，且不能隐式复制。�
 loan 使用 non-lexical lifetime：最后一次可达使用之后即可结束，因此可以顺序 mutable reborrow。
 struct sibling field 与不同 constant array index 可分别借用；dynamic index 和 subslice 保守视为重叠。
 
-async 调用捕获 borrow 时，body-local `Task` 会持有 loan，直到 `await()` 或 `cancel()` 确认进入终态。
-携带非 static loan 的 Task 不能 detach。Domain scheduling 不会放宽 shared/unique 规则，因此安全引用
-在 serial 与 concurrent Domain 间仍保持 data-race freedom。
+async 调用捕获 borrow 时，直接创建的结构化 Task 会持有 loan，直到 Task 完成且作用域清理结束。
+`cancel()` 只发布取消请求；需要等待终态时应使用 `await()` 或 `cancel_and_await()`。跨作用域或
+Domain 的 heap Task 仍必须满足普通生命周期与 `Sendable` 规则。Domain scheduling 不会放宽
+shared/unique 规则，因此安全引用在 serial 与 concurrent Domain 间仍保持 data-race freedom。
 
 ## 生命周期约束
 
-`@life(a > b)` 表示 `a` 的目标生命周期必须长于 `b`。lifetime annotation 描述跨函数
-source 关系；MIR loan analysis 会在每个调用点另行检查 shared/mutable alias 与 source invalidation。
-
-存储 `T&` 或 `T[]&` 字段时，目标对象的生命周期必须覆盖包含该字段的值。跨函数或存储到字段的关系可以用 `@life(...)` 表达：
+nominal `struct` / `union` 使用 `@region` 声明公开 lifetime Shape。每个 region 都必须直接
+绑定到至少一个字段或 union payload 的 lifetime slot。单-slot 字段使用 `@life(a)`：
 
 ```c
-@life(data > self)
-struct Slice {
+@region(a)
+struct ByteView {
+    @life(a)
     UInt8[]& data;
-    Int len;
+    Int length;
 }
-
-@life(buffer > return)
-Slice make_slice(Buffer& buffer);
 ```
 
-函数返回引用时有一条默认推断规则：如果返回引用只可能来自同一种输入来源，那么该来源的
-lifetime 默认覆盖 `return`。这里的输入来源可以是某个参数，也可以是 `self`。
+public region 按稳定 Shape 顺序声明。`@region(a, b, b: a)` 表示 `a` outlives `b`。
+约束两端必须在同一 annotation 中声明，同一个 constraint target 不能出现两次。coverage
+允许成环：`@region(a, b, b: a, a: b)` 表示两个 region 互相覆盖。每个 region 都必须被
+实际字段或 payload slot 使用。
+
+多-region 字段可以按 Shape 位置写 `@life(a, b)`，也可以按字段类型公开的名字写
+`@life(left: a, right: b)`。两种模式不能混用，每个 target 必须恰好绑定一次；
+字段 binding 不能使用 `self` source。
+
+函数和方法统一使用 `target: source`，右侧 source 覆盖左侧 target：
+
+```c
+@life(return: data)
+UInt8[]& first_two(UInt8[]& data) {
+    return data[0..2];
+}
+```
+
+函数返回 Shape 非空但省略 `@life` 时，Shape 非空的 readonly `self` / `Self&! self`
+reference receiver 优先成为默认来源。没有 receiver 特例时，只有恰好一个用户可见参数 root
+携带 lifetime，才使用该参数的完整 Shape；单个多-region 参数仍只算一个 root。这是
+signature elision，不是从函数体推断：
 
 ```c
 Int& first(Int& value) {
-    return value; // 允许：返回来源只可能是 value。
+    return value; // 默认契约：@life(return: value)
 }
 
 struct Pair {
     Int left;
     Int right;
 
-    Int& choose(Bool use_left) {
+    Int& choose(self, Bool use_left) {
         if use_left {
             return self.left$.ref();
         }
-        return self.right$.ref(); // 允许：两个分支都来自同一个来源 self。
+        return self.right$.ref(); // 默认契约：@life(return: self)
     }
 }
 ```
 
-如果返回引用可能来自多个输入来源，就必须显式写出所有允许来源。显式 `@life(... > return)`
-出现后，borrow check 只允许标注中的来源：
+`Self self` 按值 receiver 不享受优先级，只参与普通的唯一 root 规则。零个非空输入 root 时，
+必须用 `@life()` 确认返回值不携带参数 borrow；存在两个或更多 root，或唯一 root 与 return
+Shape 不兼容时，必须显式声明。任意显式 `@life(...)` 都完全替换 implicit return contract。
+每个 target 必须唯一；同 Shape 的多个候选来源使用 `&` 逐位取得共同最短 region：
 
 ```c
-@life(left > return, right > return)
+@life(return: left & right)
 Int& pick(Int& left, Int& right, Bool use_left) {
     if use_left {
         return left;
@@ -255,50 +257,42 @@ Int& pick(Int& left, Int& right, Bool use_left) {
 }
 ```
 
-缺少标注时会失败：
+参数 target 表示参数声明的完整 Shape，不是参数栈槽。`@life(left: right)` 要求 `right`
+按 Shape 位置覆盖 `left`，函数体检查和每个调用点都必须满足：
 
 ```c
-Int& bad_pick(Int& left, Int& right, Bool use_left) {
-    if use_left {
-        return left;
-    }
-    return right; // 错误：返回来源可能是 left 或 right，必须显式 @life。
+@life(left: right)
+() relate(Int& left, Int& right) {}
+```
+
+多-slot 返回值必须把完整 `return` target 一次映射到 product expression：
+
+```c
+@region(a, b)
+struct PairRef {
+    @life(a)
+    Int& left;
+
+    @life(b)
+    Int& right;
+}
+
+@life(return: (left, right))
+PairRef make_pair(Int& left, Int& right) {
+    PairRef(left: left, right: right)
 }
 ```
 
-正例：结构体字段保存外部 slice 时，用 `@life(data > self)` 表示 `data` 指向的存储必须长于结构体本身：
+不能把它拆成 `return.a` / `return.b` 多条映射，也不能重复同一个 target。lifetime contract
+不支持 `value[0]` 位置路径；tuple 元素和 `Fn` / `RawFn` 的 result/参数位置必须命名后才能引用。
+`@life()` 表示显式空 callable contract。
+
+callable 子契约使用它声明的 result 和参数名：
 
 ```c
-@life(data > self)
-struct ByteView {
-    UInt8[]& data;
-}
-
-ByteView view(UInt8[]& data) {
-    return ByteView(data: data)
-}
-```
-
-反例：把局部数组切片存进返回值会产生悬垂引用：
-
-```c
-@life(data > self)
-struct ByteView {
-    UInt8[]& data;
-}
-
-ByteView bad_view() {
-    UInt8[_] local = "abc";
-    return ByteView(data: local[..]) // 错误：local 的生命周期短于返回值。
-}
-```
-
-公开接口、跨函数调用、返回含引用字段的聚合值，仍建议显式写出返回来源关系：
-
-```c
-@life(data > return)
-UInt8[]& first_two(UInt8[]& data) {
-    return data[0..2];
+@life(callback.result: callback.value, return: value)
+Int& apply(Fn<Int& result, Int& value> callback, Int& value) {
+    callback(value)
 }
 ```
 

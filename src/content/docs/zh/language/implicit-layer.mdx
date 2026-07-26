@@ -57,7 +57,7 @@ Int raw = (left + right)$.as(Int);
 | `value$.mut_ptr()` | 返回可写 `T*!`，要求可写 place 和 `unsafe` |
 | `value$.get()` | 显式读取 `T^` / `T&` / `T&!` / `T*` / `T*!` 指向的值 |
 | `value$.set(new_value)` | 显式写入 `T&!` 或 `T*!` 指向的目标 |
-| `value$.move()` | 显式转移所有权，源变量随后失效 |
+| `value$.move()` | 强制显式 move，源变量随后失效 |
 | `value$.addr()` | 获取当前值的裸指针，需要 `unsafe` |
 | `value$.dealloc()` | 释放默认堆分配器上的对象，需要 `unsafe` |
 | `value$.as(Type)` | 低层强制转换；裸指针转换需要 `unsafe` |
@@ -82,11 +82,15 @@ Int copied_ref = ref$.get();
 
 ## 所有权转移
 
-`$.move()` 是所有权转移的显式边界：
+非 Copyable、但 Movable 的值在按值位置默认 move。`$.move()` 是保留的显式形式，
+也可以让 Copyable 值不执行默认 copy、而是强制 move：
 
 ```c
 Int^ a = new Int(42);
 Int^ b = a$.move();
+
+Int copyable = 1;
+Int forced = copyable$.move();
 ```
 
 转移后源变量失效：

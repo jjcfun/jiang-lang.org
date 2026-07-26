@@ -100,14 +100,14 @@ Jiang 代码需要长度 view 时优先使用 `T[]&` 或 `{ ptr, len }` 风格�
 - 哪个字段拥有资源。
 - 哪个字段只是视图或引用。
 - `deinit` 如何释放资源。
-- 是否禁止隐式复制。
+- 资源包装类型不要实现 `Copyable`，让普通按值使用执行 move。
 
 ```c
 struct CBuffer {
     UInt8*! data;
     Int length;
 
-    deinit() {
+    deinit(self) {
         unsafe {
             self.data$.dealloc();
         }

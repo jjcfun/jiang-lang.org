@@ -59,7 +59,7 @@ operation layer, then resolves the following operation.
 | `value$.mut_ptr()` | returns a writable `T*!`; requires a writable place and `unsafe` |
 | `value$.get()` | explicitly reads through `T^`, `T&`, `T&!`, `T*`, or `T*!` |
 | `value$.set(new_value)` | explicitly writes through a `T&!` or `T*!` target |
-| `value$.move()` | transfers ownership and invalidates the source |
+| `value$.move()` | forces an explicit move and invalidates the source |
 | `value$.addr()` | gets a raw pointer to the current value; requires `unsafe` |
 | `value$.dealloc()` | frees an object allocated by the default heap allocator; requires `unsafe` |
 | `value$.as(Type)` | low-level cast; requires `unsafe` for raw pointer casts |
@@ -85,11 +85,15 @@ Member access is the exception: `owner.member` can pass through `T^` to access t
 
 ## Ownership Transfer
 
-`$.move()` is the explicit boundary for ownership transfer:
+Non-copyable movable values move by default in value positions. `$.move()` is the explicit form,
+and can also force a move instead of the default copy for a `Copyable` value:
 
 ```c
 Int^ a = new Int(42);
 Int^ b = a$.move();
+
+Int copyable = 1;
+Int forced = copyable$.move();
 ```
 
 The source is invalid after the move:

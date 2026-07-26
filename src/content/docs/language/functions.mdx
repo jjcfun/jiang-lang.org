@@ -164,7 +164,8 @@ T add<T>(T left, T right) {
 
 ## Methods
 
-Types can define instance methods and associated functions without a `self` parameter:
+Functions inside a type are associated functions unless their first parameter is a receiver.
+Write `self` for a readonly `Self&` receiver:
 
 ```c
 struct User {
@@ -174,7 +175,7 @@ struct User {
         return User(id: 0)
     }
 
-    Int value() {
+    Int value(self) {
         return self.id;
     }
 }
@@ -184,11 +185,13 @@ Int a = user.value();
 User z = User.zero();
 ```
 
-Instance methods have implicit `self`. Associated functions without a receiver do not.
+The receiver must be explicit in the parameter list. `Ret method(self, ...)` uses `Self&`;
+`Ret method(Self&! self, ...)` requires a unique mutable receiver; and
+`Ret method(Self self, ...)` consumes the receiver by value. Associated functions omit a receiver.
 
-`init(...)` is a constructor with an initializing `self` target. It is called through `Type(...)` or
-`new Type(...)`, and is not exposed as a normal function value. `deinit()` is the cleanup entry point
-and is not called manually as an ordinary function.
+`init(self, ...)` is a constructor with an initializing `self` target. It is called through
+`Type(...)` or `new Type(...)`, and is not exposed as a normal function value. `deinit(self)` is
+the cleanup entry point and is not called manually as an ordinary function.
 
 Instance calls can also be written with an explicit receiver argument:
 
@@ -225,12 +228,13 @@ Anonymous functions use the expected type from their context:
 ```c
 Fn<Int, Int> add_base(Int base) {
     Fn<Int, Int> add = (value) => value + base;
-    return add$.move(); // error: stack Fn cannot escape its captured stack environment.
+    return add; // error: the moved stack Fn cannot let its captured environment escape.
 }
 ```
 
-A stack `Fn` is movable but not copyable. It can be passed to functions that call it immediately, but
-it cannot be returned or stored somewhere that may outlive the captured stack values.
+A stack `Fn` is movable but not copyable, so ordinary value use moves it by default. It can be passed
+to functions that call it immediately, but it cannot be returned or stored somewhere that may
+outlive the captured stack values.
 
 Use `new` to create an owned closure:
 
@@ -296,12 +300,15 @@ async Int render() {
 }
 ```
 
-In 0.4.7, async behavior belongs to named functions and direct calls. Async `Fn` values and async
-closures are not yet part of the supported callable-value API.
+Async functions, async `RawFn` values, and async `Fn` closures use the same call and suspension
+model. A closure may capture an environment; its captures still follow the normal ownership,
+lifetime, and cross-Domain `Sendable` rules.
 
-Use `async call(...)` or `async { ... }` to start work eagerly and receive a body-local `Task<T>`.
-Calling `await()` consumes that Task. Starting multiple Tasks before awaiting them preserves
-concurrent progress even when they are awaited in source order:
+Use `async call(...)` or `async { ... }` to start work eagerly and receive an address-stable
+`Task<T>`. This direct form is structured and `!Movable`: it stays in its enclosing scope. It may
+also be initialized directly in a statically addressable struct, tuple, or fixed-array field; an
+aggregate containing it cannot be moved, passed or returned by value, or captured. Starting multiple
+Tasks before awaiting them preserves concurrent progress even when they are awaited in source order:
 
 ```c
 async Int load_both() {
@@ -311,10 +318,34 @@ async Int load_both() {
 }
 ```
 
-`Task<T>` cannot appear in parameters, return types, fields, globals, or public ABI. `task.await()`
-and `task.cancel()` both consume the Task and are mutually exclusive. Cancellation waits for terminal
-acknowledgement and coroutine-frame cleanup; dropping an unconsumed Task means detach, not cancel.
-A Task that carries a non-static borrow must be consumed before its source leaves scope.
+Use `new async call(...)` or `new async { ... }` when the Task owner must independently move, be
+returned, be passed to another function, or be stored in a movable field or container. The result is
+a movable, non-copyable `Task<T>^`; moving it transfers only the owner pointer and never relocates
+the running Task:
+
+```c
+Task<Int>^ start_load() {
+    new async [worker] { load_page() }
+}
+
+struct Request {
+    Task<Int>^ task;
+}
+```
+
+`task.await()` waits and consumes the result exactly once. `task.cancel()` is a synchronous,
+idempotent request: it does not wait and does not consume the result, so a later `await()` remains
+valid. `task.cancel_and_await()` requests cancellation and asynchronously waits for the Task to exit.
+Dropping a `Task<T>^` owner neither blocks nor implicitly cancels; the runtime reclaims the Task after
+both the owner and coroutine have finished with it. Direct `Task<T>` values remain structured and are
+cleaned up before their enclosing scope exits.
+
+Cancellation is cooperative. Suspend and resume boundaries observe requests automatically;
+long-running computation that does not suspend should call `coroutine.check_cancelled()` periodically.
+It returns immediately when no request exists and otherwise enters the current coroutine's cleanup.
+If ordinary `await()` observes a child that ended through cancellation, it also cancels the current
+parent; structured cleanup then cancels and waits for unfinished siblings. Use `cancel_and_await()`
+when only the selected Task should stop and the caller should continue.
 
 A Domain effect names a `const` value whose type implements `Domain`. Distinct const bindings are
 distinct Domains even when they have the same type and value:

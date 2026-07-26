@@ -23,7 +23,7 @@ trait Equatable {
 }
 
 trait Hashable: Equatable {
-    UInt64 hash();
+    UInt64 hash(self);
 }
 ```
 
@@ -90,13 +90,13 @@ Types can list traits in their declaration and provide matching methods:
 
 ```c
 trait HasValue {
-    Int value();
+    Int value(self);
 }
 
 struct Box: HasValue {
     Int inner;
 
-    Int value() {
+    Int value(self) {
         return self.inner;
     }
 }
@@ -112,13 +112,13 @@ struct User {
 }
 
 extend User {
-    Int id_value() {
+    Int id_value(self) {
         return self.id;
     }
 }
 
 extend User: HasValue {
-    Int value() {
+    Int value(self) {
         return self.id;
     }
 }
@@ -133,7 +133,7 @@ extensions, `@where` type-shape matching, module visibility, and `public extend`
 ```c
 trait Iterator {
     associated Element;
-    Element? next();
+    Element? next(self);
 }
 ```
 
@@ -142,7 +142,7 @@ Associated types can have bounds:
 ```c
 trait HasItem {
     associated Element: Hashable & Equatable;
-    Element item();
+    Element item(self);
 }
 ```
 
@@ -152,8 +152,8 @@ Implementations bind associated types:
 struct Counter: Iterator {
     associated Element = UInt8;
 
-    UInt8? next() {
-        return 42;
+    UInt8? next(self) {
+        return null;
     }
 }
 ```
@@ -166,8 +166,8 @@ struct RangeCounter {}
 extend RangeCounter: Iterator {
     associated Element = Int;
 
-    Int? next() {
-        return 0;
+    Int? next(self) {
+        return null;
     }
 }
 ```
@@ -177,23 +177,23 @@ Use a qualified associated type path when multiple traits expose the same associ
 ```c
 trait Left {
     associated Item;
-    Item left();
+    Item left(self);
 }
 
 trait Right {
     associated Item;
-    Item right();
+    Item right(self);
 }
 
 struct Pair: Left, Right {
     associated Left.Item = UInt8;
     associated Right.Item = Int;
 
-    UInt8 left() {
+    UInt8 left(self) {
         return 20;
     }
 
-    Int right() {
+    Int right(self) {
         return 22;
     }
 }
@@ -239,10 +239,10 @@ public trait SubscriptGet {
     associated Index: Equatable;
     associated Value;
 
-    Value subscript_get(Index index);
+    Value subscript_get(self, Index index);
 }
 
 public trait SubscriptSet: SubscriptGet {
-    () subscript_set(Index index, Value value);
+    () subscript_set(self, Index index, Value value);
 }
 ```

@@ -15,7 +15,7 @@ struct User {
 }
 
 extend User {
-    public Int id_value() {
+    public Int id_value(self) {
         self.id
     }
 }
@@ -33,7 +33,7 @@ Int value = user.id_value();
 
 ```c
 trait HasValue {
-    Int value();
+    Int value(self);
 }
 
 struct User {
@@ -41,7 +41,7 @@ struct User {
 }
 
 extend User: HasValue {
-    public Int value() {
+    public Int value(self) {
         self.id
     }
 }
@@ -59,7 +59,7 @@ struct Holder<T> {
 }
 
 extend <T> Holder<T> {
-    public T get() {
+    public T get(self) {
         self.value
     }
 }

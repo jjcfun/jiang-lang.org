@@ -48,24 +48,10 @@ enum [UInt8] ByteTag {
 UInt8 tag = UInt8(ByteTag.block);
 ```
 
-`enum` 可以定义实例方法和不带 `self` 参数的关联函数：
+enum 值使用目标整数类型的构造表达式转换：
 
 ```c
-enum Mode {
-    read,
-    write,
-
-    Int answer() {
-        return 42;
-    }
-
-    Int value() {
-        return Int(self);
-    }
-}
-
-Int a = Mode.answer();
-Int b = Int(Mode.read);
+Int value = Int(Mode.read);
 ```
 
 ## 联合类型

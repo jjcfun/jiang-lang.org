@@ -10,75 +10,70 @@ This chapter explains how resources move, when they are destroyed, and how refer
 
 ## Move and Destruction
 
-Plain `struct` and `union` types are implicitly copyable by default. `T^` is a built-in
-resource type and cannot be implicitly copied. Nominal types that explicitly declare `Movable` also
-cannot be implicitly copied. `T&`, `T&!`, `T*`, `T*!`, and `T[]&` are non-owning views; fields with
-these types do not affect ownership classification. Binding mutability is written after the name.
+`Movable` is a default auto trait: values may change storage address unless their nominal type
+explicitly opts out with `!Movable`. A `!Movable` value must be initialized directly in its final
+place; it cannot be passed or returned by value, assigned to a new place, captured, or moved.
+Direct `Task<T>` and `Mutex<T>` values use this rule to remain address-stable.
 
-`T?` follows the ownership classification of its payload type. `Int?` is implicitly copyable, while
-`Int^?` contains an owned payload, so it is `Movable` and must be transferred with `$.move()`.
+`Copyable` extends `Movable` and decides whether ordinary value use copies or moves. Scalars, enums,
+shared references, raw pointers, and `RawFn` values are copyable. User-defined `struct` and `union`
+types are not copyable unless they explicitly implement `Copyable` and every field or payload is
+also copyable. A type with a custom `deinit` cannot be `Copyable`.
 
-Explicit move uses `value$.move()`:
+Non-copyable but movable values move by default in assignments, arguments, returns, and captures:
 
 ```c
 Int^ a = new Int(42);
-Int^ b = a$.move();
+Int^ b = a;
 
 Int value = b$.get();
 ```
 
-Implicit copy or implicit move is not allowed for `T^`:
+The source is invalid after the move:
 
 ```c
 Int^ a = new Int(42);
-Int^ b = a; // error: T^ cannot be implicitly copied or moved by plain assignment.
-```
-
-Using the source after a move is an error:
-
-```c
-Int^ a = new Int(1);
-Int^ b = a$.move();
+Int^ b = a;
 Int value = a$.get(); // error: a has been moved.
 ```
 
-Plain values can still be copied:
+`$.move()` remains available as an explicit spelling. It can also force a move of a copyable value:
 
 ```c
 Int a = 1;
 Int b = a;
-Int c = a + b;
+Int c = b$.move();
+Int invalid = b; // error: the explicit move invalidated b.
 ```
 
-Nominal types that directly or indirectly contain `Movable` fields must explicitly declare
-`Movable`, and they cannot be implicitly copied:
+Declare copyable value types explicitly:
 
 ```c
-struct Box: Movable {
+struct Point: Copyable {
+    Int x;
+    Int y;
+}
+
+Point a = Point(x: 1, y: 2);
+Point b = a; // copy
+```
+
+An ordinary resource-owning struct is movable but not copyable, so plain assignment transfers it:
+
+```c
+struct Box {
     Int^ value;
 }
 
-Box a = Box(value: new Int(1))
-Box b = a; // error: Box is Movable.
-Box c = a$.move();
+Box a = Box(value: new Int(1));
+Box b = a; // move; a is now invalid
 ```
 
-Non-owning view fields do not make a type `Movable`:
-
-```c
-struct SliceView {
-    UInt8[]& data;
-}
-
-SliceView a = SliceView(data: "abc")
-SliceView b = a; // allowed: T[]& does not own resources.
-```
-
-Resource-owning types should describe cleanup with `deinit` and avoid implicit copy unless they define their own copy behavior.
-
-Destruction only runs for `Movable` types. Dropping `T^` first drops the pointee and then frees the
-heap storage. Dropping `T?` is conditional: `some` drops the payload, while `none` has no payload to
-drop. Non-owning views such as `T&`, `T*`, and `T[]&` do not free their targets.
+Runtime destruction follows ownership, fields, payloads, and custom `deinit`; it is not enabled by
+the `Movable` marker. Dropping `T^` first drops the pointee and then frees its heap storage.
+Tuple, array, optional, errorable, struct, and union values recursively drop owned contents.
+Non-owning views such as `T&`, `T*`, and `T[]&` do not free their targets. A custom `deinit` runs
+before fields are dropped in reverse declaration order.
 
 ## Reference Rules
 
@@ -192,57 +187,80 @@ Loan lifetimes are non-lexical: a loan ends after its last reachable use, so seq
 reborrows are allowed. Struct sibling fields and distinct constant array indexes can be borrowed
 independently; dynamic indexes and subslices conservatively overlap.
 
-If an async call captures a borrow, its body-local `Task` holds that loan until `await()` or
-`cancel()` confirms terminal completion. A Task carrying a non-static loan cannot detach. Domain
-scheduling never relaxes shared/unique rules, so safe references remain data-race free across
-serial and concurrent Domains.
+If an async call captures a borrow, its direct structured Task holds the loan until the Task has
+finished and its scope cleanup is complete. `cancel()` only requests cancellation; use `await()` or
+`cancel_and_await()` when the caller must wait for terminal completion. A heap Task that crosses a
+scope or Domain must satisfy the normal lifetime and `Sendable` rules. Domain scheduling never
+relaxes shared/unique rules, so safe references remain data-race free across serial and concurrent
+Domains.
 
 ## Lifetime Annotations
 
-`@life(a > b)` expresses that `a` must outlive `b`. Lifetime annotations describe cross-function
-source relationships; MIR loan analysis separately enforces shared/mutable aliasing and source
-invalidation at each call site.
-
-When a value stores `T&` or `T[]&` fields, the referenced target must outlive the value that stores
-the field. Cross-function or stored-field relationships can be expressed with `@life(...)`:
+Nominal `struct` and `union` types declare their public lifetime shape with `@region`. Each declared
+region must be bound directly to at least one field or union payload lifetime slot. A single-slot
+field uses `@life(a)`:
 
 ```c
-@life(data > self)
-struct Slice {
+@region(a)
+struct ByteView {
+    @life(a)
     UInt8[]& data;
-    Int len;
+    Int length;
 }
-
-@life(buffer > return)
-Slice make_slice(Buffer& buffer);
 ```
 
-Return lifetimes have a default inference rule: if the returned reference can only come from one
-input source, that source is inferred to outlive `return`. The source can be a parameter or `self`:
+List public regions in stable Shape order. A clause such as `@region(a, b, b: a)` means `a`
+outlives `b`. Constraint endpoints must be declared in the same annotation, and the same constraint
+target cannot appear twice. Coverage cycles are valid: `@region(a, b, b: a, a: b)` makes the two
+regions cover each other. Every declared region must be used by an actual field or payload slot.
+
+Multi-region fields can bind by Shape position, as in `@life(a, b)`, or by the names exposed by the
+field type, as in `@life(left: a, right: b)`. The two forms cannot be mixed. Every target must be
+bound exactly once, and field bindings cannot use `self` as a source.
+
+Functions and methods use `target: source`. The source on the right outlives and covers the target
+on the left:
+
+```c
+@life(return: data)
+UInt8[]& first_two(UInt8[]& data) {
+    return data[0..2];
+}
+```
+
+When a function with a non-empty return lifetime Shape omits `@life`, a readonly `self` or
+`Self&! self` reference receiver with a non-empty Shape takes priority. Without that receiver rule,
+the complete Shape of the only lifetime-bearing, user-visible parameter becomes the return source.
+One multi-region parameter is still one parameter root. This is signature elision, not inference
+from the function body:
 
 ```c
 Int& first(Int& value) {
-    return value; // allowed: the only possible source is value.
+    return value; // default contract: @life(return: value)
 }
 
 struct Pair {
     Int left;
     Int right;
 
-    Int& choose(Bool use_left) {
+    Int& choose(self, Bool use_left) {
         if use_left {
             return self.left$.ref();
         }
-        return self.right$.ref(); // allowed: both branches come from self.
+        return self.right$.ref(); // default contract: @life(return: self)
     }
 }
 ```
 
-If a returned reference can come from multiple input sources, all allowed sources must be written
-explicitly. Once explicit `@life(... > return)` exists, borrow check only accepts those sources:
+A by-value `Self self` receiver has no priority; it participates in the ordinary unique-root rule.
+If there are zero lifetime-bearing input roots, write `@life()` to confirm that the result carries
+no parameter borrow. If there are two or more roots, or the unique root has an incompatible Shape,
+write an explicit contract. Any explicit `@life(...)` completely replaces the implicit return
+contract. Each target must be unique; use `&` to take the common shortest region of same-shaped
+sources:
 
 ```c
-@life(left > return, right > return)
+@life(return: left & right)
 Int& pick(Int& left, Int& right, Bool use_left) {
     if use_left {
         return left;
@@ -251,52 +269,44 @@ Int& pick(Int& left, Int& right, Bool use_left) {
 }
 ```
 
-Without the annotation, the same function fails:
+Parameter targets describe their complete declaration Shapes, not the parameter stack slots.
+`@life(left: right)` requires `right` to cover `left` by Shape position in the function body and at
+each call site:
 
 ```c
-Int& bad_pick(Int& left, Int& right, Bool use_left) {
-    if use_left {
-        return left;
-    }
-    return right; // error: the source may be left or right.
+@life(left: right)
+() relate(Int& left, Int& right) {}
+```
+
+For a multi-slot return, map the complete `return` target once with a product expression:
+
+```c
+@region(a, b)
+struct PairRef {
+    @life(a)
+    Int& left;
+
+    @life(b)
+    Int& right;
+}
+
+@life(return: (left, right))
+PairRef make_pair(Int& left, Int& right) {
+    PairRef(left: left, right: right)
 }
 ```
 
-Positive example: a struct that stores an external slice can express that `data` must outlive
-`self`:
+Do not split that mapping into `return.a` and `return.b`, repeat the same target, or use positional
+paths such as `value[0]` in a lifetime contract. Tuple elements and `Fn` / `RawFn` result and
+parameter positions must be named before a contract can refer to them. `@life()` is the explicit
+empty callable contract.
+
+For example, a callable sub-contract uses its declared result and parameter names:
 
 ```c
-@life(data > self)
-struct ByteView {
-    UInt8[]& data;
-}
-
-ByteView view(UInt8[]& data) {
-    return ByteView(data: data)
-}
-```
-
-Negative example: storing a slice of a local array in a returned value would dangle:
-
-```c
-@life(data > self)
-struct ByteView {
-    UInt8[]& data;
-}
-
-ByteView bad_view() {
-    UInt8[_] local = "abc";
-    return ByteView(data: local[..]) // error: local does not outlive the return value.
-}
-```
-
-For public APIs, cross-function calls, or aggregate return values containing borrowed fields, prefer
-writing the return source explicitly:
-
-```c
-@life(data > return)
-UInt8[]& first_two(UInt8[]& data) {
-    return data[0..2];
+@life(callback.result: callback.value, return: value)
+Int& apply(Fn<Int& result, Int& value> callback, Int& value) {
+    callback(value)
 }
 ```
 

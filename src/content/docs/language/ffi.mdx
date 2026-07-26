@@ -97,7 +97,7 @@ struct CBuffer {
     UInt8*! data;
     Int length;
 
-    deinit() {
+    deinit(self) {
         unsafe {
             self.data$.dealloc();
         }

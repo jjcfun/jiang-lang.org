@@ -48,24 +48,10 @@ enum [UInt8] ByteTag {
 UInt8 tag = UInt8(ByteTag.block);
 ```
 
-Enums can define instance methods and associated functions without a `self` parameter:
+Convert an enum value with a target integer constructor:
 
 ```c
-enum Mode {
-    read,
-    write,
-
-    Int answer() {
-        return 42;
-    }
-
-    Int value() {
-        return Int(self);
-    }
-}
-
-Int a = Mode.answer();
-Int b = Int(Mode.read);
+Int value = Int(Mode.read);
 ```
 
 ## Unions

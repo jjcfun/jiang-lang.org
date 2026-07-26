@@ -161,7 +161,7 @@ T add<T>(T left, T right) {
 
 ## 方法
 
-类型里的函数分为实例方法和不带 `self` 参数的关联函数。
+类型内部函数如果没有 receiver，就是关联函数。readonly `Self&` receiver 简写为 `self`：
 
 ```c
 struct User {
@@ -171,7 +171,7 @@ struct User {
         return User(id: 0)
     }
 
-    Int value() {
+    Int value(self) {
         return self.id;
     }
 }
@@ -181,10 +181,13 @@ Int a = user.value();
 User z = User.zero();
 ```
 
-实例方法体内有隐式 `self`。不带接收者的关联函数不能使用 `self`。
+receiver 必须显式出现在参数列表中。`Ret method(self, ...)` 使用 `Self&`；
+`Ret method(Self&! self, ...)` 要求 unique mutable receiver；
+`Ret method(Self self, ...)` 按值消费 receiver。不带 receiver 的函数是关联函数。
 
-`init(...)` 是构造函数，拥有初始化中的 `self` 目标，只能通过 `Type(...)` / `new Type(...)`
-调用，不作为普通函数值暴露。`deinit()` 是资源清理入口，不能手动当作普通函数调用。
+`init(self, ...)` 是构造函数，拥有初始化中的 `self` 目标，只能通过 `Type(...)` /
+`new Type(...)` 调用，不作为普通函数值暴露。`deinit(self)` 是资源清理入口，
+不能手动当作普通函数调用。
 
 实例方法可以用两种方式调用：
 
@@ -220,12 +223,12 @@ Bool ok = compare(1, 2);
 ```c
 Fn<Int, Int> add_base(Int base) {
     Fn<Int, Int> add = (value) => value + base;
-    return add$.move(); // 错误：stack Fn 不能让捕获的栈环境逃逸。
+    return add; // 错误：被 move 的 stack Fn 不能让捕获的栈环境逃逸。
 }
 ```
 
-栈上的 `Fn` 可以 move，但不能 copy。它可以传给立即调用的函数，但不能返回，也不能保存到可能
-比捕获的栈变量活得更久的位置。
+栈上的 `Fn` 可以 move，但不能 copy，因此普通按值使用默认执行 move。它可以传给立即调用的函数，
+但不能返回，也不能保存到可能比捕获的栈变量活得更久的位置。
 
 使用 `new` 创建拥有型闭包：
 
@@ -290,11 +293,13 @@ async Int render() {
 }
 ```
 
-0.4.7 的 async 能力属于具名函数和直接调用；async `Fn` 值与 async 闭包尚未进入受支持的
-callable value API。
+async 函数、async `RawFn` 值和 async `Fn` 闭包使用同一套调用与挂起模型。闭包可以捕获环境；
+capture 仍遵守普通的所有权、生命周期与跨 Domain `Sendable` 规则。
 
-使用 `async call(...)` 或 `async { ... }` 可以立即启动任务并得到 body-local `Task<T>`。
-调用 `await()` 会消费该 Task。先启动多个 Task，再按源码顺序等待，仍然可以保持并发推进：
+使用 `async call(...)` 或 `async { ... }` 可以立即启动任务并得到地址稳定的 `Task<T>`。这种直接
+形式属于结构化任务且为 `!Movable`，因此留在当前作用域内。它也可以直接存入 struct、tuple 或固定
+数组中的静态字段；包含它的聚合值同样不能移动、按值传参、返回或捕获。先启动多个 Task，
+再按源码顺序等待，仍然可以保持并发推进：
 
 ```c
 async Int load_both() {
@@ -304,10 +309,29 @@ async Int load_both() {
 }
 ```
 
-`Task<T>` 不能出现在参数、返回类型、字段、全局变量或 public ABI 中。
-`task.await()` 和 `task.cancel()` 都会消费 Task，只能二选一。取消会等待 Task 进入终态并完成
-coroutine frame 清理；未消费 Task 直接离开作用域表示 detach，不会隐式取消。持有非 static
-borrow 的 Task 必须在 source 离开作用域前显式消费。
+需要让 Task 独立移动、返回、传参或存入可移动字段/容器时，使用 `new async call(...)` 或
+`new async { ... }`。
+结果类型是可移动但不可复制的 `Task<T>^`；移动只转移 owner pointer，不会搬动正在运行的 Task：
+
+```c
+Task<Int>^ start_load() {
+    new async [worker] { load_page() }
+}
+
+struct Request {
+    Task<Int>^ task;
+}
+```
+
+`task.await()` 会等待并且只能消费一次结果。`task.cancel()` 是同步、幂等的取消请求：它不会等待，
+也不会消费结果，因此之后仍可调用 `await()`。`task.cancel_and_await()` 会请求取消并异步等待 Task
+退出。销毁 `Task<T>^` owner 不会阻塞，也不会隐式取消；owner 与 coroutine 都不再使用 Task 后，
+runtime 才回收存储。直接 `Task<T>` 仍保持结构化，并在外层作用域退出前完成清理。
+
+取消是协作式的。挂起和恢复边界会自动观察请求；长时间不挂起的计算应定期调用
+`coroutine.check_cancelled()`。没有请求时它立即返回，有请求时当前 coroutine 直接进入 cleanup。
+普通 `await()` 如果发现 child 已因取消结束，会同时取消当前 parent；结构化 cleanup 随后取消并等待
+其他未完成 sibling。需要只停止指定 Task、然后继续执行 caller 时，使用 `cancel_and_await()`。
 
 Domain effect 使用实现 `Domain` 的类型所对应的命名 `const` value。即使类型和值相同，
 两个不同 const binding 也表示两个不同 Domain：
