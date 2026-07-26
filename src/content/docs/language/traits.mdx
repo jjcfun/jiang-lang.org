@@ -22,13 +22,21 @@ trait Equatable {
     Bool equal(Self& lhs, Self& rhs);
 }
 
+trait Hasher {
+    () write(Self&! self, UInt8[]& bytes);
+    UInt64 finish(self);
+}
+
 trait Hashable: Equatable {
-    UInt64 hash(self);
+    () hash<H: Hasher>(self, H&! hasher);
 }
 ```
 
 Requirements with a `self` parameter use the current value as the receiver. Requirements without
 `self` are associated functions on the implementing type.
+
+`Hashable` feeds a value into any concrete `Hasher`; it does not choose or return a hash algorithm
+itself. `Hasher` also provides `write` overloads with default implementations for primitive values.
 
 ## Dynamic Trait Values
 

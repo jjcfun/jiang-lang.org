@@ -227,10 +227,13 @@ Anonymous functions use the expected type from their context:
 
 ```c
 Fn<Int, Int> add_base(Int base) {
-    Fn<Int, Int> add = (value) => value + base;
+    Fn<Int, Int> add = { value => value + base };
     return add; // error: the moved stack Fn cannot let its captured environment escape.
 }
 ```
+
+A closure with no parameters starts with `{ =>`. An explicit capture list comes before the
+parameters, as in `{ [snapshot = value] delta => snapshot + delta }`.
 
 A stack `Fn` is movable but not copyable, so ordinary value use moves it by default. It can be passed
 to functions that call it immediately, but it cannot be returned or stored somewhere that may
@@ -240,7 +243,7 @@ Use `new` to create an owned closure:
 
 ```c
 Fn<Int>^ make_answer(Int value) {
-    return new () [_ snapshot = value] => snapshot;
+    return new { [_ snapshot = value] => snapshot };
 }
 
 Int main() {
@@ -304,7 +307,8 @@ Async functions, async `RawFn` values, and async `Fn` closures use the same call
 model. A closure may capture an environment; its captures still follow the normal ownership,
 lifetime, and cross-Domain `Sendable` rules.
 
-Use `async call(...)` or `async { ... }` to start work eagerly and receive an address-stable
+Use `Task { ... }` to start work eagerly in the current Domain, or
+`Task(domain: worker) { ... }` to choose a Domain explicitly. The result is an address-stable
 `Task<T>`. This direct form is structured and `!Movable`: it stays in its enclosing scope. It may
 also be initialized directly in a statically addressable struct, tuple, or fixed-array field; an
 aggregate containing it cannot be moved, passed or returned by value, or captured. Starting multiple
@@ -312,20 +316,20 @@ Tasks before awaiting them preserves concurrent progress even when they are awai
 
 ```c
 async Int load_both() {
-    Task<Int> left = async load_left();
-    Task<Int> right = async load_right();
+    Task<Int> left = Task { load_left() };
+    Task<Int> right = Task { load_right() };
     left.await() + right.await()
 }
 ```
 
-Use `new async call(...)` or `new async { ... }` when the Task owner must independently move, be
-returned, be passed to another function, or be stored in a movable field or container. The result is
-a movable, non-copyable `Task<T>^`; moving it transfers only the owner pointer and never relocates
-the running Task:
+Use `new Task { ... }` or `new Task(domain: worker) { ... }` when the Task owner must independently
+move, be returned, be passed to another function, or be stored in a movable field or container. The
+result is a movable, non-copyable `Task<T>^`; moving it transfers only the owner pointer and never
+relocates the running Task:
 
 ```c
 Task<Int>^ start_load() {
-    new async [worker] { load_page() }
+    new Task(domain: worker) { load_page() }
 }
 
 struct Request {

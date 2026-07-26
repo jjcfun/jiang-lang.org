@@ -222,10 +222,13 @@ Bool ok = compare(1, 2);
 
 ```c
 Fn<Int, Int> add_base(Int base) {
-    Fn<Int, Int> add = (value) => value + base;
+    Fn<Int, Int> add = { value => value + base };
     return add; // 错误：被 move 的 stack Fn 不能让捕获的栈环境逃逸。
 }
 ```
+
+零参数闭包以 `{ =>` 开头。显式 capture list 写在参数之前，例如
+`{ [snapshot = value] delta => snapshot + delta }`。
 
 栈上的 `Fn` 可以 move，但不能 copy，因此普通按值使用默认执行 move。它可以传给立即调用的函数，
 但不能返回，也不能保存到可能比捕获的栈变量活得更久的位置。
@@ -234,7 +237,7 @@ Fn<Int, Int> add_base(Int base) {
 
 ```c
 Fn<Int>^ make_answer(Int value) {
-    return new () [_ snapshot = value] => snapshot;
+    return new { [_ snapshot = value] => snapshot };
 }
 
 Int main() {
@@ -296,26 +299,27 @@ async Int render() {
 async 函数、async `RawFn` 值和 async `Fn` 闭包使用同一套调用与挂起模型。闭包可以捕获环境；
 capture 仍遵守普通的所有权、生命周期与跨 Domain `Sendable` 规则。
 
-使用 `async call(...)` 或 `async { ... }` 可以立即启动任务并得到地址稳定的 `Task<T>`。这种直接
-形式属于结构化任务且为 `!Movable`，因此留在当前作用域内。它也可以直接存入 struct、tuple 或固定
-数组中的静态字段；包含它的聚合值同样不能移动、按值传参、返回或捕获。先启动多个 Task，
-再按源码顺序等待，仍然可以保持并发推进：
+使用 `Task { ... }` 可以在当前 Domain 立即启动任务；需要显式选择 Domain 时写
+`Task(domain: worker) { ... }`。结果是地址稳定的 `Task<T>`。这种直接形式属于结构化任务且为
+`!Movable`，因此留在当前作用域内。它也可以直接存入 struct、tuple 或固定数组中的静态字段；
+包含它的聚合值同样不能移动、按值传参、返回或捕获。先启动多个 Task，再按源码顺序等待，
+仍然可以保持并发推进：
 
 ```c
 async Int load_both() {
-    Task<Int> left = async load_left();
-    Task<Int> right = async load_right();
+    Task<Int> left = Task { load_left() };
+    Task<Int> right = Task { load_right() };
     left.await() + right.await()
 }
 ```
 
-需要让 Task 独立移动、返回、传参或存入可移动字段/容器时，使用 `new async call(...)` 或
-`new async { ... }`。
+需要让 Task 独立移动、返回、传参或存入可移动字段/容器时，使用 `new Task { ... }` 或
+`new Task(domain: worker) { ... }`。
 结果类型是可移动但不可复制的 `Task<T>^`；移动只转移 owner pointer，不会搬动正在运行的 Task：
 
 ```c
 Task<Int>^ start_load() {
-    new async [worker] { load_page() }
+    new Task(domain: worker) { load_page() }
 }
 
 struct Request {

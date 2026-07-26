@@ -22,12 +22,20 @@ trait Equatable {
     Bool equal(Self& lhs, Self& rhs);
 }
 
+trait Hasher {
+    () write(Self&! self, UInt8[]& bytes);
+    UInt64 finish(self);
+}
+
 trait Hashable: Equatable {
-    UInt64 hash(self);
+    () hash<H: Hasher>(self, H&! hasher);
 }
 ```
 
 带 `self` 参数的方法要求会把当前值作为接收者；不带 `self` 的要求是实现类型上的关联函数。
+
+`Hashable` 负责把值写入任意具体 `Hasher`，自身不选择哈希算法，也不直接返回 hash。
+`Hasher` 还为基本类型提供带默认实现的 `write` 重载。
 
 ## 动态 Trait 值
 
