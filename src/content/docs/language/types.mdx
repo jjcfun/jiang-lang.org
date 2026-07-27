@@ -96,10 +96,6 @@ The declaration forms below keep type inference and binding mutability separate:
 | --- | --- |
 | `_ name` | bind a new immutable value with the RHS type |
 | `_ name!` | bind a new mutable value with the RHS type |
-| `ref _ name` | borrow the RHS place and bind an immutable inferred reference |
-| `ref! _ name` | unique mutable borrow with an immutable reference binding |
-| `ref _ name!` | shared borrow with a rebindable reference binding |
-| `ref! _ name!` | unique mutable borrow with a rebindable reference binding |
 
 Put `!` after the name when the new binding itself must be reassignable:
 
@@ -126,47 +122,39 @@ _ copied = source;     // immutable binding, value type Int
 _ mutable! = source;   // mutable binding, value type Int
 ```
 
-Use `ref _` to infer a borrowed reference binding from a place expression:
+Ordinary variable declarations do not accept `ref` on the left. Create reference values explicitly
+on the right:
 
 ```c
 Int value = 1;
-ref _ borrowed = value;  // borrowed: Int&
+Int& borrowed = value$.ref();
 Int copied = borrowed$.get();
 
 Int mutable_value! = 2;
-ref! _ mutable_ref = mutable_value; // mutable_ref: Int&!
-```
-
-`ref _` is a binding mode. It actively borrows the right-hand side place and infers the referenced
-type. The source must be a place that can be borrowed; if the expression is already a reference, use
-`_` instead of `ref _`:
-
-```c
-Int& existing = value$.ref();
-_ same_ref = existing;   // same_ref: Int&
-// ref _ nested = existing; // error: `ref _` does not borrow an existing reference again.
+Int&! mutable_ref = mutable_value$.mut_ref();
 ```
 
 Inside destructuring and patterns, `ref` versus `ref!` selects shared versus unique mutable borrow;
-the `!` after the name only makes the new binding reassignable:
 
 ```c
 Int first! = 1;
 Int second! = 2;
-(ref! _ current) = (first);
-(ref! _ rebindable!) = (second);
+(ref! current) = first;
+(ref! rebindable!) = second;
 ```
 
-The same binding forms are used inside destructuring. Use `ref T name` when borrowing a payload
-pattern:
+The type position after `ref` is optional: `ref name` means `ref _ name`, and `ref! name` means
+`ref! _ name`. This applies to destructuring, payload patterns, and lambda captures:
 
 ```c
-(ref _ left, _ right!) = pair;
+(ref left, _ right!) = pair;
 
-if maybe is .some(ref Int item) {
+if maybe is .some(ref item) {
     use(item);
 }
 ```
+
+Type patterns may infer only part of a type, as in `Int[_] values` or `_[3] values`.
 
 ## Binding Mutability
 

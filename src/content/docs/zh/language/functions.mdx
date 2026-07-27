@@ -267,7 +267,7 @@ Int main() {
 
 ```c
 Int call_optional(Fn<Int>^? maybe) {
-    guard maybe is .some(ref _ answer_ref) else {
+    guard maybe is .some(ref answer_ref) else {
         return 0;
     }
     Fn<Int>& answer = answer_ref$.ref();

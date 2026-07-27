@@ -115,7 +115,8 @@ if value is .int_value(_ n!) {
 }
 ```
 
-使用 `ref T name` 可以借用联合承载值，而不是按值绑定承载值：
+使用 `ref name` 可以借用联合承载值，而不是按值绑定承载值。省略的类型位表示 `_`；
+需要显式 type pattern 时仍可写 `ref T name`：
 
 ```c
 union Node {
@@ -128,7 +129,7 @@ Int read_ref(Int& value) {
 }
 
 Int first(Node node) {
-    if node is .pair(ref Int left, _) {
+    if node is .pair(ref left, _) {
         return read_ref(left);
     }
     return 0;
@@ -195,6 +196,8 @@ Int value = switch maybe {
 
 - 可选值模式：`.some(item)` / `.none`。
 - 变体模式：`.name(...)` 或 `Type.name(...)`。
+- Tuple 模式：例如 `(left, right)`。
 - 字面量模式：例如 `null`、整数、字符、布尔值。
 
-绑定和通配符只作为可选值或变体携带值的子模式使用。元组模式当前不作为 `is` / `switch` 的分支根；需要解构元组时，使用独立解构语句。
+绑定和通配符只作为子模式使用。Tuple payload 直接传给 variant，因此 `(Int, Int)` payload
+写作 `.pair(left, right)`；只有嵌套 Tuple 保留括号，例如 `.nested((left, right), tail)`。

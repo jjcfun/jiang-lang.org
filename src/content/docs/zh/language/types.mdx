@@ -100,10 +100,6 @@ _ values = [1, 2, 3];
 | --- | --- |
 | `_ name` | 使用 RHS 类型创建不可变值绑定 |
 | `_ name!` | 使用 RHS 类型创建可变值绑定 |
-| `ref _ name` | 借用 RHS place，创建不可重绑定的推导引用 |
-| `ref! _ name` | unique mutable borrow，创建不可重绑定的 reference binding |
-| `ref _ name!` | shared borrow，创建可重绑定的 reference binding |
-| `ref! _ name!` | unique mutable borrow，创建可重绑定的 reference binding |
 
 如果新绑定本身需要重新赋值，把 `!` 写在名字后：
 
@@ -129,24 +125,15 @@ _ copied = source;   // 不可变绑定，值类型是 Int
 _ mutable! = source; // 可变绑定，值类型是 Int
 ```
 
-使用 `ref _` 可以从 place expression 推导出借用引用绑定：
+普通变量定义不能在左侧使用 `ref`。引用值应在右侧显式创建：
 
 ```c
 Int value = 1;
-ref _ borrowed = value; // borrowed: Int&
+Int& borrowed = value$.ref();
 Int copied = borrowed$.get();
 
 Int mutable_value! = 2;
-ref! _ mutable_ref = mutable_value; // mutable_ref: Int&!
-```
-
-`ref _` 是 binding mode。它会主动借用右侧 place，并推导被引用的类型。右侧必须是可以被借用的
-place；如果表达式本身已经是引用，应该使用 `_`，而不是 `ref _`：
-
-```c
-Int& existing = value$.ref();
-_ same_ref = existing;  // same_ref: Int&
-// ref _ nested = existing; // 错误：`ref _` 不会对已有引用再次借用。
+Int&! mutable_ref = mutable_value$.mut_ref();
 ```
 
 在解构和 pattern 中，`ref` / `ref!` 分别选择 shared / unique mutable borrow；
@@ -155,19 +142,22 @@ _ same_ref = existing;  // same_ref: Int&
 ```c
 Int first! = 1;
 Int second! = 2;
-(ref! _ current) = (first);
-(ref! _ rebindable!) = (second);
+(ref! current) = first;
+(ref! rebindable!) = second;
 ```
 
-同一组 `_` 绑定形式也用于解构。承载值模式中需要借用时，使用 `ref T name`：
+`ref` 后的类型位可以省略：`ref name` 等价于 `ref _ name`，`ref! name` 等价于
+`ref! _ name`。这条规则同时适用于解构、承载值模式和 lambda capture：
 
 ```c
-(ref _ left, _ right!) = pair;
+(ref left, _ right!) = pair;
 
-if maybe is .some(ref Int item) {
+if maybe is .some(ref item) {
     use(item);
 }
 ```
+
+type pattern 还可以只推导局部形状，例如 `Int[_] values` 或 `_[3] values`。
 
 解构出的每个绑定和结构体的每个字段都在自己的名字后声明 `!`；可变性不会从外层类型自动传播。
 

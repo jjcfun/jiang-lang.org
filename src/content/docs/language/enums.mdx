@@ -108,7 +108,8 @@ if value is .int_value(_ n!) {
 }
 ```
 
-Use `ref T name` to borrow a union payload instead of binding it by value:
+Use `ref name` to borrow a union payload instead of binding it by value. The omitted type position
+means `_`; write `ref T name` when an explicit type pattern is useful:
 
 ```c
 union Node {
@@ -121,7 +122,7 @@ Int read_ref(Int& value) {
 }
 
 Int first(Node node) {
-    if node is .pair(ref Int left, _) {
+    if node is .pair(ref left, _) {
         return read_ref(left);
     }
     return 0;
@@ -186,6 +187,9 @@ Int value = switch maybe {
 
 - optional patterns: `.some(payload)` and `.none`
 - variant patterns: `.name(...)` or `Type.name(...)`
+- tuple patterns such as `(left, right)`
 - literal patterns such as `null`, numbers, chars, and booleans
 
-Bindings and wildcards are sub-patterns of optional or variant payloads. Tuple patterns are not switch roots; use destructuring statements for tuples.
+Bindings and wildcards are sub-patterns. A Tuple payload is passed directly to its variant, so a
+`(Int, Int)` payload matches `.pair(left, right)`. Preserve parentheses only for nested tuples:
+`.nested((left, right), tail)`.

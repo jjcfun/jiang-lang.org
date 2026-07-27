@@ -28,6 +28,24 @@ Destructuring bindings can choose mutability:
 y = y + 1;
 ```
 
+The parentheses introduce destructuring, including the one-binding form. By-value bindings keep a
+type position; borrowed bindings may omit it:
+
+```c
+(Int left, _ right) = pair;
+(ref borrowed) = value;
+(Int[_] first, _[3] second) = arrays;
+```
+
+Tuple patterns use the same recursive shape in `is`, `switch`, union payloads, and optional payloads.
+One payload tuple layer is supplied directly to the variant:
+
+```c
+if node is .pair(left, right) { }
+if node is .nested((left, right), tail) { }
+if maybe_pair is .some(left, right) { }
+```
+
 ## One-element Tuples
 
 `(T)` is equivalent to `T`:
@@ -39,6 +57,8 @@ Int add(Int a, Int b);
 (Int x!) = add(1, 2);
 Int x! = add(1, 2);
 ```
+
+Accordingly, `(ref value) = source;` borrows `source` directly; it does not project an index `0`.
 
 ## Unit
 

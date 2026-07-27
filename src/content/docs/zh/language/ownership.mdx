@@ -83,22 +83,25 @@ Int& ref = value$.ref();
 Int copied = ref$.get();
 ```
 
-在局部绑定中，`ref _` 会创建推导 pointee 类型的 shared borrow。standalone mutable borrow
-使用 `ref!` 或 `mut_ref()` 从可写 place 创建唯一可变 `T&!` 借用：
+普通局部变量使用 `.ref()` / `.mut_ref()` 创建引用。`ref` / `ref!` 只用于解构、
+承载值模式和 lambda capture：
 
 ```c
 Int value = 10;
-ref _ ref = value; // 生命周期规则等同于 value$.ref()
+Int& ref = value$.ref();
 
 Int first! = 20;
-ref! _ mutable_ref = first;
+Int&! mutable_ref = first$.mut_ref();
 
 Int second! = 30;
 Int&! another_mutable_ref = second$.mut_ref();
+
+(ref borrowed) = value;
+(ref! another_borrow) = second;
 ```
 
-在可选值和联合的承载值模式中，使用 `ref T name` 借用承载值，
-不会隐式复制或转移承载值。`ref` 后面需要写出类型，也可以写 `_` 类型占位：
+在可选值和联合的承载值模式中，使用 `ref name` 借用承载值，不会隐式复制或转移。
+省略的类型位表示 `_`；需要显式 type pattern 时仍可写 `ref T name`：
 
 ```c
 Int read_ref(Int& value) {

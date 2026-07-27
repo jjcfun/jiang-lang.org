@@ -85,22 +85,25 @@ Int& ref = value$.ref();
 Int copied = ref$.get();
 ```
 
-For local bindings, `ref _` creates a shared borrow with an inferred pointee type. Use `ref!` or
-`mut_ref()` to create a unique mutable `T&!` borrow from a writable place:
+Ordinary local declarations create references with `.ref()` or `.mut_ref()`. `ref` and `ref!` are
+reserved for destructuring, match payloads, and lambda captures:
 
 ```c
 Int value = 10;
-ref _ ref = value; // same lifetime rule as value$.ref()
+Int& ref = value$.ref();
 
 Int first! = 20;
-ref! _ mutable_ref = first;
+Int&! mutable_ref = first$.mut_ref();
 
 Int second! = 30;
 Int&! another_mutable_ref = second$.mut_ref();
+
+(ref borrowed) = value;
+(ref! another_borrow) = second;
 ```
 
-Inside optional and union payload patterns, use `ref T name` to borrow the payload instead of
-copying or moving it. The type after `ref` is required; it may also be `_` as a type placeholder:
+Inside optional and union payload patterns, use `ref name` to borrow the payload instead of copying
+or moving it. The omitted type position means `_`; explicit `ref T name` remains available:
 
 ```c
 Int read_ref(Int& value) {

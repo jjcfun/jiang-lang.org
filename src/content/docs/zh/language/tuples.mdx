@@ -33,6 +33,24 @@ y += 100;
 print("x = %d, y = %d", x, y);  // 输出：x = 100, y = 500
 ```
 
+括号是独立解构的语法入口，即使只有一个 binding 也要保留。by-value binding 必须保留
+类型位置；借用 binding 可以省略：
+
+```c
+(Int left, _ right) = pair;
+(ref borrowed) = value;
+(Int[_] first, _[3] second) = arrays;
+```
+
+Tuple pattern 在 `is`、`switch`、union payload 和 optional payload 中使用同一套递归形状。
+variant 直接接收 payload 的一层 Tuple：
+
+```c
+if node is .pair(left, right) { }
+if node is .nested((left, right), tail) { }
+if maybe_pair is .some(left, right) { }
+```
+
 ## 一元组
 
 一元组 `(T)` 与它的元素类型 `T` 等价，占用内存空间也一致：
@@ -46,6 +64,8 @@ Int add(Int a, Int b);
 (Int x!) = add(1, 2);
 Int x! = add(1, 2);
 ```
+
+因此 `(ref value) = source;` 会直接借用 `source`，不会额外投影索引 `0`。
 
 ## 单元类型
 
