@@ -26,26 +26,27 @@ Int add(Int left, Int right) {
 
 ## 参数
 
-参数列表中每个参数写成 `类型 名字`。参数可以带默认值；带默认值的参数必须位于参数列表尾部。
-当前默认值只支持字面量，并按参数的期望类型检查：
+参数列表中每个参数写成 `类型 名字`。默认参数可以出现在参数列表任意位置。当前默认值只支持
+字面量，并按参数的期望类型检查：
 
 ```c
-Int scale(Int value, Int factor = 2) {
+Int scale(Int factor = 2, Int value) {
     return value * factor;
 }
 
-Int result = scale(21, 2);
-Int defaulted = scale(21);
+Int result = scale(2, 21);
+Int defaulted = scale(value: 21);
 ```
 
-调用实参可以直接按位置提供，也可以写成 `name: expr`。位置参数必须出现在命名参数之前；
-命名参数可以重排，也可以跳过带默认值的参数：
+调用实参可以直接按位置提供，也可以写成 `name: expr`。位置参数总是绑定最早尚未绑定的参数，
+不会根据实参类型跳过默认参数。命名参数可以重排，也可以跳过带默认值的参数：
 
 ```c
-Int value = scale(21, 2);
-Int named = scale(value: 21, factor: 2);
-Int reordered = scale(factor: 2, value: 21);
+Int value = scale(2, 21);
+Int named = scale(factor: 2, value: 21);
+Int reordered = scale(value: 21, factor: 2);
 Int defaulted = scale(value: 21);
+Int missing = scale(21); // 错误：21 绑定 factor，value 仍然缺失。
 ```
 
 命名参数之后不能再出现位置参数：
@@ -230,6 +231,21 @@ Fn<Int, Int> add_base(Int base) {
 零参数闭包以 `{ =>` 开头。显式 capture list 写在参数之前，例如
 `{ [snapshot = value] delta => snapshot + delta }`。
 
+最后一个参数是 `Fn` 或 `RawFn` 时，可以把它写成尾随闭包：
+
+```c
+() run(Fn<()> work) {
+    work();
+}
+
+run { print("done"); };
+map(values) { value => transform(value) };
+```
+
+在尾随位置，`{ statements }` 表示零参数闭包。单独出现的 brace body 仍是普通 block；
+单独写零参数闭包时需要 `=>`。一次调用只接受一个尾随闭包，前面省略的参数必须有默认值，并通过
+命名参数跳过。
+
 栈上的 `Fn` 可以 move，但不能 copy，因此普通按值使用默认执行 move。它可以传给立即调用的函数，
 但不能返回，也不能保存到可能比捕获的栈变量活得更久的位置。
 
@@ -349,9 +365,10 @@ async [worker] Int load_on_worker() {
 }
 ```
 
-`async [worker] { ... }` 在该 Domain 上启动 Task；无 domain 的 async block 继承 current Domain。
-在 async 函数中，`sync [worker] { ... }` 是结构化 Domain switch：它挂起当前 coroutine，不阻塞
-worker thread，完成后回到进入前的 Domain。普通函数最外层的 `sync [worker]` 才会阻塞调用线程。
+`Task(domain: worker) { ... }` 在该 Domain 上启动 Task；`Task { ... }` 继承 current Domain。
+已删除的 `async { ... }` block 形式不再接受。在 async 函数中，`sync [worker] { ... }` 是结构化
+Domain switch：它挂起当前 coroutine，不阻塞 worker thread，完成后回到进入前的 Domain。
+普通函数最外层的 `sync [worker]` 才会阻塞调用线程。
 
 底层 async API 可以用 `coroutine.suspend(registration)` 主动挂起。registration callback 会收到
 continuation；完成时调用 `resume(value)`，需要主动取消时使用 `on_cancel(handler)` 注册处理。

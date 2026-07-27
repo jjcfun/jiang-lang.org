@@ -23,16 +23,20 @@ _ b = id(42);
 ## Generic Types
 
 ```c
+@region(a, b)
 struct Pair<A, B> {
+    @life(a)
     A first;
+
+    @life(b)
     B second;
 }
 
-Pair<Int, UInt8[]&> pair = Pair<Int, UInt8[]&> {
-    first: 1,
-    second: "one",
-}
+Pair<Int, UInt8[]&> pair = Pair<Int, UInt8[]&>(first: 1, second: "one");
 ```
+
+Generic fields may be instantiated with lifetime-carrying types, so a generic nominal type declares
+and binds the public regions exposed by those fields.
 
 Type arguments may include suffixes:
 

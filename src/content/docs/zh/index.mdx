@@ -17,13 +17,13 @@ import { Icon } from '@astrojs/starlight/components';
 
 Jiang 是一门正在开发中的系统编程语言。自定义语法是 Jiang 实现 All in one 的基石：
 用户可以基于自己的理想语法扩展语言，同时继续享受 Jiang 自带的类型检查和系统级运行效率。
-当前编译器已经可以通过 0.4.8 macOS arm64 发布包安装。
+当前编译器已经可以通过 0.4.9 macOS arm64 发布包安装。
 
 这份文档优先作为教程和使用指南来写。它会说明当前已经形成的语言规则，也会在仍处于快速演进中的部分保持谨慎。
 
-Jiang 0.4.8 加入一等结构化/拥有型 Task、async callable、协作式取消、`Copyable` 与默认 move
-所有权规则、同步原语，以及更精确的 borrow check。可变绑定写成 `T name!`；唯一可变引用使用
-`T&!`，可写 raw pointer 使用 `T*!`。
+Jiang 0.4.9 加入具名 lifetime region、Shape-aware lifetime contract、brace closure 与尾随闭包、
+改进的命名/默认参数、trait 默认实现，以及基于泛型 `Hasher` 的哈希接口。可变绑定写成
+`T name!`；唯一可变引用使用 `T&!`，可写 raw pointer 使用 `T*!`。
 
 ## 从这里开始
 

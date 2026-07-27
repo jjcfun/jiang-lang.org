@@ -15,7 +15,7 @@ sidebar:
 ```ini
 [package]
 name = app
-version = 0.4.8
+version = 1.0.0
 root = src/main.jiang
 type = bin
 ```
@@ -36,7 +36,7 @@ type = bin
 ```ini
 [package]
 name = app
-version = 0.4.8
+version = 1.0.0
 root = src/main.jiang
 
 [dependencies]
@@ -62,8 +62,8 @@ Int main() {
 
 - root 文件里的 `public` 声明是包的公开接口。
 - root 文件里的 `public import` 可以重新导出一个模块命名空间。
-- root 文件里的 `public alias` 可以重新导出一个具体 public symbol，例如
-  `public alias answer = util.answer;`。
+- root 文件里的 `public alias` 可以重新导出 public symbol。函数 alias 会保留目标的 public
+  overload family，但不会暴露 private overload。
 - 非 root 文件中的 `public` 声明不会自动成为包的公开接口。
 
 因此包根模块是明确的公开接口边界。

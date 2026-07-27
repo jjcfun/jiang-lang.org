@@ -15,7 +15,7 @@ Use a fixed `package.ini` file:
 ```ini
 [package]
 name = app
-version = 0.4.8
+version = 1.0.0
 root = src/main.jiang
 type = bin
 ```
@@ -37,7 +37,7 @@ Declare local source dependencies in `[dependencies]`:
 ```ini
 [package]
 name = app
-version = 0.4.8
+version = 1.0.0
 root = src/main.jiang
 
 [dependencies]
@@ -64,8 +64,8 @@ Cross-package access only sees the dependency package root module's public names
 
 - `public` declarations in the root file are package API.
 - `public import` in the root file re-exports a module namespace.
-- `public alias` in the root file re-exports a concrete public symbol, such as
-  `public alias answer = util.answer;`.
+- `public alias` in the root file re-exports a public symbol. A function alias preserves the target's
+  public overload family and does not expose private overloads.
 - `public` declarations in non-root files are not automatically package API.
 
 This makes the root file the explicit API boundary of a package.

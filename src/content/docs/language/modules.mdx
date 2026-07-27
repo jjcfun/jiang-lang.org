@@ -112,8 +112,11 @@ If the right-hand side resolves to an existing namespace, type, value, or member
 bound in that same name domain. If it does not resolve to an existing symbol, the right-hand side is
 treated as type syntax and must be a valid type.
 
-`public alias` re-exports a concrete public symbol through the current module API:
+`public alias` re-exports a public symbol through the current module API:
 
 ```c
 public alias answer = math.add;
 ```
+
+For a function target, the alias keeps the target's public overload family. Calls use normal overload
+resolution in the target namespace, and private functions with the same name are not re-exported.

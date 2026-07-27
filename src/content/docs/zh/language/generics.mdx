@@ -24,16 +24,20 @@ _ b = id(42);
 ## 泛型类型
 
 ```c
+@region(a, b)
 struct Pair<A, B> {
+    @life(a)
     A first;
+
+    @life(b)
     B second;
 }
 
-Pair<Int, UInt8[]&> pair = Pair<Int, UInt8[]&> {
-    first: 1,
-    second: "one",
-}
+Pair<Int, UInt8[]&> pair = Pair<Int, UInt8[]&>(first: 1, second: "one");
 ```
+
+泛型字段可能被实例化成携带 lifetime 的类型，因此泛型 nominal type 需要声明并绑定这些字段
+对外暴露的 region。
 
 泛型实参也是类型，因此可以继续携带可选、数组、指针和引用等后缀：
 

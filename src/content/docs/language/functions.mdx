@@ -26,27 +26,28 @@ Every function has a return type. Use `()` for Unit:
 
 ## Parameters
 
-Parameters are written as `Type name`. Parameters can have default values; defaulted parameters must
-come at the end of the parameter list. Default values currently use literals and are checked against
-the parameter's expected type:
+Parameters are written as `Type name`. Defaulted parameters may appear anywhere in the parameter
+list. Default values currently use literals and are checked against the parameter's expected type:
 
 ```c
-Int scale(Int value, Int factor = 2) {
+Int scale(Int factor = 2, Int value) {
     return value * factor;
 }
 
-Int result = scale(21, 2);
-Int defaulted = scale(21);
+Int result = scale(2, 21);
+Int defaulted = scale(value: 21);
 ```
 
-Call arguments may be positional or written with `name: expr`. Positional arguments must appear before
-named arguments. Named arguments can be reordered and can skip parameters that have defaults:
+Call arguments may be positional or written with `name: expr`. A positional argument always binds the
+earliest unbound parameter; it never skips a default by looking at the argument type. Named arguments
+can be reordered and can skip parameters that have defaults:
 
 ```c
-Int value = scale(21, 2);
-Int named = scale(value: 21, factor: 2);
-Int reordered = scale(factor: 2, value: 21);
+Int value = scale(2, 21);
+Int named = scale(factor: 2, value: 21);
+Int reordered = scale(value: 21, factor: 2);
 Int defaulted = scale(value: 21);
+Int missing = scale(21); // error: 21 binds factor, leaving value missing.
 ```
 
 Positional arguments cannot appear after named arguments:
@@ -235,6 +236,21 @@ Fn<Int, Int> add_base(Int base) {
 A closure with no parameters starts with `{ =>`. An explicit capture list comes before the
 parameters, as in `{ [snapshot = value] delta => snapshot + delta }`.
 
+When the final parameter is `Fn` or `RawFn`, its argument can be written as a trailing closure:
+
+```c
+() run(Fn<()> work) {
+    work();
+}
+
+run { print("done"); };
+map(values) { value => transform(value) };
+```
+
+In trailing position, `{ statements }` means a zero-parameter closure. A standalone brace body remains
+a normal block; write `=>` when a standalone closure has no parameters. A call accepts one trailing
+closure, and any earlier omitted parameters must have defaults and be skipped by name.
+
 A stack `Fn` is movable but not copyable, so ordinary value use moves it by default. It can be passed
 to functions that call it immediately, but it cannot be returned or stored somewhere that may
 outlive the captured stack values.
@@ -363,10 +379,11 @@ async [worker] Int load_on_worker() {
 }
 ```
 
-`async [worker] { ... }` starts a Task on that Domain. A domain-less async block inherits the current
-Domain. In an async function, `sync [worker] { ... }` is a structured Domain switch: it suspends the
-current coroutine without blocking a worker thread and resumes on the entering Domain afterward.
-The outermost `sync [worker]` in an ordinary function blocks the calling thread until completion.
+`Task(domain: worker) { ... }` starts a Task on that Domain; `Task { ... }` inherits the current
+Domain. The removed `async { ... }` block form is not accepted. In an async function,
+`sync [worker] { ... }` is a structured Domain switch: it suspends the current coroutine without
+blocking a worker thread and resumes on the entering Domain afterward. The outermost
+`sync [worker]` in an ordinary function blocks the calling thread until completion.
 
 Low-level async APIs can suspend explicitly with `coroutine.suspend(registration)`. The registration
 callback receives a continuation; call `resume(value)` on completion and register active cancellation

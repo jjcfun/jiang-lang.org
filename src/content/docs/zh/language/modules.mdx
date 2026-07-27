@@ -108,8 +108,11 @@ alias add = math.add;
 如果右侧解析为已有 namespace、type、value 或 member symbol，alias 会绑定到同一个 name
 domain。如果右侧不能解析为已有 symbol，则按 type alias 处理，右侧必须是类型语法。
 
-`public alias` 可以把一个具体 public symbol 重新导出到当前模块公开接口：
+`public alias` 可以把 public symbol 重新导出到当前模块公开接口：
 
 ```c
 public alias answer = math.add;
 ```
+
+如果目标是函数，alias 会保留目标的 public overload family。调用仍在目标命名空间执行普通
+重载决议，同名 private 函数不会被重新导出。
