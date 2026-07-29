@@ -176,17 +176,23 @@ Use `defer expr;` for a single operation or `defer { ... }` for several operatio
 
 ## `try catch`
 
-`try expr catch (...) => fallback` handles a `T@E` value:
+Use `catch { ... }` when only a fallback value is needed:
 
 ```c
-Int value = try parse(text) catch (err) => {
+Int value = try parse(text) catch {
+    0
+};
+```
+
+Bind the error after `catch` when the handler needs it. The binding type is inferred from `E`:
+
+```c
+Int value = try parse(text) catch err {
     log_error(err);
     0
-}
+};
 ```
 
-Use `catch ()` when the error value is not needed:
-
-```c
-Int value = try parse(text) catch () => 0;
-```
+Write the type explicitly as `catch Error err { ... }` when it improves clarity. Parenthesized bindings,
+such as `catch (err) { ... }`, are also accepted. The handler is always a block, and its tail expression
+is the fallback value.

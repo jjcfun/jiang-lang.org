@@ -306,12 +306,12 @@ Int@Err ok() {
 }
 
 Int main() {
-    return try ok() catch () => 0;
+    return try ok() catch { 0 };
 }
 ```
 
 可错值不会隐式变成 `T`。需要成功值时，要么在同错误类型的 `T@E` 函数中让错误传播，
-要么使用 `try expr catch (...) => 备用值` 显式处理错误分支。
+要么使用 `try expr catch { ... }` 显式处理错误分支。
 
 ## 数值转换
 

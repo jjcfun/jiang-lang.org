@@ -174,17 +174,22 @@ defer {
 
 ## `try catch`
 
-`try expr catch (...) => 备用值` 用于把 `T@E` 显式转换成成功值 `T`。备用值会在失败时使用：
+只需要备用值时，直接使用 `catch { ... }`：
 
 ```c
-Int value = try parse(text) catch (err) => {
+Int value = try parse(text) catch {
+    0
+};
+```
+
+需要处理错误值时，在 `catch` 后声明绑定。绑定类型由 `E` 推导：
+
+```c
+Int value = try parse(text) catch err {
     log_error(err);
     0
-}
+};
 ```
 
-`catch ()` 表示不需要错误值：
-
-```c
-Int value = try parse(text) catch () => 0;
-```
+需要强调类型时可以写 `catch Error err { ... }`，也允许 `catch (err) { ... }`
+这样的带括号形式。失败分支必须是代码块，代码块的尾表达式就是备用值。

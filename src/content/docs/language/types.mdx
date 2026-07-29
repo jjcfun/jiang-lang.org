@@ -288,8 +288,8 @@ Int@Err ok() {
 }
 
 Int main() {
-    return try ok() catch () => 0;
+    return try ok() catch { 0 };
 }
 ```
 
-Use `throw expr;` to return the error side and `try expr catch (...) => fallback` to handle it.
+Use `throw expr;` to return the error side and `try expr catch { ... }` to handle it.
