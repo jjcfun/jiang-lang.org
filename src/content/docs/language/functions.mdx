@@ -367,23 +367,55 @@ If ordinary `await()` observes a child that ended through cancellation, it also 
 parent; structured cleanup then cancels and waits for unfinished siblings. Use `cancel_and_await()`
 when only the selected Task should stop and the caller should continue.
 
-A Domain effect names a `const` value whose type implements `Domain`. Distinct const bindings are
-distinct Domains even when they have the same type and value:
+A Domain effect names where async work runs. Start with the two standard Domains:
 
 ```c
-struct WorkerDomain: Domain<kind = .concurrent> {}
-const WorkerDomain worker = WorkerDomain();
-
-async [worker] Int load_on_worker() {
+async [global_domain] Int load_on_worker() {
     1
+}
+
+Int main() {
+    sync [main_domain] {
+        Task<Int> worker = Task(domain: global_domain) {
+            load_on_worker()
+        };
+        worker.await()
+    }
 }
 ```
 
-`Task(domain: worker) { ... }` starts a Task on that Domain; `Task { ... }` inherits the current
-Domain. The removed `async { ... }` block form is not accepted. In an async function,
-`sync [worker] { ... }` is a structured Domain switch: it suspends the current coroutine without
+`main_domain` is serial and bound to the program's startup thread. `global_domain` uses the shared
+concurrent executor. `Task(domain: global_domain) { ... }` starts a Task there; `Task { ... }`
+inherits the current Domain. The removed `async { ... }` block form is not accepted. In an async
+function, `sync [global_domain] { ... }` is a structured Domain switch: it suspends the current coroutine without
 blocking a worker thread and resumes on the entering Domain afterward. The outermost
-`sync [worker]` in an ordinary function blocks the calling thread until completion.
+`sync [main_domain]` in an ordinary function blocks the calling thread until completion while
+pumping main-thread work.
+
+Applications with their own queue or event loop can provide an Executor and bind it to a Domain:
+
+```c
+struct InlineExecutor: Executor {
+    () enqueue(Self& self, ExecutorJob job) {
+        job.run();
+    }
+}
+
+struct InlineDomain: Domain<kind = .serial> {
+    associated ExecutorType = InlineExecutor;
+
+    InlineExecutor make_executor(Self& self) {
+        InlineExecutor()
+    }
+}
+
+const InlineDomain inline_domain = InlineDomain();
+```
+
+Every named `const` binding is a distinct Domain and lazily owns one Executor instance.
+`ExecutorJob` is a move-only, one-shot value: after accepting it, an Executor must eventually call
+`run()` exactly once. An Executor may receive concurrent `enqueue` calls and must synchronize its
+own mutable queue state.
 
 Low-level async APIs can suspend explicitly with `coroutine.suspend(registration)`. The registration
 callback receives a continuation; call `resume(value)` on completion and register active cancellation

@@ -353,22 +353,52 @@ runtime 才回收存储。直接 `Task<T>` 仍保持结构化，并在外层作�
 普通 `await()` 如果发现 child 已因取消结束，会同时取消当前 parent；结构化 cleanup 随后取消并等待
 其他未完成 sibling。需要只停止指定 Task、然后继续执行 caller 时，使用 `cancel_and_await()`。
 
-Domain effect 使用实现 `Domain` 的类型所对应的命名 `const` value。即使类型和值相同，
-两个不同 const binding 也表示两个不同 Domain：
+Domain effect 指定异步工作在哪里运行。通常先使用两个标准 Domain：
 
 ```c
-struct WorkerDomain: Domain<kind = .concurrent> {}
-const WorkerDomain worker = WorkerDomain();
-
-async [worker] Int load_on_worker() {
+async [global_domain] Int load_on_worker() {
     1
+}
+
+Int main() {
+    sync [main_domain] {
+        Task<Int> worker = Task(domain: global_domain) {
+            load_on_worker()
+        };
+        worker.await()
+    }
 }
 ```
 
-`Task(domain: worker) { ... }` 在该 Domain 上启动 Task；`Task { ... }` 继承 current Domain。
-已删除的 `async { ... }` block 形式不再接受。在 async 函数中，`sync [worker] { ... }` 是结构化
+`main_domain` 是绑定程序启动线程的串行 Domain，`global_domain` 使用进程共享的并发执行器。
+`Task(domain: global_domain) { ... }` 在该 Domain 上启动 Task；`Task { ... }` 继承 current Domain。
+已删除的 `async { ... }` block 形式不再接受。在 async 函数中，`sync [global_domain] { ... }` 是结构化
 Domain switch：它挂起当前 coroutine，不阻塞 worker thread，完成后回到进入前的 Domain。
-普通函数最外层的 `sync [worker]` 才会阻塞调用线程。
+普通函数最外层的 `sync [main_domain]` 会阻塞调用线程，同时泵送主线程工作。
+
+应用如果有自己的队列或事件循环，可以实现 Executor，再把它绑定到 Domain：
+
+```c
+struct InlineExecutor: Executor {
+    () enqueue(Self& self, ExecutorJob job) {
+        job.run();
+    }
+}
+
+struct InlineDomain: Domain<kind = .serial> {
+    associated ExecutorType = InlineExecutor;
+
+    InlineExecutor make_executor(Self& self) {
+        InlineExecutor()
+    }
+}
+
+const InlineDomain inline_domain = InlineDomain();
+```
+
+每个命名 `const` binding 都是独立 Domain，并且只懒创建一个 Executor 实例。
+`ExecutorJob` 是只能移动、只能运行一次的值；Executor 接收后必须最终恰好调用一次 `run()`。
+`enqueue` 可能从多个线程并发调用，Executor 必须自行同步可变队列状态。
 
 底层 async API 可以用 `coroutine.suspend(registration)` 主动挂起。registration callback 会收到
 continuation；完成时调用 `resume(value)`，需要主动取消时使用 `on_cancel(handler)` 注册处理。
