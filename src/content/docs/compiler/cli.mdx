@@ -73,6 +73,45 @@ jiangc --mode release . -o app
 
 For single-file input, release mode still compiles that source file directly.
 
+## Artifact Cache and Backend Jobs
+
+Debug package builds persist reusable source interfaces and object work products under
+`build/cache` by default. Override the location when separate builds must not share a cache:
+
+```bash
+jiangc --artifact-cache-dir .jiang-cache . -o app
+```
+
+Use the explicit clean command instead of deleting an unresolved path from a script:
+
+```bash
+jiangc --artifact-cache-dir .jiang-cache --clean-artifact-cache
+```
+
+Independent debug codegen units can run in parallel. The default worker count is the logical CPU
+count available to the process; use `--jobs` only to set an explicit limit:
+
+```bash
+jiangc --jobs 1 . -o app
+```
+
+`--jobs` currently affects debug package object emission. Release, shared-library, LLVM IR, and
+single object emission remain serial. A failed unit does not discard successful cached objects, so
+a later build can reuse them.
+
+## Targets
+
+Use `--target` for LLVM IR or object output:
+
+```bash
+jiangc --target x86_64-unknown-linux-gnu --emit-obj main.jiang -o main.o
+```
+
+Hosted executable linking is native-toolchain only. macOS arm64 is the current 0.5.0 release host;
+Linux x86_64 hosted support is being prepared for 0.5.1. Linux hosted programs use the system libc.
+Linux aarch64, Wasm, WASI, and Windows targets currently have narrower or experimental output
+boundaries, and Linux no-libc executable support is not part of 0.5.1.
+
 ## Linker Options
 
 Use `--linker` to select the program used for final linking:
@@ -89,11 +128,6 @@ jiangc main.jiang -o main --link-arg -lm
 
 ## Runtime Boundary
 
-The current minimum runtime boundary still uses the host C runtime for low-level services, mainly:
-
-- `malloc`
-- `free`
-- `printf`
-- `abort`
-
-This is expected during the current compiler development stage.
+Hosted builds use the target host's C runtime and native linker toolchain. Release compilers include
+the LLVM libraries used by `jiangc`, so running a packaged compiler does not require a separate
+`libLLVM` or `liblld` installation.

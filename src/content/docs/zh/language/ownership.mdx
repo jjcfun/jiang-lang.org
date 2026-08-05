@@ -178,17 +178,25 @@ Int^ make_owner() {
 }
 ```
 
-Jiang 区分 shared readonly loan 和 unique mutable loan。任意数量的 shared `T&` 可以共存；
-live `T&!` 必须对所有重叠 place 保持独占，且不能隐式复制。任意 reference loan 存活期间，
-与 source 重叠的 storage 都不能被覆盖、move 或 drop。
+Jiang 区分 shared readonly loan 和 unique mutable loan。任意数量的 shared `T&` view 可以共存。
+`T&` 本身不提供写能力，但普通 shared view 不会仅因存在就冻结 owner 通过自身更新 source。
+live `T&!` 必须对所有重叠 place 保持独占，且不能隐式复制；这种 unique loan 存活期间，
+与 source 重叠的 storage 不能被覆盖、move 或 drop。
+
+把 `T&!` reborrow 为 `T&` 会创建 frozen shared view。原 unique reference 仍可读取，但在 shared
+reborrow 最后一次使用前不能写入；多个 shared reborrow 可以同时存在。
 
 loan 使用 non-lexical lifetime：最后一次可达使用之后即可结束，因此可以顺序 mutable reborrow。
 struct sibling field 与不同 constant array index 可分别借用；dynamic index 和 subslice 保守视为重叠。
 
 async 调用捕获 borrow 时，直接创建的结构化 Task 会持有 loan，直到 Task 完成且作用域清理结束。
 `cancel()` 只发布取消请求；需要等待终态时应使用 `await()` 或 `cancel_and_await()`。跨作用域或
-Domain 的 heap Task 仍必须满足普通生命周期与 `Sendable` 规则。Domain scheduling 不会放宽
-shared/unique 规则，因此安全引用在 serial 与 concurrent Domain 间仍保持 data-race freedom。
+Domain 的 heap Task 仍必须满足普通 lifetime 与 `Sendable` 规则。
+
+跨 Domain 传递和 lifetime 有效性是两项独立检查。当 `T: Sendable` 时，共享 `T&` 可以作为参数、
+返回值或 capture 跨 Domain，但仍不能活过来源 owner。`T&!` 不能直接跨 Domain；需要 `T&` 的
+调用可以建立上面的 frozen shared reborrow。raw pointer 不携带 ownership 或 lifetime 证明，
+不会自动满足 `Sendable`。
 
 ## 生命周期约束
 

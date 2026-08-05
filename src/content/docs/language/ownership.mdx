@@ -181,10 +181,15 @@ Int^ make_owner() {
 }
 ```
 
-Jiang distinguishes shared readonly and unique mutable loans. Any number of non-overlapping or
-shared `T&` loans may coexist. A live `T&!` loan must be exclusive for every overlapping place, and
-cannot be implicitly copied. While any reference loan is live, overlapping source storage cannot be
-overwritten, moved, or dropped.
+Jiang distinguishes shared readonly and unique mutable loans. Any number of shared `T&` views may
+coexist. A `T&` does not grant write capability through that reference, but an ordinary shared view
+does not by itself freeze updates through the owner. A live `T&!` loan must be exclusive for every
+overlapping place and cannot be implicitly copied. While such a unique loan is live, overlapping
+source storage cannot be overwritten, moved, or dropped.
+
+Reborrowing `T&!` as `T&` creates a frozen shared view. The original unique reference may still be
+read, but it cannot be used to write until the shared reborrow's last use. Several shared reborrows
+may coexist.
 
 Loan lifetimes are non-lexical: a loan ends after its last reachable use, so sequential mutable
 reborrows are allowed. Struct sibling fields and distinct constant array indexes can be borrowed
@@ -193,9 +198,13 @@ independently; dynamic indexes and subslices conservatively overlap.
 If an async call captures a borrow, its direct structured Task holds the loan until the Task has
 finished and its scope cleanup is complete. `cancel()` only requests cancellation; use `await()` or
 `cancel_and_await()` when the caller must wait for terminal completion. A heap Task that crosses a
-scope or Domain must satisfy the normal lifetime and `Sendable` rules. Domain scheduling never
-relaxes shared/unique rules, so safe references remain data-race free across serial and concurrent
-Domains.
+scope or Domain must satisfy the normal lifetime and `Sendable` rules.
+
+Cross-Domain transfer and lifetime validity are separate checks. A shared `T&` may be passed,
+returned, or captured across Domains when `T: Sendable`, but it still cannot outlive its source
+owner. `T&!` cannot cross directly; a call that needs `T&` may establish the frozen shared reborrow
+described above. Raw pointers carry neither ownership nor lifetime proof and are not automatically
+`Sendable`.
 
 ## Lifetime Annotations
 

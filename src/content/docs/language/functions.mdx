@@ -234,7 +234,17 @@ Fn<Int, Int> add_base(Int base) {
 ```
 
 A closure with no parameters starts with `{ =>`. An explicit capture list comes before the
-parameters, as in `{ [snapshot = value] delta => snapshot + delta }`.
+parameters and selects an existing local: `[name]` captures by value, while `[ref name]` and
+`[ref! name]` create shared and unique borrows. A capture list cannot declare, rename, type, or
+initialize a variable. Create an ordinary local first when a closure needs a snapshot or expression:
+
+```c
+Int snapshot = value;
+Fn<Int, Int> add_snapshot = { [snapshot] delta => snapshot + delta };
+```
+
+Locals omitted from the list are captured as shared views. Raw pointers are the exception and are
+captured by value. Writing outer storage requires an explicit `[ref! name]` capture.
 
 When the final parameter is `Fn` or `RawFn`, its argument can be written as a trailing closure:
 
@@ -258,8 +268,9 @@ outlive the captured stack values.
 Use `new` to create an owned closure:
 
 ```c
+@life()
 Fn<Int>^ make_answer(Int value) {
-    return new { [_ snapshot = value] => snapshot };
+    return new { [value] => value };
 }
 
 Int main() {
@@ -344,21 +355,31 @@ result is a movable, non-copyable `Task<T>^`; moving it transfers only the owner
 relocates the running Task:
 
 ```c
+@life()
 Task<Int>^ start_load() {
-    new Task(domain: worker) { load_page() }
+    new Task(domain: global_domain) { load_page() }
 }
 
+@region(a)
 struct Request {
+    @life(a)
     Task<Int>^ task;
 }
 ```
+
+`Task<T>^` has the same capture lifetime shape as direct `Task<T>`; `^` changes storage ownership,
+not borrowing. A factory with no borrowed source uses `@life()`. A returned owner that captures a
+borrow instead declares that source with `@life(return: source)`, and a containing field binds the
+Task lifetime through the struct's `@region`. Because owner destruction does not wait, an owner that
+carries capture loans must be consumed with `await()` or `cancel_and_await()` before it is dropped.
 
 `task.await()` waits and consumes the result exactly once. `task.cancel()` is a synchronous,
 idempotent request: it does not wait and does not consume the result, so a later `await()` remains
 valid. `task.cancel_and_await()` requests cancellation and asynchronously waits for the Task to exit.
 Dropping a `Task<T>^` owner neither blocks nor implicitly cancels; the runtime reclaims the Task after
 both the owner and coroutine have finished with it. Direct `Task<T>` values remain structured and are
-cleaned up before their enclosing scope exits.
+cleaned up before their enclosing scope exits: unfinished children are first cancelled and then
+awaited before the remaining locals are destroyed.
 
 Cancellation is cooperative. Suspend and resume boundaries observe requests automatically;
 long-running computation that does not suspend should call `coroutine.check_cancelled()` periodically.
@@ -375,7 +396,7 @@ async [global_domain] Int load_on_worker() {
 }
 
 Int main() {
-    sync [main_domain] {
+    coroutine.sync(main_domain) {
         Task<Int> worker = Task(domain: global_domain) {
             load_on_worker()
         };
@@ -386,11 +407,17 @@ Int main() {
 
 `main_domain` is serial and bound to the program's startup thread. `global_domain` uses the shared
 concurrent executor. `Task(domain: global_domain) { ... }` starts a Task there; `Task { ... }`
-inherits the current Domain. The removed `async { ... }` block form is not accepted. In an async
-function, `sync [global_domain] { ... }` is a structured Domain switch: it suspends the current coroutine without
-blocking a worker thread and resumes on the entering Domain afterward. The outermost
-`sync [main_domain]` in an ordinary function blocks the calling thread until completion while
-pumping main-thread work.
+inherits the current Domain. The removed `async { ... }` and `sync [domain] { ... }` block forms are
+not accepted. `coroutine.sync(domain) { ... }` always requires an explicit Domain. In an async
+function it suspends the current coroutine, runs the closure on the target Domain without blocking a
+worker thread, and then resumes on the entering Domain. An outermost `coroutine.sync(main_domain)` in
+an ordinary function blocks the calling thread until completion while pumping main-thread work.
+
+Values transferred by value across Domains must preserve their normal move or copy capability and
+also satisfy `Sendable`. A shared `T&` may cross when `T: Sendable`, but its ordinary lifetime still
+cannot outlive the source owner. A unique `T&!` does not cross directly; it can reborrow as `T&`,
+which freezes writes through the original unique reference while that shared reborrow is live. Raw
+pointers are not automatically `Sendable`.
 
 Applications with their own queue or event loop can provide an Executor and bind it to a Domain:
 
@@ -416,6 +443,23 @@ Every named `const` binding is a distinct Domain and lazily owns one Executor in
 `ExecutorJob` is a move-only, one-shot value: after accepting it, an Executor must eventually call
 `run()` exactly once. An Executor may receive concurrent `enqueue` calls and must synchronize its
 own mutable queue state.
+
+Use `Atomic<T>` for supported lock-free scalar state. The default operations use sequential ordering;
+the same operation names accept an explicit `MemoryOrder` when weaker ordering is required:
+
+```c
+Atomic<Int> state = Atomic<Int>(0);
+state.set(1, .release);
+Int observed = state.get(.acquire);
+Int previous = state.get_and_set(2, .acquire_release);
+Bool changed = state.compare_and_set(
+    2, 3, MemoryOrder.acquire_release, MemoryOrder.acquire
+);
+```
+
+Use `Mutex<T>` for compound shared state. `Mutex<T>` is address-stable and `!Movable`; when
+`T: Sendable`, transfer a `Mutex<T>^` owner handle across Domains. `with_lock` provides a unique
+mutable reference only for the synchronous callback, so it cannot be held across an `await`.
 
 Low-level async APIs can suspend explicitly with `coroutine.suspend(registration)`. The registration
 callback receives a continuation; call `resume(value)` on completion and register active cancellation

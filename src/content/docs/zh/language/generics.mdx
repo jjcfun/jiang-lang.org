@@ -6,7 +6,7 @@ sidebar:
 ---
 
 泛型让同一份代码适用于不同类型。泛型参数写在声明名之后。类型泛型参数写普通名字，
-编译期泛型参数写成 `const Type Name`。
+编译期泛型参数写成 `Name: const Type`。
 
 ## 泛型函数
 
@@ -45,6 +45,28 @@ Pair<Int, UInt8[]&> pair = Pair<Int, UInt8[]&>(first: 1, second: "one");
 Pair<Int?, UInt8[]&> maybe_pair;
 Pair<Int&!, Int[3]^> mutable_ref_and_owner;
 ```
+
+## 泛型 initializer 推断
+
+声明目标已经给出相同 generic nominal type 时，initializer 可以省略重复的类型实参。
+`_` 只为对应位置建立 inference hole：
+
+```c
+Box<Int> value = Box(40);
+Box<_> partial = Box(42);
+Duo<Int, _> mixed = Duo(11, true);
+Fixed<Int, _> fixed = Fixed([17, 18, 19]);
+```
+
+编译器联合声明类型、initializer 实参和泛型约束求解每个 hole；显式实参不会被覆盖。
+省略 constructor 的全部类型实参时，必须有兼容的 expected nominal type。下面两边都没有
+提供类型，因此会失败：
+
+```c
+_ value = Box(1); // 错误：generic initializer 缺少上下文
+```
+
+普通 value initializer 与 `new` owner initializer 使用同一套推断规则。
 
 ## 编译期泛型参数
 

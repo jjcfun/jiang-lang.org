@@ -17,15 +17,15 @@ import { Icon } from '@astrojs/starlight/components';
 
 Jiang is a systems programming language in active development. Custom syntax is the foundation for
 Jiang's All-in-one direction: users can extend Jiang with their ideal domain syntax while keeping
-Jiang's built-in type checking and systems-level runtime efficiency. The current compiler can be
-installed from the 0.4.9 macOS arm64 release.
+Jiang's built-in type checking and systems-level runtime efficiency. The current stable compiler can
+be installed from the 0.5.0 macOS arm64 release.
 
-These docs are written as a practical guide first. They describe the language as it exists today, while treating fast-moving areas carefully.
+These docs are written as a practical guide first. The language guide tracks the current development
+compiler; installation and platform pages distinguish released packages from 0.5.1 work in progress.
 
-Jiang 0.4.9 adds named lifetime regions, Shape-aware lifetime contracts, brace closures and trailing
-closures, named/default argument improvements, trait default methods, and generic `Hasher`-based
-hashing. Write mutable bindings as `T name!`; use `T&!` for a unique mutable reference and `T*!` for
-a writable raw pointer.
+Jiang 0.5.0 is the stable bootstrap baseline. Current development adds Linux x86_64 hosted support,
+incremental and parallel compilation, and an initial LSP. It does not add Linux no-libc support or
+a new language syntax surface.
 
 ## Start Here
 
@@ -57,8 +57,8 @@ a writable raw pointer.
 The Jiang compiler has reached an initial stable self-hosting milestone: the release compiler is
 produced from Jiang source and verified by the full language test suite.
 
-The next priorities are broader language tests, release packaging polish, package/module ergonomics,
-backend coverage, and runtime coverage. `#asm` is primarily for runtime code, system calls, and
-platform boundaries; ordinary application code usually should not need it.
+The current 0.5.1 priorities are Linux hosted/libc support, incremental and parallel compilation,
+and an initial LSP. `#asm` is primarily for runtime code, system calls, and platform boundaries;
+ordinary application code usually should not need it.
 
 For now, treat the website as a living language guide rather than a frozen specification. The most stable pieces are naming style, type notation, mutability, arrays, pointers, optionals, imports, packages, and the current compiler command-line workflow.

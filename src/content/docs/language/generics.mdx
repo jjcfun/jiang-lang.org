@@ -7,7 +7,7 @@ sidebar:
 
 Generics let one declaration work with multiple types. Generic parameters are written after the
 declaration name. Type parameters use a name such as `T`; const generic parameters use
-`const Type Name`.
+`Name: const Type`.
 
 ## Generic Functions
 
@@ -44,6 +44,28 @@ Type arguments may include suffixes:
 Pair<Int?, UInt8[]&> maybe_pair;
 Pair<Int&!, Int[3]^> mutable_ref_and_owner;
 ```
+
+## Generic Initializer Inference
+
+A generic nominal initializer may omit repeated type arguments when the declared target supplies the
+same nominal type. `_` creates an inference hole for only that argument:
+
+```c
+Box<Int> value = Box(40);
+Box<_> partial = Box(42);
+Duo<Int, _> mixed = Duo(11, true);
+Fixed<Int, _> fixed = Fixed([17, 18, 19]);
+```
+
+The compiler solves each hole from the declared type, initializer arguments, and generic
+constraints. Explicit arguments are never overwritten. Omitting all constructor arguments requires
+a compatible expected nominal type; this deliberately fails because neither side provides one:
+
+```c
+_ value = Box(1); // error: generic initializer requires context
+```
+
+Value initializers and `new` owner initializers use the same inference rules.
 
 ## Const Generic Parameters
 

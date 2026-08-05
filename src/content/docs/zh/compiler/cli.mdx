@@ -73,6 +73,44 @@ jiangc --mode release . -o app
 
 如果输入是单个源文件，发布模式仍然直接编译这个源文件。
 
+## Artifact cache 与 backend jobs
+
+debug 包构建默认把可复用的源码 interface 与 object work product 持久化到 `build/cache`。
+需要隔离不同构建时，可以覆盖 cache 位置：
+
+```bash
+jiangc --artifact-cache-dir .jiang-cache . -o app
+```
+
+脚本需要清理 cache 时，使用显式命令，不要删除一个尚未解析确认的路径：
+
+```bash
+jiangc --artifact-cache-dir .jiang-cache --clean-artifact-cache
+```
+
+互相独立的 debug codegen unit 可以并发执行。默认 worker 数量是当前进程可用的逻辑 CPU 数；
+只有需要明确限制时才传 `--jobs`：
+
+```bash
+jiangc --jobs 1 . -o app
+```
+
+`--jobs` 当前只影响 debug 包的 object emission。release、shared library、LLVM IR 和单 object
+输出仍为串行路径。某个 unit 失败不会删除其他成功 unit 的缓存 object，
+后续构建仍可复用。
+
+## 目标平台
+
+生成 LLVM IR 或 object 时可以使用 `--target`：
+
+```bash
+jiangc --target x86_64-unknown-linux-gnu --emit-obj main.jiang -o main.o
+```
+
+hosted executable 只使用目标平台的本机工具链链接。macOS arm64 是当前 0.5.0 release host；
+Linux x86_64 hosted 支持正在为 0.5.1 准备，并使用系统 libc。Linux aarch64、Wasm、WASI 和
+Windows 目前只有较窄或实验性的输出边界；Linux no-libc executable 不属于 0.5.1。
+
 ## 链接器选项
 
 使用 `--linker` 指定最终链接程序：
@@ -89,11 +127,5 @@ jiangc main.jiang -o main --link-arg -lm
 
 ## 运行时边界
 
-当前最小运行时边界仍依赖宿主 C 运行时，主要包括：
-
-- `malloc`
-- `free`
-- `printf`
-- `abort`
-
-这属于当前编译器开发阶段的正常状态。
+hosted 构建使用目标 host 的 C runtime 与本机 linker toolchain。发布版编译器已经包含 `jiangc`
+使用的 LLVM 库，因此运行发布包不需要另外安装 `libLLVM` 或 `liblld`。

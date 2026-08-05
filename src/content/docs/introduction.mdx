@@ -25,8 +25,8 @@ and memory layout should stay explicit in the language instead of depending on h
 behavior.
 
 Jiang has a builtin `#asm` syntax block for runtime code, system calls, and platform boundaries. It
-is not meant as the normal way to write application logic; it provides the low-level foundation
-needed for Linux no-libc, startup entries, and system interfaces.
+is not meant as the normal way to write application logic. Jiang 0.5.1 uses the host libc for Linux
+x86_64; Linux no-libc remains a later, separate runtime path.
 
 That does not rule out optional runtime capabilities. If Jiang later adds garbage collection, it
 should be chosen by users and packages for the cases that need it, such as embedded scripting,
@@ -45,8 +45,9 @@ Jiang is currently best suited for exploring:
 ## Current Status
 
 Jiang is still early. The language, standard library, and compiler internals will continue to change.
-The current release package targets macOS arm64; the compiler is self-hosting and verified by smoke
-tests and source-level language tests.
+The current 0.5.0 release package targets macOS arm64. Linux x86_64 hosted support is being validated
+for 0.5.1; it uses the native system libc and toolchain. The compiler is self-hosting and verified by
+smoke tests and source-level language tests.
 
 Start with [Getting Started](/getting-started/) if you want to try the language, or read
 [Custom Syntax](/language/custom-syntax/) to understand Jiang's central extension mechanism.

@@ -228,8 +228,18 @@ Fn<Int, Int> add_base(Int base) {
 }
 ```
 
-零参数闭包以 `{ =>` 开头。显式 capture list 写在参数之前，例如
-`{ [snapshot = value] delta => snapshot + delta }`。
+零参数闭包以 `{ =>` 开头。显式 capture list 写在参数之前，并且只能选择已有 local：
+`[name]` 按值捕获，`[ref name]` / `[ref! name]` 分别建立共享/独占借用。capture list
+不能声明、重命名、标注类型或初始化变量。需要捕获快照或表达式结果时，
+先声明普通 local：
+
+```c
+Int snapshot = value;
+Fn<Int, Int> add_snapshot = { [snapshot] delta => snapshot + delta };
+```
+
+未列入列表的 local 默认按共享 view 捕获；raw pointer 是按值捕获的例外。需要写入外层 storage
+时，必须显式使用 `[ref! name]`。
 
 最后一个参数是 `Fn` 或 `RawFn` 时，可以把它写成尾随闭包：
 
@@ -252,8 +262,9 @@ map(values) { value => transform(value) };
 使用 `new` 创建拥有型闭包：
 
 ```c
+@life()
 Fn<Int>^ make_answer(Int value) {
-    return new { [_ snapshot = value] => snapshot };
+    return new { [value] => value };
 }
 
 Int main() {
@@ -334,19 +345,30 @@ async Int load_both() {
 结果类型是可移动但不可复制的 `Task<T>^`；移动只转移 owner pointer，不会搬动正在运行的 Task：
 
 ```c
+@life()
 Task<Int>^ start_load() {
-    new Task(domain: worker) { load_page() }
+    new Task(domain: global_domain) { load_page() }
 }
 
+@region(a)
 struct Request {
+    @life(a)
     Task<Int>^ task;
 }
 ```
 
+`Task<T>^` 与直接 `Task<T>` 使用同一 capture lifetime shape；`^` 只改变存储所有权，不改变
+借用关系。不携带参数 borrow 的工厂使用 `@life()`；返回捕获了借用的 owner 时，用
+`@life(return: source)` 声明来源；Task owner 字段通过 struct 的 `@region` 绑定 lifetime。
+owner 析构不会等待，因此携带 capture loan 的 owner 必须先通过 `await()` 或
+`cancel_and_await()` 消费，不能直接 drop。
+
 `task.await()` 会等待并且只能消费一次结果。`task.cancel()` 是同步、幂等的取消请求：它不会等待，
 也不会消费结果，因此之后仍可调用 `await()`。`task.cancel_and_await()` 会请求取消并异步等待 Task
 退出。销毁 `Task<T>^` owner 不会阻塞，也不会隐式取消；owner 与 coroutine 都不再使用 Task 后，
-runtime 才回收存储。直接 `Task<T>` 仍保持结构化，并在外层作用域退出前完成清理。
+runtime 才回收存储。直接 `Task<T>` 仍保持结构化；外层作用域退出时，
+会先取消未完成 child，
+再等待它们结束，最后才析构其余 local。
 
 取消是协作式的。挂起和恢复边界会自动观察请求；长时间不挂起的计算应定期调用
 `coroutine.check_cancelled()`。没有请求时它立即返回，有请求时当前 coroutine 直接进入 cleanup。
@@ -361,7 +383,7 @@ async [global_domain] Int load_on_worker() {
 }
 
 Int main() {
-    sync [main_domain] {
+    coroutine.sync(main_domain) {
         Task<Int> worker = Task(domain: global_domain) {
             load_on_worker()
         };
@@ -372,9 +394,15 @@ Int main() {
 
 `main_domain` 是绑定程序启动线程的串行 Domain，`global_domain` 使用进程共享的并发执行器。
 `Task(domain: global_domain) { ... }` 在该 Domain 上启动 Task；`Task { ... }` 继承 current Domain。
-已删除的 `async { ... }` block 形式不再接受。在 async 函数中，`sync [global_domain] { ... }` 是结构化
-Domain switch：它挂起当前 coroutine，不阻塞 worker thread，完成后回到进入前的 Domain。
-普通函数最外层的 `sync [main_domain]` 会阻塞调用线程，同时泵送主线程工作。
+已删除的 `async { ... }` 和 `sync [domain] { ... }` block 形式不再接受。
+`coroutine.sync(domain) { ... }` 的 Domain 参数始终必填。在 async 函数中，它挂起当前
+coroutine，在目标 Domain 执行 closure，不阻塞 worker thread，完成后回到进入前的 Domain。
+普通函数最外层的 `coroutine.sync(main_domain)` 会阻塞调用线程，同时泵送主线程工作。
+
+跨 Domain 按值传递的值既要保持原本的 move/copy 能力，也必须满足 `Sendable`。当 `T: Sendable`
+时，共享 `T&` 可以跨 Domain，但普通 lifetime 仍不能超过来源 owner。唯一 `T&!` 不直接跨
+Domain；它可以 reborrow 为 `T&`，并在 shared reborrow 存活期间冻结原 unique reference 的写能力。
+raw pointer 不会自动满足 `Sendable`。
 
 应用如果有自己的队列或事件循环，可以实现 Executor，再把它绑定到 Domain：
 
@@ -399,6 +427,23 @@ const InlineDomain inline_domain = InlineDomain();
 每个命名 `const` binding 都是独立 Domain，并且只懒创建一个 Executor 实例。
 `ExecutorJob` 是只能移动、只能运行一次的值；Executor 接收后必须最终恰好调用一次 `run()`。
 `enqueue` 可能从多个线程并发调用，Executor 必须自行同步可变队列状态。
+
+支持 lock-free 的简单标量共享状态使用 `Atomic<T>`。默认操作采用 sequential order；需要更弱
+顺序时，向同名重载传入 `MemoryOrder`：
+
+```c
+Atomic<Int> state = Atomic<Int>(0);
+state.set(1, .release);
+Int observed = state.get(.acquire);
+Int previous = state.get_and_set(2, .acquire_release);
+Bool changed = state.compare_and_set(
+    2, 3, MemoryOrder.acquire_release, MemoryOrder.acquire
+);
+```
+
+复合共享状态使用 `Mutex<T>`。`Mutex<T>` 地址稳定且为 `!Movable`；当 `T: Sendable` 时，
+跨 Domain 移动 `Mutex<T>^` owner handle。`with_lock` 只在同步 callback 中提供 unique
+mutable reference，因此不能把锁持有到 `await` 之后。
 
 底层 async API 可以用 `coroutine.suspend(registration)` 主动挂起。registration callback 会收到
 continuation；完成时调用 `resume(value)`，需要主动取消时使用 `on_cancel(handler)` 注册处理。
