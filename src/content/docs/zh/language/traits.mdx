@@ -23,12 +23,12 @@ trait Equatable {
 }
 
 trait Hasher {
-    () write(Self&! self, UInt8[]& bytes);
+    Void write(Self&! self, UInt8[]& bytes);
     UInt64 finish(self);
 }
 
 trait Hashable: Equatable {
-    () hash<H: Hasher>(self, H&! hasher);
+    Void hash<H: Hasher>(self, H&! hasher);
 }
 ```
 
@@ -72,7 +72,7 @@ writer.write(123);
 调用方法时会经由这张表动态分派：
 
 ```c
-() write_one(Writer.Any& writer) {
+Void write_one(Writer.Any& writer) {
     writer.write(123);
 }
 ```
@@ -81,7 +81,7 @@ writer.write(123);
 第一个参数；关联函数保留原来的参数列表：
 
 ```c
-RawFn<(), Writer.Receiver, Int> write_slot = writer.write;
+RawFn<Void, Writer.Receiver, Int> write_slot = writer.write;
 write_slot(writer.receiver, 123);
 ```
 
@@ -250,7 +250,7 @@ public trait SubscriptGet {
 }
 
 public trait SubscriptSet: SubscriptGet {
-    () subscript_set(self, Index index, Value value);
+    Void subscript_set(self, Index index, Value value);
 }
 ```
 

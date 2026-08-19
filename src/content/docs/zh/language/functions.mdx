@@ -15,12 +15,11 @@ Int add(Int left, Int right) {
 
 ## 返回类型
 
-函数总是有返回类型。没有有意义的返回值时使用 `()` 表示单元类型：
+函数总是有返回类型。没有有意义的返回值时使用 `Void`；它的唯一值写作 `()`：
 
 ```c
-() log_done() {
+Void log_done() {
     print("done");
-    return ();
 }
 ```
 
@@ -90,11 +89,11 @@ Int abs(Int value) {
 }
 ```
 
-`return` 是语句，不是普通表达式。显式返回 `()` 时需要写出单元值：
+`return` 是语句，不是普通表达式。`Void` 函数可以省略返回值：
 
 ```c
-() done() {
-    return ();
+Void done() {
+    return;
 }
 ```
 
@@ -107,7 +106,7 @@ Int value = {
     base + 2
 }
 
-() unit_value = {
+Void void_value = {
     Int ignored = 1;
 }
 ```
@@ -124,7 +123,7 @@ Int add_tail(Int left, Int right) {
 }
 ```
 
-需要提前返回、从分支里直接退出，或者返回 `()` 时，继续使用 `return`。
+需要提前返回或从分支里直接退出时，使用 `return`。
 
 ## 多返回值
 
@@ -205,6 +204,7 @@ Jiang 区分 C 风格函数指针和闭包：
 
 - `RawFn<R, A, B, ...>` 是裸函数指针，不带捕获环境。需要 C ABI callback 时使用它。
 - `Fn<R, A, B, ...>` 是 Jiang 闭包值。它可以捕获局部值，也可以包装匹配的 `RawFn`。
+- `FnOnce<R, A, B, ...>` 是消费型闭包。调用会 move 闭包本身，因此闭包体可以 move 按值捕获。
 - `Fn<R, A, B, ...>^` 是拥有型闭包 handle。闭包需要离开当前栈帧时使用它。
 
 第一个类型参数是返回类型，后续参数是调用参数类型。
@@ -244,7 +244,7 @@ Fn<Int, Int> add_snapshot = { [snapshot] delta => snapshot + delta };
 最后一个参数是 `Fn` 或 `RawFn` 时，可以把它写成尾随闭包：
 
 ```c
-() run(Fn<()> work) {
+Void run(Fn<Void> work) {
     work();
 }
 
@@ -258,6 +258,8 @@ map(values) { value => transform(value) };
 
 栈上的 `Fn` 可以 move，但不能 copy，因此普通按值使用默认执行 move。它可以传给立即调用的函数，
 但不能返回，也不能保存到可能比捕获的栈变量活得更久的位置。
+
+只有 callback 必须消费捕获值时才使用 `FnOnce`。`FnOnce&` 不可调用，并且 `FnOnce` 调用后不能再次使用。
 
 使用 `new` 创建拥有型闭包：
 
@@ -400,15 +402,15 @@ coroutine，在目标 Domain 执行 closure，不阻塞 worker thread，完成�
 普通函数最外层的 `coroutine.sync(main_domain)` 会阻塞调用线程，同时泵送主线程工作。
 
 跨 Domain 按值传递的值既要保持原本的 move/copy 能力，也必须满足 `Sendable`。当 `T: Sendable`
-时，共享 `T&` 可以跨 Domain，但普通 lifetime 仍不能超过来源 owner。唯一 `T&!` 不直接跨
-Domain；它可以 reborrow 为 `T&`，并在 shared reborrow 存活期间冻结原 unique reference 的写能力。
-raw pointer 不会自动满足 `Sendable`。
+时，共享 `T&` 可以跨 Domain，但 lifetime 仍不能超过来源 owner。唯一 `T&!` 不直接跨 Domain；
+需要共享 view 时，显式调用 `$.ref()` 建立重借用。该 shared reborrow 存活期间，原 unique
+reference 的写能力保持冻结。raw pointer 不会自动满足 `Sendable`。
 
 应用如果有自己的队列或事件循环，可以实现 Executor，再把它绑定到 Domain：
 
 ```c
 struct InlineExecutor: Executor {
-    () enqueue(Self& self, ExecutorJob job) {
+    Void enqueue(Self& self, ExecutorJob job) {
         job.run();
     }
 }

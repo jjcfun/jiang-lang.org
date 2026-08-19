@@ -1,6 +1,6 @@
 ---
 title: Tuples
-description: Tuples, Unit, and destructuring in Jiang.
+description: Tuples, Void, and destructuring in Jiang.
 sidebar:
   order: 5
 ---
@@ -60,18 +60,17 @@ Int x! = add(1, 2);
 
 Accordingly, `(ref value) = source;` borrows `source` directly; it does not project an index `0`.
 
-## Unit
+## Void
 
-`()` is the Unit type:
+`Void` is the zero-size type; `()` is its only value:
 
 ```c
-() hello() {
+Void hello() {
     print("Hello World!");
-    return ();
 }
 ```
 
-Unit can be used as a value, parameter, local, and field type.
+`Void` can be used as a parameter, local, and field type.
 
 ## Destructuring in Loops
 

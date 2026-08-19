@@ -208,9 +208,10 @@ described above. Raw pointers carry neither ownership nor lifetime proof and are
 
 ## Lifetime Annotations
 
-Borrowing `struct` and `union` types declare their named lifetime regions with `@region`. Every
-declared region must be used by at least one borrowed field or union payload. A field with one
-lifetime uses `@life(a)`:
+Borrowing `struct` and `union` types declare their public lifetime regions with `@region`. Every
+declared region must be used by a field or union payload. A reference has an outer borrow plus the
+lifetime shape of its pointee. For a simple field, `@life(a)` binds the outer borrow and uses `a` for
+every pointee lifetime as well:
 
 ```c
 @region(a)
@@ -229,6 +230,24 @@ same annotation, and the same name cannot be constrained twice. Mutual constrain
 Fields with several lifetimes can bind them in declaration order, as in `@life(a, b)`, or by names
 provided by the field type, as in `@life(left: a, right: b)`. The two forms cannot be mixed. Every
 name must be bound exactly once, and field bindings cannot use `self`.
+
+For an exact binding of a reference whose pointee has several regions, keep its pointee shape grouped.
+If `PairRef` has regions `left` and `right`, use `@life(a, (left, right))`; do not flatten it to
+`@life(a, left, right)` or bind only one pointee region.
+
+Generic regions name their source type explicitly. `a: T` means that `a` has the complete lifetime
+shape of `T`; `= anchor` supplies a default for every slot when a field omits that generic binding:
+
+```c
+@region(anchor, value: T = anchor)
+struct BorrowedBox<T> {
+    @life(anchor)
+    T& value;
+}
+```
+
+Use `@region(a: T)` when a type stores `T` directly. A generic parameter must be used by a member
+type; Jiang does not permit phantom nominal type parameters.
 
 Functions and methods use `target: source`: a borrow named on the right must live long enough for
 the value named on the left:
@@ -285,7 +304,7 @@ part of `right` must live long enough for the corresponding borrowed part of `le
 
 ```c
 @life(left: right)
-() relate(Int& left, Int& right) {}
+Void relate(Int& left, Int& right) {}
 ```
 
 When a result carries several lifetimes, map the complete `return` once with a tuple expression:

@@ -15,12 +15,11 @@ Int add(Int left, Int right) {
 
 ## Return Types
 
-Every function has a return type. Use `()` for Unit:
+Every function has a return type. Use `Void` when no result is needed; its only value is `()`:
 
 ```c
-() log_done() {
+Void log_done() {
     print("done");
-    return ();
 }
 ```
 
@@ -91,16 +90,16 @@ Int abs(Int value) {
 }
 ```
 
-`return` is a statement. An explicit Unit return still writes the Unit value:
+`return` is a statement. A `Void` function may omit its value:
 
 ```c
-() done() {
-    return ();
+Void done() {
+    return;
 }
 ```
 
 Blocks can be used as value blocks. Statements do not contribute to the block value; the value comes
-only from the final tail expression without a semicolon. A block without a tail expression has Unit
+only from the final tail expression without a semicolon. A block without a tail expression has `Void`
 value:
 
 ```c
@@ -109,7 +108,7 @@ Int value = {
     base + 2
 }
 
-() unit_value = {
+Void void_value = {
     Int ignored = 1;
 }
 ```
@@ -127,7 +126,7 @@ Int add_tail(Int left, Int right) {
 }
 ```
 
-Use `return` for early returns, branch exits, or explicit Unit returns.
+Use `return` for early returns or branch exits.
 
 ## Multiple Results
 
@@ -209,6 +208,8 @@ Jiang separates C-style function pointers from closures:
   use for C ABI callbacks.
 - `Fn<R, A, B, ...>` is a Jiang closure value. It can capture local values and can also wrap a
   matching `RawFn`.
+- `FnOnce<R, A, B, ...>` is a consuming closure. Calling it moves the closure, which permits moving
+  value captures out of its body.
 - `Fn<R, A, B, ...>^` is an owned closure handle. Use it when the closure value must outlive the
   current stack frame.
 
@@ -249,7 +250,7 @@ captured by value. Writing outer storage requires an explicit `[ref! name]` capt
 When the final parameter is `Fn` or `RawFn`, its argument can be written as a trailing closure:
 
 ```c
-() run(Fn<()> work) {
+Void run(Fn<Void> work) {
     work();
 }
 
@@ -264,6 +265,9 @@ closure, and any earlier omitted parameters must have defaults and be skipped by
 A stack `Fn` is movable but not copyable, so ordinary value use moves it by default. It can be passed
 to functions that call it immediately, but it cannot be returned or stored somewhere that may
 outlive the captured stack values.
+
+Use `FnOnce` only when the callback must consume a captured value. A `FnOnce` cannot be called
+through `FnOnce&`, and it cannot be called a second time.
 
 Use `new` to create an owned closure:
 
@@ -415,15 +419,15 @@ an ordinary function blocks the calling thread until completion while pumping ma
 
 Values transferred by value across Domains must preserve their normal move or copy capability and
 also satisfy `Sendable`. A shared `T&` may cross when `T: Sendable`, but its ordinary lifetime still
-cannot outlive the source owner. A unique `T&!` does not cross directly; it can reborrow as `T&`,
-which freezes writes through the original unique reference while that shared reborrow is live. Raw
-pointers are not automatically `Sendable`.
+cannot outlive the source owner. A unique `T&!` does not cross directly. To pass a shared view,
+explicitly create one with `$.ref()`; writes through the original unique reference stay frozen while
+that shared reborrow is live. Raw pointers are not automatically `Sendable`.
 
 Applications with their own queue or event loop can provide an Executor and bind it to a Domain:
 
 ```c
 struct InlineExecutor: Executor {
-    () enqueue(Self& self, ExecutorJob job) {
+    Void enqueue(Self& self, ExecutorJob job) {
         job.run();
     }
 }

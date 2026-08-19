@@ -114,7 +114,7 @@ means `_`; write `ref T name` when an explicit type pattern is useful:
 ```c
 union Node {
     (Int, Int) pair;
-    () empty;
+    Void empty;
 }
 
 Int read_ref(Int& value) {

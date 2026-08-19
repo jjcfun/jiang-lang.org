@@ -65,39 +65,17 @@ echo $?
 jiangc --mode debug main.jiang -o main
 ```
 
-发布模式会启用 LLVM 优化；当输入是包目录时，发布模式会按包组织目标文件：
+发布模式会启用 LLVM 优化：
 
 ```bash
 jiangc --mode release . -o app
 ```
 
-如果输入是单个源文件，发布模式仍然直接编译这个源文件。
-
-## Artifact cache 与 backend jobs
-
-debug 包构建默认把可复用的源码 interface 与 object work product 持久化到 `build/cache`。
-需要隔离不同构建时，可以覆盖 cache 位置：
-
-```bash
-jiangc --artifact-cache-dir .jiang-cache . -o app
-```
-
-脚本需要清理 cache 时，使用显式命令，不要删除一个尚未解析确认的路径：
-
-```bash
-jiangc --artifact-cache-dir .jiang-cache --clean-artifact-cache
-```
-
-互相独立的 debug codegen unit 可以并发执行。默认 worker 数量是当前进程可用的逻辑 CPU 数；
-只有需要明确限制时才传 `--jobs`：
+需要限制编译并发度时，使用 `--jobs`：
 
 ```bash
 jiangc --jobs 1 . -o app
 ```
-
-`--jobs` 当前只影响 debug 包的 object emission。release、shared library、LLVM IR 和单 object
-输出仍为串行路径。某个 unit 失败不会删除其他成功 unit 的缓存 object，
-后续构建仍可复用。
 
 ## 目标平台
 
@@ -107,9 +85,9 @@ jiangc --jobs 1 . -o app
 jiangc --target x86_64-unknown-linux-gnu --emit-obj main.jiang -o main.o
 ```
 
-hosted executable 只使用目标平台的本机工具链链接。Jiang 0.5.1 支持 macOS arm64 和
-Linux x86_64 release host；Linux hosted 程序使用系统 libc。Linux aarch64、Wasm、WASI 和
-Windows 目前只有较窄或实验性的输出边界；Linux no-libc executable 不属于 0.5.1。
+hosted executable 只使用目标平台的本机工具链链接。发布包支持 macOS arm64 和 Linux x86_64；
+Linux hosted 程序使用系统 libc。Linux aarch64、Wasm、WASI 和 Windows 目前只有较窄或实验性的
+输出边界；Linux no-libc executable 尚不可用。
 
 ## 链接器选项
 

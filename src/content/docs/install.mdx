@@ -3,7 +3,7 @@ title: Installation
 description: Install the Jiang compiler.
 ---
 
-Jiang 0.5.1 provides prebuilt compiler packages for macOS arm64 and Linux x86_64.
+Jiang provides prebuilt compiler packages for macOS arm64 and Linux x86_64.
 
 ## Requirements
 
@@ -16,8 +16,7 @@ or newer.
 
 ## Install a Release
 
-Download `jiang-0.5.1-macos-arm64.zip` or `jiang-0.5.1-linux-x86_64.tar.gz` from the
-[0.5.1 GitHub release](https://github.com/jjcfun/jiang/releases/tag/0.5.1), then unpack it.
+Download the archive for your host from the [latest GitHub release](https://github.com/jjcfun/jiang/releases/latest), then unpack it.
 
 Install Jiang:
 
@@ -28,7 +27,7 @@ Install Jiang:
 By default this installs:
 
 ```text
-~/.jiang/versions/0.5.1
+~/.jiang/versions/<version>
 ~/.jiang/bin/jiangc
 ```
 
@@ -49,39 +48,15 @@ jiangc --version
 The first line should be:
 
 ```text
-jiang 0.5.1
+jiang <version>
 ```
 
 ## Build From Source
 
-Source builds are mainly for compiler development. Clone the repository:
+Source builds are contributor work. Their toolchain and bootstrap requirements change with the
+compiler, so follow the repository's [compiler development guide](https://github.com/jjcfun/jiang/blob/release/0.5.2/doc/develop.md).
 
-```bash
-git clone https://github.com/jjcfun/jiang.git
-cd jiang
-```
-
-Install the pinned LLVM 22.1.8 SDK. Use `--user` to keep one verified SDK under `~/.jiang` and share
-it across worktrees:
-
-```bash
-bash ./script/install_llvm.sh --user
-```
-
-The script downloads a checksum-locked Jiang LLVM SDK for macOS arm64 or Linux x86_64 and installs it
-under `$JIANG_HOME/toolchains/llvm/<version>/<host>`. If `JIANG_HOME` is not set, `~/.jiang` is used.
-It does not use an arbitrary system or Homebrew LLVM. Omit `--user` to install a worktree-local SDK
-under `build/llvm/<host>/install` instead.
-
-Build and verify the compiler with the installed 0.5.1 release:
-
-```bash
-BOOTSTRAP_RELEASE_VERSION=0.5.1 \
-BOOTSTRAP_BIN="$HOME/.jiang/versions/0.5.1/bin/jiangc" \
-BOOTSTRAP_DEPTH=stable \
-VERIFY=full \
-bash ./script/build_next.sh
-```
+For an ordinary language installation, no source build is required.
 
 ## Next Step
 

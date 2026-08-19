@@ -1,6 +1,6 @@
 ---
 title: 元组
-description: Jiang 语言中的元组，包括多元组、一元组、单元类型和解构。
+description: Jiang 语言中的元组、Void 类型和解构。
 sidebar:
   order: 5
 ---
@@ -67,18 +67,17 @@ Int x! = add(1, 2);
 
 因此 `(ref value) = source;` 会直接借用 `source`，不会额外投影索引 `0`。
 
-## 单元类型
+## Void
 
-`()` 表示单元类型。单元值不占用内存空间，用于表达“无意义返回值”：
+`Void` 是零大小类型，`()` 是它的唯一值，用于表达“无意义返回值”：
 
 ```c
-() hello() {
+Void hello() {
   print("Hello World!");
-  return ();
 }
 ```
 
-单元类型可以像普通类型一样作为值、参数、局部变量和字段使用。
+`Void` 可以像普通类型一样作为参数、局部变量和字段类型使用。
 
 ## for 循环中的解构
 

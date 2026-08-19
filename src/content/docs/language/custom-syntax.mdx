@@ -189,7 +189,7 @@ Int linux_syscall1(Int number, Int arg0) {
 An assembly block can also be used as a statement. If no value is needed, omit `result`:
 
 ```c
-() fence() {
+Void fence() {
     #asm {
         code "mfence";
         memory;
@@ -219,7 +219,7 @@ Int linux_syscall1_builtin(Int number, Int arg0) {
 
 The current `#asm` block supports:
 
-- `result T;`: the result type. If omitted, the block returns unit.
+- `result T;`: the result type. If omitted, the block returns `Void`.
 - `code "...";`: the assembly text. This item is required.
 - `in "register-or-constraint" value;`: an input operand.
 - `out "register-or-constraint";`: an output operand.

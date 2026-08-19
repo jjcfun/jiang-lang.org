@@ -3,7 +3,7 @@ title: 安装
 description: 安装 Jiang 编译器。
 ---
 
-Jiang 0.5.1 为 macOS arm64 和 Linux x86_64 提供预构建编译器包。
+Jiang 为 macOS arm64 和 Linux x86_64 提供预构建编译器包。
 
 ## 环境要求
 
@@ -15,8 +15,7 @@ LLVM 动态库。Linux 发布包要求 glibc 2.34 或更新版本。
 
 ## 安装发布包
 
-从 [0.5.1 GitHub 发布页](https://github.com/jjcfun/jiang/releases/tag/0.5.1) 下载
-`jiang-0.5.1-macos-arm64.zip` 或 `jiang-0.5.1-linux-x86_64.tar.gz`，然后解压。
+从[最新 GitHub 发布页](https://github.com/jjcfun/jiang/releases/latest)下载当前 host 对应的归档，然后解压。
 
 安装 Jiang：
 
@@ -27,7 +26,7 @@ LLVM 动态库。Linux 发布包要求 glibc 2.34 或更新版本。
 默认安装到：
 
 ```text
-~/.jiang/versions/0.5.1
+~/.jiang/versions/<version>
 ~/.jiang/bin/jiangc
 ```
 
@@ -48,39 +47,15 @@ jiangc --version
 第一行应该是：
 
 ```text
-jiang 0.5.1
+jiang <version>
 ```
 
 ## 从源码构建
 
-源码构建主要用于编译器开发。先克隆仓库：
+源码构建面向编译器贡献者。其工具链和 bootstrap 要求会随编译器演进；需要从源码构建时，请阅读
+[编译器开发流程](https://github.com/jjcfun/jiang/blob/release/0.5.2/doc/develop.md)。
 
-```bash
-git clone https://github.com/jjcfun/jiang.git
-cd jiang
-```
-
-安装锁定版本的 LLVM 22.1.8 SDK。使用 `--user` 可以把同一份已校验 SDK 放在 `~/.jiang`，
-供多个 worktree 复用：
-
-```bash
-bash ./script/install_llvm.sh --user
-```
-
-脚本会下载经过固定 SHA-256 校验的 macOS arm64 或 Linux x86_64 Jiang LLVM SDK，并安装到
-`$JIANG_HOME/toolchains/llvm/<version>/<host>`。未设置 `JIANG_HOME` 时使用 `~/.jiang`。
-脚本不会任意复用系统或 Homebrew LLVM。省略 `--user` 时，SDK 会安装到当前 worktree 的
-`build/llvm/<host>/install`。
-
-使用已安装的 0.5.1 发布版构建并验证编译器：
-
-```bash
-BOOTSTRAP_RELEASE_VERSION=0.5.1 \
-BOOTSTRAP_BIN="$HOME/.jiang/versions/0.5.1/bin/jiangc" \
-BOOTSTRAP_DEPTH=stable \
-VERIFY=full \
-bash ./script/build_next.sh
-```
+普通语言使用者不需要从源码构建编译器。
 
 ## 下一步
 

@@ -5,8 +5,7 @@ sidebar:
   order: 9
 ---
 
-Optional values are written as `T?`. The compiler-owned nominal name behind this form is not
-available to user source.
+Optional values are written as `T?`.
 
 ## Basic Usage
 
@@ -64,7 +63,7 @@ The left side must be optional. Use `guard` for early-exit control flow.
 ## `guard`
 
 ```c
-() print_value(Int? maybe) {
+Void print_value(Int? maybe) {
     guard maybe is .some(value) else {
         return ();
     }

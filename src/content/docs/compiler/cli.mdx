@@ -65,39 +65,17 @@ echo $?
 jiangc --mode debug main.jiang -o main
 ```
 
-Release mode enables LLVM optimization and uses package-level object organization when compiling a package directory:
+Release mode enables LLVM optimization:
 
 ```bash
 jiangc --mode release . -o app
 ```
 
-For single-file input, release mode still compiles that source file directly.
-
-## Artifact Cache and Backend Jobs
-
-Debug package builds persist reusable source interfaces and object work products under
-`build/cache` by default. Override the location when separate builds must not share a cache:
-
-```bash
-jiangc --artifact-cache-dir .jiang-cache . -o app
-```
-
-Use the explicit clean command instead of deleting an unresolved path from a script:
-
-```bash
-jiangc --artifact-cache-dir .jiang-cache --clean-artifact-cache
-```
-
-Independent debug codegen units can run in parallel. The default worker count is the logical CPU
-count available to the process; use `--jobs` only to set an explicit limit:
+Use `--jobs` when you need to cap compilation concurrency:
 
 ```bash
 jiangc --jobs 1 . -o app
 ```
-
-`--jobs` currently affects debug package object emission. Release, shared-library, LLVM IR, and
-single object emission remain serial. A failed unit does not discard successful cached objects, so
-a later build can reuse them.
 
 ## Targets
 
@@ -107,10 +85,10 @@ Use `--target` for LLVM IR or object output:
 jiangc --target x86_64-unknown-linux-gnu --emit-obj main.jiang -o main.o
 ```
 
-Hosted executable linking is native-toolchain only. Jiang 0.5.1 supports macOS arm64 and Linux x86_64
-as release hosts. Linux hosted programs use the system libc.
+Hosted executable linking is native-toolchain only. Release packages support macOS arm64 and Linux
+x86_64; Linux hosted programs use the system libc.
 Linux aarch64, Wasm, WASI, and Windows targets currently have narrower or experimental output
-boundaries, and Linux no-libc executable support is not part of 0.5.1.
+boundaries, and Linux no-libc executable support is not yet available.
 
 ## Linker Options
 

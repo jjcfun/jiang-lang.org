@@ -175,7 +175,7 @@ Int linux_syscall1(Int number, Int arg0) {
 也可以把汇编块写成语句。当不需要返回值时，可以省略 `result`：
 
 ```c
-() fence() {
+Void fence() {
     #asm {
         code "mfence";
         memory;

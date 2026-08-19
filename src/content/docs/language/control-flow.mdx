@@ -141,7 +141,7 @@ for i in 0..10 {
 `guard` is used for early exit while carrying successful bindings into the following scope:
 
 ```c
-() print_value(Int? maybe) {
+Void print_value(Int? maybe) {
     guard maybe is .some(value) else {
         return ();
     }

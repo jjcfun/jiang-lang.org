@@ -19,8 +19,7 @@ movement and lifetime rules are covered in [Ownership, Borrowing & Lifetimes](/l
 - `T[]^`: an owning slice.
 - `T[:S]&`: a borrowed sentinel slice whose sentinel value is `S`.
 
-Only `T^` and `T[]^` express language-level ownership. Compiler-owned names behind these forms are
-not available to user source; use the surface syntax directly.
+Only `T^` and `T[]^` express language-level ownership. Use these surface forms directly in source.
 
 Type-level `!` is supported only after `&` or `*`: `T&!` and `T*!`. A `!` after a binding name has a
 different purpose—it lets that variable, parameter, global, or field be reassigned and does not

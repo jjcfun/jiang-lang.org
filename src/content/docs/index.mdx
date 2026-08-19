@@ -17,14 +17,14 @@ import { Icon } from '@astrojs/starlight/components';
 
 Jiang is a systems programming language in active development. Custom syntax is the foundation for
 Jiang's All-in-one direction: users can extend Jiang with their ideal domain syntax while keeping
-Jiang's built-in type checking and systems-level runtime efficiency. Jiang 0.5.1 provides release
-compiler packages for macOS arm64 and Linux x86_64.
+Jiang's built-in type checking and systems-level runtime efficiency. Release compiler packages are
+available for macOS arm64 and Linux x86_64.
 
 These docs are written as a practical guide first. The language guide tracks the current development
 compiler; installation and platform pages describe the supported release hosts and toolchain boundaries.
 
-Jiang 0.5.1 adds Linux x86_64 hosted support plus incremental and parallel compilation. It does not
-add Linux no-libc support or an LSP; compiler-service foundations remain available for later tooling.
+Linux hosted programs use the system libc and native toolchain. Linux no-libc support and an LSP are
+not yet available.
 
 ## Start Here
 
@@ -56,8 +56,7 @@ add Linux no-libc support or an LSP; compiler-service foundations remain availab
 The Jiang compiler has reached an initial stable self-hosting milestone: the release compiler is
 produced from Jiang source and verified by the full language test suite.
 
-The 0.5.1 release focuses on Linux hosted/libc support and incremental and parallel compilation.
-`#asm` is primarily for runtime code, system calls, and platform boundaries; ordinary application
-code usually should not need it.
+`#asm` is primarily for runtime code, system calls, and platform boundaries; ordinary application code
+usually should not need it.
 
 For now, treat the website as a living language guide rather than a frozen specification. The most stable pieces are naming style, type notation, mutability, arrays, pointers, optionals, imports, packages, and the current compiler command-line workflow.

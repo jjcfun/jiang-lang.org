@@ -180,7 +180,7 @@ Int b = u.value();
 ```
 
 receiver 简写 `self` 是 readonly `Self&`。需要修改可写字段时，显式声明 `Self&! self`；
-borrow checker 会在调用点建立 unique mutable reborrow。
+调用会在需要时建立唯一可变重借用。
 
 ## 局部声明
 

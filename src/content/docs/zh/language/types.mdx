@@ -26,7 +26,7 @@ Char ch = 'a';
 
 `enum` 的 discriminant 默认使用 `Int32` 存储；只有显式声明其他整数表示时才会改变。
 
-`()` 是单元类型。它是零大小值，也用于表示函数没有有意义的返回数据。
+`Void` 是零大小类型，用于表示函数没有有意义的返回数据；它的唯一值是 `()`。
 
 字符串字面量按 UTF-8 字节序列处理。默认借用视图类型是 `UInt8[:0]&`，因此编译器可以在
 C 风格边界暴露以 0 结尾的数据，同时把切片长度和哨兵字节分开处理。
@@ -76,9 +76,8 @@ Int?[2]?[3] nullable_rows;
 | `T[]^` | owning slice |
 | `T[:S]&` | 借用哨兵 slice reference |
 
-这些表面语法背后的 compiler-owned 名义类型名不再向用户源码开放。声明、`extend`
-target 和 `@where` type pattern 都应使用表面语法。用户自定义的 `Option`、`Result`、`Ref`、
-`Box` 或 `Slice` 只是普通名义类型，不会获得内建语义。
+声明、`extend` target 和 `@where` type pattern 都应使用这些表面语法。用户自定义的 `Option`、
+`Result`、`Ref`、`Box` 或 `Slice` 只是普通名义类型，不会获得内建语义。
 
 类型级 `!` 只允许用于 `T&!` 和 `T*!`。`Int!`、`T^!`、`T[]!`、`T?!`、`T!&` 都是非法
 类型。变量、参数、全局和字段是否可重新赋值，统一在绑定名后写 `!`。

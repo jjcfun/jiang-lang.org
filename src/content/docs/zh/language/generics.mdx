@@ -24,7 +24,7 @@ _ b = id(42);
 ## 泛型类型
 
 ```c
-@region(a, b)
+@region(a: A, b: B)
 struct Pair<A, B> {
     @life(a)
     A first;
@@ -36,8 +36,8 @@ struct Pair<A, B> {
 Pair<Int, UInt8[]&> pair = Pair<Int, UInt8[]&>(first: 1, second: "one");
 ```
 
-泛型字段可能被实例化成携带 lifetime 的类型，因此泛型 nominal type 需要声明并绑定这些字段
-对外暴露的 region。
+`a: A` 与 `b: B` 表示这两个公开 region 分别具有对应类型实参的完整 lifetime shape。泛型字段
+上的 `@life(a)` 会绑定 `A` 携带的全部 lifetime，而不只是其中第一个。
 
 泛型实参也是类型，因此可以继续携带可选、数组、指针和引用等后缀：
 

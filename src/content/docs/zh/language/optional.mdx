@@ -5,7 +5,7 @@ sidebar:
   order: 9
 ---
 
-可选类型使用 `T?` 表示。它背后的 compiler-owned 名义类型名不向用户源码开放。
+可选类型使用 `T?` 表示。
 
 ## 基本用法
 
@@ -67,7 +67,7 @@ Int other = maybe ?? default_value();
 需要“为空就提前退出”时使用 `guard`：
 
 ```c
-() print_value(Int? maybe) {
+Void print_value(Int? maybe) {
     guard maybe is .some(value) else {
         return ();
     }

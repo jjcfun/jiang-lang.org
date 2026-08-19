@@ -23,12 +23,12 @@ trait Equatable {
 }
 
 trait Hasher {
-    () write(Self&! self, UInt8[]& bytes);
+    Void write(Self&! self, UInt8[]& bytes);
     UInt64 finish(self);
 }
 
 trait Hashable: Equatable {
-    () hash<H: Hasher>(self, H&! hasher);
+    Void hash<H: Hasher>(self, H&! hasher);
 }
 ```
 
@@ -75,7 +75,7 @@ writer.write(123);
 `Writer.Any&` dispatch through that table:
 
 ```c
-() write_one(Writer.Any& writer) {
+Void write_one(Writer.Any& writer) {
     writer.write(123);
 }
 ```
@@ -85,7 +85,7 @@ erased receiver as their first parameter, while associated functions keep their 
 list:
 
 ```c
-RawFn<(), Writer.Receiver, Int> write_slot = writer.write;
+RawFn<Void, Writer.Receiver, Int> write_slot = writer.write;
 write_slot(writer.receiver, 123);
 ```
 
@@ -251,6 +251,6 @@ public trait SubscriptGet {
 }
 
 public trait SubscriptSet: SubscriptGet {
-    () subscript_set(self, Index index, Value value);
+    Void subscript_set(self, Index index, Value value);
 }
 ```
