@@ -1,14 +1,12 @@
 ---
-title: 枚举、联合类型与模式匹配
-description: Jiang 语言中的 enum、带标签联合类型、可选值和变体模式匹配。
+title: 枚举与模式匹配
+description: Jiang 语言中的整数 enum、payload enum、可选值和变体模式匹配。
 sidebar:
   order: 8
 ---
 
-Jiang 把有限标签集合和带携带值的联合类型分开表达：
-
-- `enum` 表示有限命名成员集合。
-- `union` 表示安全的带标签联合类型，每个变体可以携带值。
+Jiang 使用 `enum` 表示一组固定的具名 case。case 也可以携带值，此时 enum 就是一个
+代数数据类型。
 
 ## 枚举
 
@@ -34,8 +32,7 @@ enum Priority {
 }
 ```
 
-`enum` 的 discriminant 默认使用 `Int32`。需要读取整数值时，使用目标整数类型构造，
-例如 `Int(value)` 或 `UInt8(value)`；`enum` case 不再提供 `.value` 成员。
+`enum` case 的整数值默认使用 `Int32`。没有显式指定值的 case 会从前一个 case 继续递增。
 
 需要固定存储表示时，可以写 `enum [UInt8]` 或其他整数类型：
 
@@ -48,56 +45,69 @@ enum [UInt8] ByteTag {
 UInt8 tag = UInt8(ByteTag.block);
 ```
 
-enum 值使用目标整数类型的构造表达式转换：
+enum 值使用目标整数类型的构造表达式转换；case 不提供 `.value` 成员：
 
 ```c
 Int value = Int(Mode.read);
 ```
 
-## 联合类型
+## Payload enum
 
-`union` 是带标签的安全联合类型。它不是 C 风格的无标签裸联合。
+payload enum 是带标签的安全代数数据类型，不是 C 风格的无标签裸联合。
 
 ```c
-union Outcome<T, E> {
-    T ok;
-    E err;
+enum Outcome<T, E> {
+    ok(T),
+    err(E),
 }
 
 Outcome<Int, ParseErr> a = Outcome.ok(42);
 Outcome<Int, ParseErr> b = .err(ParseErr.bad);
 ```
 
-携带值可以是普通类型，例如 `struct`、元组、数组、slice、`Fn<...>`、`T^`、`T&`、`T*`、
-可选类型，以及其他 `union` / `enum`。
+携带值可以是普通类型，例如 `struct`、Tuple、数组、slice、`Fn<...>`、`T^`、`T&`、`T*`、
+可选类型，以及其他 payload enum。
 
-同类型多个变体可以合并声明：
+一个 case 可以携带多个值。为这些位置命名后，文档和 pattern 绑定会更清晰：
 
 ```c
-union Value {
-    Int int_value, code;
-    Double float_value;
-    UInt8[]& text;
+enum Value {
+    none,
+    int_value(Int),
+    pair(Int left, Bool right),
 }
 ```
 
-`union` 可以省略显式标签枚举，直接使用变体名区分不同情况；也可以复用已有 `enum` 作为标签：
+payload case 也可以显式指定整数类型和整数值：
 
 ```c
-enum Kind {
-    int_value,
-    text,
+enum [UInt8] WireValue {
+    none = 1,
+    int_value(Int) = 7,
 }
 
-union [Kind] TaggedValue {
-    Int int_value;
-    UInt8[]& text;
+UInt8 tag = UInt8(WireValue.int_value(42));
+```
+
+case 必须写在方法和嵌套类型之前。enum 同时定义这些成员时，用 `;` 将 case 与成员分开：
+
+```c
+enum Value {
+    none,
+    int_value(Int);
+
+    Bool has_value(self) {
+        return self is .int_value(_);
+    }
 }
 ```
+
+payload 遵循普通 ownership 规则：move enum 会 move 当前 case 的 payload，borrow payload 不会
+move 它，析构 enum 时也只析构当前 case 的 payload。
 
 ## `is` 匹配
 
-`is` 用于模式匹配。匹配 `union` 变体时可以解构携带值：
+`is` 用于模式匹配。匹配 payload enum case 时可以解构携带值：
 
 ```c
 if value is .int_value(_ n) {
@@ -115,13 +125,13 @@ if value is .int_value(_ n!) {
 }
 ```
 
-使用 `ref name` 可以借用联合承载值，而不是按值绑定承载值。省略的类型位表示 `_`；
+使用 `ref name` 可以借用 enum payload，而不是按值绑定 payload。省略的类型位表示 `_`；
 需要显式 type pattern 时仍可写 `ref T name`：
 
 ```c
-union Node {
-    (Int, Int) pair;
-    Void empty;
+enum Node {
+    pair(Int, Int),
+    empty,
 }
 
 Int read_ref(Int& value) {
@@ -152,7 +162,7 @@ if maybe is .some(item) {
 
 ## `switch` 匹配
 
-`switch` 按模式分支匹配。处理 `enum`、`union` 和可选值时，建议覆盖所有情况；需要兜底时使用 `else`。
+`switch` 按模式分支匹配。处理 `enum` 和可选值时，建议覆盖所有情况；需要兜底时使用 `else`。
 
 ```c
 Int code = switch mode {
@@ -161,7 +171,7 @@ Int code = switch mode {
 }
 ```
 
-处理 `union` 携带值：
+处理 enum payload：
 
 ```c
 Int result = switch value {
@@ -172,7 +182,7 @@ Int result = switch value {
 }
 ```
 
-借用联合承载值时使用同样的 `ref` 子模式：
+借用 enum payload 时使用同样的 `ref` 子模式：
 
 ```c
 Int result = switch node {

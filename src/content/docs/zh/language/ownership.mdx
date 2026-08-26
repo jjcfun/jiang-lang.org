@@ -15,7 +15,7 @@ storage address。`!Movable` 值必须直接初始化到最终 place，不能按
 捕获或 move。直接 `Task<T>` 和 `Mutex<T>` 用这条规则保持地址稳定。
 
 `Copyable` 继承 `Movable`，决定普通按值使用执行 copy 还是 move。标量、enum、shared reference、
-raw pointer 和 `RawFn` 默认 Copyable。用户定义的 `struct` / `union` 不默认 Copyable；
+raw pointer 和 `RawFn` 默认 Copyable。用户定义的 `struct` / payload enum 不默认 Copyable；
 只有显式实现 `Copyable` 且所有字段或 payload 都 Copyable 时才能复制。带自定义 `deinit`
 的类型不能实现 `Copyable`。
 
@@ -69,7 +69,7 @@ Box b = a; // move；a 随后失效
 ```
 
 runtime 析构取决于 ownership、字段、payload 和自定义 `deinit`，不由 `Movable` 标记开启。
-`T^` 会先析构 pointee，再释放堆存储。tuple、array、optional、errorable、struct 和 union
+`T^` 会先析构 pointee，再释放堆存储。tuple、array、optional、errorable、struct 和 payload enum
 会递归析构拥有的内容。`T&`、`T*`、`T[]&` 等非拥有视图不会释放目标。自定义 `deinit`
 先执行，随后字段按声明逆序析构。
 
@@ -200,8 +200,8 @@ Domain 的 heap Task 仍必须满足普通 lifetime 与 `Sendable` 规则。
 
 ## 生命周期约束
 
-包含借用的 `struct` / `union` 使用 `@region` 声明公开 lifetime region。每个 region 都必须被字段或
-union payload 使用。引用同时包含外层 borrow 与 pointee 的 lifetime shape。对于简单字段，
+包含借用的 `struct` / payload enum 使用 `@region` 声明公开 lifetime region。每个 region 都必须被
+字段或 enum payload 使用。引用同时包含外层 borrow 与 pointee 的 lifetime shape。对于简单字段，
 `@life(a)` 会绑定外层 borrow，并用 `a` 填充 pointee 的全部 lifetime：
 
 ```c

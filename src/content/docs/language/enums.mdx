@@ -1,14 +1,12 @@
 ---
-title: Enums, Unions & Patterns
-description: Enums, tagged unions, optional and variant patterns, and switch.
+title: Enums & Patterns
+description: Integer enums, payload enums, optional and variant patterns, and switch.
 sidebar:
   order: 8
 ---
 
-Jiang separates finite tag sets from payload-bearing sum types:
-
-- `enum` defines named members.
-- `union` defines a safe tagged union where variants may carry payloads.
+Jiang uses `enum` for a fixed set of named cases. A case can also carry values, which makes the enum
+an algebraic data type.
 
 ## Enums
 
@@ -32,9 +30,8 @@ enum Priority {
 }
 ```
 
-Enum discriminants use `Int32` by default. Convert an enum value with a target integer
-constructor such as `Int(value)` or `UInt8(value)`; enum cases do not expose a `.value`
-member.
+Enum case values use `Int32` by default. Cases without an explicit value continue from the previous
+case.
 
 Use `enum [UInt8]` or another integer type when the stored representation must be
 fixed:
@@ -48,47 +45,60 @@ enum [UInt8] ByteTag {
 UInt8 tag = UInt8(ByteTag.block);
 ```
 
-Convert an enum value with a target integer constructor:
+Convert an enum value with a target integer constructor; enum cases do not expose a `.value` member:
 
 ```c
 Int value = Int(Mode.read);
 ```
 
-## Unions
+## Payload Enums
 
 ```c
-union Outcome<T, E> {
-    T ok;
-    E err;
+enum Outcome<T, E> {
+    ok(T),
+    err(E),
 }
 
 Outcome<Int, ParseErr> a = Outcome.ok(42);
 Outcome<Int, ParseErr> b = .err(ParseErr.bad);
 ```
 
-Same-type variants can be grouped:
+A case can carry more than one value. Names make those payload positions easier to document and bind:
 
 ```c
-union Value {
-    Int int_value, code;
-    Double float_value;
-    UInt8[]& text;
+enum Value {
+    none,
+    int_value(Int),
+    pair(Int left, Bool right),
 }
 ```
 
-Unions can bind an explicit tag enum:
+Payload cases can also have an explicit integer type and values:
 
 ```c
-enum Kind {
-    int_value,
-    text,
+enum [UInt8] WireValue {
+    none = 1,
+    int_value(Int) = 7,
 }
 
-union [Kind] TaggedValue {
-    Int int_value;
-    UInt8[]& text;
+UInt8 tag = UInt8(WireValue.int_value(42));
+```
+
+Cases must come before methods and nested types. Use `;` to separate the cases from those members:
+
+```c
+enum Value {
+    none,
+    int_value(Int);
+
+    Bool has_value(self) {
+        return self is .int_value(_);
+    }
 }
 ```
+
+A payload follows the usual ownership rules. Moving the enum moves its active payload, borrowing a
+payload does not move it, and destroying the enum destroys only the payload of its current case.
 
 ## `is`
 
@@ -108,13 +118,13 @@ if value is .int_value(_ n!) {
 }
 ```
 
-Use `ref name` to borrow a union payload instead of binding it by value. The omitted type position
+Use `ref name` to borrow an enum payload instead of binding it by value. The omitted type position
 means `_`; write `ref T name` when an explicit type pattern is useful:
 
 ```c
-union Node {
-    (Int, Int) pair;
-    Void empty;
+enum Node {
+    pair(Int, Int),
+    empty,
 }
 
 Int read_ref(Int& value) {
@@ -152,7 +162,7 @@ Int code = switch mode {
 }
 ```
 
-Union payloads:
+Enum payloads:
 
 ```c
 Int result = switch value {
@@ -163,7 +173,7 @@ Int result = switch value {
 }
 ```
 
-Borrowed union payloads use the same `ref` sub-pattern:
+Borrowed enum payloads use the same `ref` sub-pattern:
 
 ```c
 Int result = switch node {

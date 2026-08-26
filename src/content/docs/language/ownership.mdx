@@ -16,7 +16,7 @@ place; it cannot be passed or returned by value, assigned to a new place, captur
 Direct `Task<T>` and `Mutex<T>` values use this rule to remain address-stable.
 
 `Copyable` extends `Movable` and decides whether ordinary value use copies or moves. Scalars, enums,
-shared references, raw pointers, and `RawFn` values are copyable. User-defined `struct` and `union`
+shared references, raw pointers, and `RawFn` values are copyable. User-defined `struct` and payload enum
 types are not copyable unless they explicitly implement `Copyable` and every field or payload is
 also copyable. A type with a custom `deinit` cannot be `Copyable`.
 
@@ -71,7 +71,7 @@ Box b = a; // move; a is now invalid
 
 Runtime destruction follows ownership, fields, payloads, and custom `deinit`; it is not enabled by
 the `Movable` marker. Dropping `T^` first drops the pointee and then frees its heap storage.
-Tuple, array, optional, errorable, struct, and union values recursively drop owned contents.
+Tuple, array, optional, errorable, struct, and payload enum values recursively drop owned contents.
 Non-owning views such as `T&`, `T*`, and `T[]&` do not free their targets. A custom `deinit` runs
 before fields are dropped in reverse declaration order.
 
@@ -102,7 +102,7 @@ Int&! another_mutable_ref = second$.mut_ref();
 (ref! another_borrow) = second;
 ```
 
-Inside optional and union payload patterns, use `ref name` to borrow the payload instead of copying
+Inside optional and enum payload patterns, use `ref name` to borrow the payload instead of copying
 or moving it. The omitted type position means `_`; explicit `ref T name` remains available:
 
 ```c
@@ -208,8 +208,8 @@ described above. Raw pointers carry neither ownership nor lifetime proof and are
 
 ## Lifetime Annotations
 
-Borrowing `struct` and `union` types declare their public lifetime regions with `@region`. Every
-declared region must be used by a field or union payload. A reference has an outer borrow plus the
+Borrowing `struct` and payload enum types declare their public lifetime regions with `@region`. Every
+declared region must be used by a field or enum payload. A reference has an outer borrow plus the
 lifetime shape of its pointee. For a simple field, `@life(a)` binds the outer borrow and uses `a` for
 every pointee lifetime as well:
 

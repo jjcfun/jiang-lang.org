@@ -43,7 +43,7 @@ UInt8[]& read_source(UInt8[]& file_path) {
 - `const`：定义编译期常量。
 - 全局变量声明。
 - 函数声明或定义。
-- `struct`、`enum`、`union`、`trait`。
+- `struct`、`enum`、`trait`。
 - `extend`：给已有类型补方法或补 `trait` 实现。
 - `comptime` block：在编译期选择顶层源码。
 
@@ -206,4 +206,4 @@ if maybe is .some(Int value!) {
 }
 ```
 
-`switch` 也使用模式。匹配 `enum`、`union` 和可选值时，应覆盖所有可能情况，或者使用 `else` 兜底。
+`switch` 也使用模式。匹配 `enum` 和可选值时，应覆盖所有可能情况，或者使用 `else` 兜底。
