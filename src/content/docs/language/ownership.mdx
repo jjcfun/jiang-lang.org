@@ -181,6 +181,9 @@ Int^ make_owner() {
 }
 ```
 
+`T^` owns the allocation and the `T` stored in it. If `T` contains non-owning references, the owner
+does not extend the lifetime of their sources; the resulting `T^` retains those lifetime requirements.
+
 Jiang distinguishes shared readonly and unique mutable loans. Any number of shared `T&` views may
 coexist. A `T&` does not grant write capability through that reference, but an ordinary shared view
 does not by itself freeze updates through the owner. A live `T&!` loan must be exclusive for every
@@ -223,13 +226,29 @@ struct ByteView {
 ```
 
 Declaration order matters when the type is used with positional lifetime bindings. A clause such as
-`@region(a, b, b: a)` means `a` must live at least as long as `b`. Both names must be declared in the
-same annotation, and the same name cannot be constrained twice. Mutual constraints are allowed:
-`@region(a, b, b: a, a: b)` gives `a` and `b` the same lifetime requirement.
+`@region(a, b: a)` declares both names and means `a` must live at least as long as `b`. Each target is
+written once. Mutual constraints are allowed: `@region(a: b, b: a)` gives `a` and `b` the same
+lifetime requirement.
 
 Fields with several lifetimes can bind them in declaration order, as in `@life(a, b)`, or by names
 provided by the field type, as in `@life(left: a, right: b)`. The two forms cannot be mixed. Every
 name must be bound exactly once, and field bindings cannot use `self`.
+
+A scalar source fills the complete lifetime shape of one top-level field or payload position. A
+parenthesized scalar such as `(a)` means the same thing. Use a tuple source only when nested lifetime
+positions need different sources. Every top-level position must still be present in the binding.
+
+For example, if each `Cell&` position has two lifetime slots, these three payload bindings are
+equivalent:
+
+```c
+@life(a, a)
+// or: @life(left: a, right: a)
+// or: @life(left: (a, a), right: (a, a))
+pair(Cell& left, Cell& right)
+```
+
+They are alternative spellings for one case declaration, not three annotations to write together.
 
 For an exact binding of a reference whose pointee has several regions, keep its pointee shape grouped.
 If `PairRef` has regions `left` and `right`, use `@life(a, (left, right))`; do not flatten it to

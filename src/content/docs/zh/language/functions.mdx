@@ -288,6 +288,10 @@ Int call_optional(Fn<Int>^? maybe) {
 }
 ```
 
+拥有型闭包拥有 closure object 和所有 by-value capture。borrow capture 仍然是借用，
+放入 `Fn^` 不会延长它们的来源生命周期。所有 borrow capture 共同形成一个 callable lifetime
+位置，因此该闭包不能比其中最短的 borrow 活得更久。
+
 实例方法作为未绑定函数值时，接收者展开为第一个参数，并表示成 `RawFn`：
 
 ```c

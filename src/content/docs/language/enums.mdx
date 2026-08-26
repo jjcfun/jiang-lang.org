@@ -51,6 +51,13 @@ Convert an enum value with a target integer constructor; enum cases do not expos
 Int value = Int(Mode.read);
 ```
 
+For a no-payload integer enum, `Type.init?(integer)` returns the matching case or `.none` when the
+integer is not a declared case value:
+
+```c
+Priority? priority = Priority.init?(2);
+```
+
 ## Payload Enums
 
 ```c
@@ -166,10 +173,9 @@ Enum payloads:
 
 ```c
 Int result = switch value {
+    .none => 0,
     .int_value(_ n) => n,
-    .code(_ code) => code,
-    .float_value(_) => 0,
-    .text(_ bytes) => bytes.length,
+    .pair(left, right) => if right { left } else { 0 },
 }
 ```
 

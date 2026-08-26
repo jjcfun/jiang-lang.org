@@ -296,6 +296,10 @@ Int call_optional(Fn<Int>^? maybe) {
 }
 ```
 
+An owned closure owns its closure object and all by-value captures. Borrowed captures remain borrows:
+putting them in `Fn^` does not extend their sources. All borrowed captures contribute to one callable
+lifetime position, so the owned closure cannot outlive the shortest borrowed capture.
+
 An unbound instance method includes the receiver reference as its first parameter and is represented
 as a `RawFn`:
 

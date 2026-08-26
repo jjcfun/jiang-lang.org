@@ -178,6 +178,9 @@ Int^ make_owner() {
 }
 ```
 
+`T^` 拥有 allocation 和其中的 `T`。如果 `T` 内部包含 non-owning reference，owner 不会延长
+这些 reference 的来源生命周期；得到的 `T^` 仍保留它们的 lifetime 要求。
+
 Jiang 区分 shared readonly loan 和 unique mutable loan。任意数量的 shared `T&` view 可以共存。
 `T&` 本身不提供写能力，但普通 shared view 不会仅因存在就冻结 owner 通过自身更新 source。
 live `T&!` 必须对所有重叠 place 保持独占，且不能隐式复制；这种 unique loan 存活期间，
@@ -213,13 +216,28 @@ struct ByteView {
 }
 ```
 
-使用位置绑定时，region 的声明顺序有意义。`@region(a, b, b: a)` 表示 `a` 至少要和 `b`
-活得一样久。关系两端必须在同一个 annotation 中声明，同一个名字不能被约束两次。
-允许相互约束：`@region(a, b, b: a, a: b)` 表示 `a` 和 `b` 的生命周期要求相同。
+使用位置绑定时，region 的声明顺序有意义。`@region(a, b: a)` 同时声明两个名字，
+并表示 `a` 至少要和 `b` 活得一样久。每个 target 只写一次。允许相互约束：
+`@region(a: b, b: a)` 表示 `a` 和 `b` 的生命周期要求相同。
 
 具有多个 lifetime 的字段可以按声明顺序写 `@life(a, b)`，也可以使用字段类型提供的名字，
 写成 `@life(left: a, right: b)`。两种形式不能混用，每个名字必须恰好绑定一次；
 字段绑定不能使用 `self`。
+
+一个 scalar source 会填充一个顶层字段或 payload 位置的完整 lifetime shape。`(a)` 这样的
+单元括号形式与 `a` 等价；只有嵌套 lifetime 位置需要不同 source 时才写 Tuple source。
+每个顶层位置仍必须在 binding 中出现。
+
+例如，假设每个 `Cell&` 位置都有两个 lifetime slot，下面三种 payload binding 等价：
+
+```c
+@life(a, a)
+// 或：@life(left: a, right: a)
+// 或：@life(left: (a, a), right: (a, a))
+pair(Cell& left, Cell& right)
+```
+
+它们是同一个 case 声明的三种可选写法，不是需要同时写下的三条 annotation。
 
 需要精确绑定一个 pointee 带多个 region 的引用时，pointee shape 必须保持分组。假设 `PairRef` 有
 `left`、`right` 两个 region，应写 `@life(a, (left, right))`，不能扁平化成

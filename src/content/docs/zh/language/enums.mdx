@@ -51,6 +51,13 @@ enum 值使用目标整数类型的构造表达式转换；case 不提供 `.valu
 Int value = Int(Mode.read);
 ```
 
+对于无 payload 整数 enum，`Type.init?(integer)` 会返回匹配的 case；整数不是已声明的
+case 值时返回 `.none`：
+
+```c
+Priority? priority = Priority.init?(2);
+```
+
 ## Payload enum
 
 payload enum 是带标签的安全代数数据类型，不是 C 风格的无标签裸联合。
@@ -175,10 +182,9 @@ Int code = switch mode {
 
 ```c
 Int result = switch value {
+    .none => 0,
     .int_value(_ n) => n,
-    .code(_ code) => code,
-    .float_value(_) => 0,
-    .text(_ bytes) => bytes.length,
+    .pair(left, right) => if right { left } else { 0 },
 }
 ```
 
