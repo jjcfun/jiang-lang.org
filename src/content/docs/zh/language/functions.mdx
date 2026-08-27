@@ -430,7 +430,31 @@ struct InlineDomain: Domain<kind = .serial> {
 const InlineDomain inline_domain = InlineDomain();
 ```
 
-每个命名 `const` binding 都是独立 Domain，并且只懒创建一个 Executor 实例。
+同一种 Domain 类型支持两种生命周期。命名 `const` binding 是程序级执行身份，并且只懒创建一个
+Executor 实例。长期共享的 Domain 应优先使用这种形式；它的调度开销也低于 runtime Domain。
+
+页面、场景或会话需要可单独释放的执行身份时，创建普通 Domain value，并在选择它时传入共享引用：
+
+```c
+SceneDomain scene_domain = SceneDomain(config: config);
+
+Task<Int> task = Task(domain: scene_domain$.ref()) {
+    load_scene()
+};
+
+Int value = coroutine.sync(scene_domain$.ref()) {
+    update_scene()
+};
+```
+
+只有命名 `const` Domain 可以写入 `async [domain]` effect。runtime Domain 已接受的 Task 可以在
+Domain owner 离开作用域后继续完成；销毁 owner 不会隐式取消 Task，相关资源会在已接受的 Task
+全部结束后释放。`coroutine.sync(scene_domain$.ref())` 则是结构化调用：它只借用 Domain 到 closure
+及其子协程全部完成，返回值不携带该 Domain 的 lifetime。
+
+选择时应先看所有权：应用全程共享的执行身份使用 `const`；需要独立拥有并及时释放的执行资源使用
+普通 Domain value。runtime 形式会支付少量动态生命周期开销，以换取资源的确定回收。
+
 `ExecutorJob` 是只能移动、只能运行一次的值；Executor 接收后必须最终恰好调用一次 `run()`。
 `enqueue` 可能从多个线程并发调用，Executor 必须自行同步可变队列状态。
 

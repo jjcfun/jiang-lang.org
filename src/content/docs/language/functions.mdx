@@ -447,7 +447,36 @@ struct InlineDomain: Domain<kind = .serial> {
 const InlineDomain inline_domain = InlineDomain();
 ```
 
-Every named `const` binding is a distinct Domain and lazily owns one Executor instance.
+The same Domain type supports two lifetime models. A named `const` binding is a program-wide
+execution identity and lazily owns one Executor instance. It is the preferred form for long-lived
+shared Domains and has lower scheduling overhead than a runtime Domain.
+
+Create an ordinary Domain value when a page, scene, or session needs an independent execution
+identity that can be released when that owner is no longer used. Pass a shared reference when
+selecting it:
+
+```c
+SceneDomain scene_domain = SceneDomain(config: config);
+
+Task<Int> task = Task(domain: scene_domain$.ref()) {
+    load_scene()
+};
+
+Int value = coroutine.sync(scene_domain$.ref()) {
+    update_scene()
+};
+```
+
+Only a named `const` Domain may appear in an `async [domain]` effect. A Task accepted by a runtime
+Domain can finish after the Domain owner leaves scope; dropping the owner does not implicitly cancel
+it. The Domain's resources are released after its accepted Tasks finish. By contrast,
+`coroutine.sync(scene_domain$.ref())` is structured: it borrows the Domain only until the closure and
+its child coroutines complete, and the returned value does not carry that Domain lifetime.
+
+Choose based on ownership first: use `const` for shared application-lifetime execution identities,
+and an ordinary Domain value for independently owned, finite-lived execution resources. The runtime
+form pays modest dynamic-lifetime overhead so that those resources can be reclaimed deterministically.
+
 `ExecutorJob` is a move-only, one-shot value: after accepting it, an Executor must eventually call
 `run()` exactly once. An Executor may receive concurrent `enqueue` calls and must synchronize its
 own mutable queue state.
