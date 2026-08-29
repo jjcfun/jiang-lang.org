@@ -1,0 +1,24 @@
+---
+title: 诊断
+description: 断言、debug 输出、trap、panic 与进程终止。
+sidebar:
+  order: 7
+---
+
+`assert(condition)` 和 `assert(condition, message)` 在 debug 与 release build 中都会保留。失败输出包含
+source location 和可选 message，随后终止进程。
+
+普通诊断输出使用 `std.debug.write` 或 `write_line`。两者都返回 `Bool`，调用方可以观察输出失败。
+`std.debug.trap()` 会立即终止，不执行 unwind，也不保证析构。
+
+```c
+if (!std.debug.write_line("loading configuration")) {
+    return 1;
+}
+```
+
+`panic(message)` 向标准错误写入 message 和换行，然后 abort。Jiang 0.5.3 不支持 unwind panic：
+`panic`、`trap` 和 `std.process.exit` 都不会执行作用域清理。可以恢复的失败应使用 `T@E`。
+
+`std.build.mode` 是只读 `BuildMode`，用于 comptime 选择 debug/release 路径。debugger 控制、profiling、
+backtrace 和 core dump 管理不属于标准库 API。

@@ -1,0 +1,55 @@
+---
+title: 文件与进程 I/O
+description: Owned 文件 handle、owned 读取结果、可移植错误与进程 stream。
+sidebar:
+  order: 4
+---
+
+`std.fs.read_all` 返回独立拥有的 bytes，离开作用域时自动释放：
+
+```c
+import std;
+
+Int main() {
+    UInt8[]^ contents = try std.fs.read_all("settings.json")
+        catch std.fs.FileError error {
+            return switch error {
+                .not_found => 2,
+                .permission_denied => 3,
+                else => 1,
+            };
+        };
+
+    std.fs.File output! = std.io.stdout();
+    Void written = try output.write_all(contents[..]) catch { return 4; };
+    return 0;
+}
+```
+
+`File` 是 move-only handle owner。move 会转移 handle；owned 文件会自动关闭，显式 `close()` 可重复
+调用并能报告错误。关闭后 read/write 返回 `.closed`。`stdout()` 与 `stderr()` 返回的 handle 不拥有
+进程 stream，因此 close 只会让当前 `File` value 失效。
+
+`FileError` 使用 `.not_found`、`.permission_denied`、`.invalid_argument`、`.no_space`、`.read_only`、
+`.closed`、`.unsupported` 和 `.io` 等可移植 case，不暴露平台错误码。
+
+async 代码可调用 `std.fs.read_all_async(path)`，避免 regular-file 读取阻塞当前 Domain。读取在共享并发
+IO Domain 上执行并返回 owned bytes。取消是 cooperative 的：已经开始的 provider call 会先完成，随后
+关闭文件并完成取消。这不是 kernel readiness API，`File` 本身仍然不满足 `Sendable`。
+
+存在性查询会把“不存在”和“不可访问”都表示为 false。需要区分失败原因时，应使用 `open` 或
+`file_metadata`。
+
+`std.fs.list_dir` 会 eager 返回完整子路径。每个 `Path` 独立拥有 native path bytes，结果不借用目录
+参数或打开的目录 handle。结果不包含 `.` 和 `..`，也不保证顺序：
+
+```c
+std.Vector<Path> entries = try std.fs.list_dir("assets") catch {
+    return 1;
+};
+for ref Path entry in entries.slice() {
+    // 在这里借用 entry.bytes()。
+}
+```
+
+需要确定性输出时，应由调用方显式排序。

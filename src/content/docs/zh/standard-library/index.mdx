@@ -1,0 +1,30 @@
+---
+title: 标准库
+description: 从 Jiang 的文本、collection、文件、时间、随机数和诊断 API 开始。
+sidebar:
+  order: 1
+---
+
+导入 `std` 即可使用标准库：
+
+```c
+import std;
+
+String message = "hello";
+std.Vector<Int> values! = std.Vector<Int>();
+```
+
+`String`、`Vector`、`Path` 和 `Duration` 等常用 value type 可以从 `std` 直接使用；更广的 API
+按用途组织：
+
+- `std.collection` 提供 `Vector`、`HashMap` 和 `HashSet`。
+- `std.fs`、`std.io` 和 `std.process` 提供 hosted 系统操作；文件读取另有一个聚焦的 async 入口。
+- `std.path` 只处理 path bytes，不访问文件系统。
+- `std.time` 和 `std.random` 提供时钟、时间间隔、系统 entropy 和 seeded generator。
+- `std.debug` 和 `panic` 提供诊断与不可恢复的进程终止。
+
+标准库遵守普通 Jiang 所有权规则：owned 结果会自动释放，borrowed view 不能活过来源，可恢复失败使用
+`T@E`。
+
+`Domain`、`Task` 和 `coroutine` 是 `core` 中的语言级并发能力；`std` 不再包装第二套 async API。
+下一步可阅读[函数与 Task](/zh/language/functions/#异步函数和-task)。

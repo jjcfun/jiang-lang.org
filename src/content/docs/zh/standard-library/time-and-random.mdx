@@ -1,0 +1,29 @@
+---
+title: 时间与随机数
+description: Duration、单调时钟、墙上时钟、系统 entropy 与可复现 generator。
+sidebar:
+  order: 5
+---
+
+使用明确单位构造非负 `Duration`：
+
+```c
+Duration timeout = std.time.milliseconds(UInt64(250));
+UInt64 micros = timeout.microseconds();
+```
+
+`monotonic_now()` 适合计算同一进程中的耗时与 timeout。`wall_now()` 返回 Unix epoch 以来的时间，可能
+随系统校时发生变化。target 无法提供相应时钟时，两者都会返回 `null`。
+
+```c
+guard std.time.monotonic_now() is .some(start) else { return 1; }
+// work
+guard std.time.monotonic_now() is .some(end) else { return 2; }
+guard end.duration_since(start) is .some(elapsed) else { return 3; }
+```
+
+需要操作系统随机字节时，使用 `std.random.fill_entropy(buffer)`。entropy 不可用时它返回 `false`，
+不会悄悄改用伪随机数据。
+
+`std.random.Generator(seed)` 面向测试、模拟等需要复现的场景。相同 seed 产生相同序列，但具体算法不是
+稳定的序列化格式，也不具备密码学安全性。同一个 generator 不能由多个线程并发修改。

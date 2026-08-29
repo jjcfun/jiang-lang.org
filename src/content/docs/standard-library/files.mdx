@@ -1,0 +1,59 @@
+---
+title: Files and Process I/O
+description: Owned file handles, owned read buffers, portable errors, and process streams.
+sidebar:
+  order: 4
+---
+
+`std.fs.read_all` returns independently owned bytes. The buffer is released automatically when it leaves
+scope:
+
+```c
+import std;
+
+Int main() {
+    UInt8[]^ contents = try std.fs.read_all("settings.json")
+        catch std.fs.FileError error {
+            return switch error {
+                .not_found => 2,
+                .permission_denied => 3,
+                else => 1,
+            };
+        };
+
+    std.fs.File output! = std.io.stdout();
+    Void written = try output.write_all(contents[..]) catch { return 4; };
+    return 0;
+}
+```
+
+`File` is a move-only handle owner. Moving it transfers the handle. An owned file closes automatically;
+explicit `close()` is idempotent and can report an error. Reading or writing a closed value reports
+`.closed`. Handles returned by `stdout()` and `stderr()` do not own the process streams, so closing one only
+invalidates that `File` value.
+
+`FileError` uses portable cases such as `.not_found`, `.permission_denied`, `.invalid_argument`, `.no_space`,
+`.read_only`, `.closed`, `.unsupported`, and `.io`. It does not expose platform error numbers.
+
+Async code can call `std.fs.read_all_async(path)` so a regular-file read does not block its current Domain.
+The operation runs on a shared concurrent IO Domain and returns owned bytes. Cancellation is cooperative: a
+provider call already in progress finishes before the file closes and cancellation completes. This is not a
+kernel-readiness API, and `File` itself remains non-`Sendable`.
+
+Existence queries return `false` for both absent and inaccessible paths. Use `open` or `file_metadata` when
+the failure reason matters.
+
+`std.fs.list_dir` eagerly returns complete child paths. Each `Path` owns its native path bytes, and the result
+does not borrow the directory argument or an open directory handle. The result excludes `.` and `..`; entry order
+is unspecified:
+
+```c
+std.Vector<Path> entries = try std.fs.list_dir("assets") catch {
+    return 1;
+};
+for ref Path entry in entries.slice() {
+    // Use entry.bytes() while entry is borrowed here.
+}
+```
+
+Sort explicitly when output order must be deterministic.

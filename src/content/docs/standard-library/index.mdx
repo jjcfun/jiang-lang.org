@@ -1,0 +1,30 @@
+---
+title: Standard Library
+description: Start with Jiang's text, collections, files, time, random, and diagnostic APIs.
+sidebar:
+  order: 1
+---
+
+Import `std` to use the standard library:
+
+```c
+import std;
+
+String message = "hello";
+std.Vector<Int> values! = std.Vector<Int>();
+```
+
+Frequently used value types such as `String`, `Vector`, `Path`, and `Duration` are available directly
+from `std`. Broader APIs are grouped by purpose:
+
+- `std.collection` provides `Vector`, `HashMap`, and `HashSet`.
+- `std.fs`, `std.io`, and `std.process` provide hosted-system operations; file reads also have a focused async entry.
+- `std.path` manipulates path bytes without accessing the filesystem.
+- `std.time` and `std.random` provide clocks, durations, system entropy, and seeded generators.
+- `std.debug` and `panic` provide diagnostics and unrecoverable process termination.
+
+The standard library follows normal Jiang ownership. Owned results are released automatically, borrowed
+views cannot outlive their source, and recoverable failures use `T@E`.
+
+`Domain`, `Task`, and `coroutine` are language-level concurrency features from `core`; `std` does not wrap
+them in a second async API. Continue with [Functions and Tasks](/language/functions/#async-functions-and-tasks).

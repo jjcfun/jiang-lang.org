@@ -3,7 +3,7 @@ title: Hello World
 description: 一个最小 Jiang 程序。
 ---
 
-当前编译器示例通常使用整数返回值，因为命令行工具可以在不额外配置运行时的情况下把它们编译成独立可执行文件。
+每个 Jiang 可执行程序都从 `main` 开始，它的整数返回值会成为进程退出状态。
 
 ```c
 Int main() {
@@ -21,7 +21,17 @@ jiangc hello.jiang -o hello
 echo $?
 ```
 
-`print` 目前是编译器支持的基础能力。现阶段最小运行时边界仍依赖宿主 C 运行时，例如 `printf`、`malloc`、`free` 和 `abort`。
+需要明确处理错误的 byte 输出时，使用 `std.io.stdout()`：
+
+```c
+import std;
+
+Int main() {
+    std.fs.File output! = std.io.stdout();
+    Void written = try output.write_all("Hello, Jiang!\n") catch { return 1; };
+    return 0;
+}
+```
 
 ## 一个小函数
 
@@ -35,4 +45,4 @@ Int main() {
 }
 ```
 
-这是检查解析、类型检查、LLVM 生成和最终链接的最小实用示例。
+函数最后一个表达式可以直接作为返回值，不一定要显式写 `return`。

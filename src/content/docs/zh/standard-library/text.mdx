@@ -1,0 +1,36 @@
+---
+title: 文本
+description: UTF-8 字符串、借用 byte view、校验与增量构造。
+sidebar:
+  order: 2
+---
+
+`String` 拥有一段合法 UTF-8。字符串字面量可以直接转换为 `String`：
+
+```c
+String greeting = "hello";
+```
+
+动态 bytes 必须先校验。`from_utf8` 会复制合法输入，并在失败时报告准确的 byte 位置。只有上游边界
+已经保证 UTF-8 invariant 时，才使用 `from_utf8_unchecked`：
+
+```c
+String text = try String.from_utf8(bytes) catch Utf8Error error {
+    return 1;
+};
+```
+
+`bytes()` 返回借用 view；`byte_length()` 是 O(1)，`char_count()` 以 O(n) 统计 Unicode scalar。
+`byte_index_of` 等搜索方法返回 byte offset，而不是字符或 grapheme 下标。
+
+反复追加时使用 `StringBuilder`。`into_string()` 会消耗 builder，并以 O(1) 转移 storage：
+
+```c
+StringBuilder builder! = StringBuilder();
+builder.append("items: ");
+builder.append(3);
+String message = builder.into_string();
+```
+
+`append_utf8` 可以恢复错误，校验失败时不会修改 builder。unchecked append 与
+`String.from_utf8_unchecked` 具有相同的安全前提。

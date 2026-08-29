@@ -50,6 +50,11 @@ export default defineConfig({
           autogenerate: { directory: 'language' },
         },
         {
+          label: 'Standard Library',
+          translations: { 'zh-CN': '标准库' },
+          autogenerate: { directory: 'standard-library' },
+        },
+        {
           label: 'Compiler',
           translations: { 'zh-CN': '编译器' },
           autogenerate: { directory: 'compiler' },

@@ -1,0 +1,31 @@
+---
+title: Time and Randomness
+description: Durations, monotonic and wall clocks, operating-system entropy, and reproducible generators.
+sidebar:
+  order: 5
+---
+
+Build a nonnegative `Duration` with an explicit unit:
+
+```c
+Duration timeout = std.time.milliseconds(UInt64(250));
+UInt64 micros = timeout.microseconds();
+```
+
+`monotonic_now()` is suitable for elapsed time and timeout calculations within one process. `wall_now()` returns
+time since the Unix epoch and may move when the system clock is adjusted. Either returns `null` when the target
+cannot provide the requested clock.
+
+```c
+guard std.time.monotonic_now() is .some(start) else { return 1; }
+// work
+guard std.time.monotonic_now() is .some(end) else { return 2; }
+guard end.duration_since(start) is .some(elapsed) else { return 3; }
+```
+
+Use `std.random.fill_entropy(buffer)` when bytes must come from the operating system. It returns `false` rather
+than substituting pseudorandom data when entropy is unavailable.
+
+`std.random.Generator(seed)` is for tests, simulations, and other reproducible work. Equal seeds produce equal
+sequences, but the concrete algorithm is not a stable serialization format and is not cryptographically secure.
+Do not mutate one generator concurrently from several threads.

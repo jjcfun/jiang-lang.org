@@ -1,0 +1,46 @@
+---
+title: Collections
+description: Growable vectors, hash maps, hash sets, and borrowed iteration.
+sidebar:
+  order: 3
+---
+
+Use `Vector<T>` for growable contiguous storage:
+
+```c
+import std;
+
+std.Vector<Int> values! = std.Vector<Int>();
+values.append(10);
+values.append(20);
+
+for value in values {
+    Int current = value$.get();
+}
+```
+
+Iteration borrows elements; it does not copy or move them out of the collection. `remove(index)` preserves
+order, while `swap_remove(index)` is O(1) and may change order. `pop()` returns an optional value;
+`remove_last()` requires a non-empty vector.
+
+## Maps and Sets
+
+```c
+std.collection.HashMap<Int, String> names! =
+    std.collection.HashMap<Int, String>();
+names.insert(1, "one");
+names.insert(2, "two");
+
+guard names.get(2) is .some(name) else { return 1; }
+if (!name.starts_with("two")) { return 2; }
+```
+
+`HashMap` iteration yields `(K&, V&)`; `HashSet` iteration yields `K&`. Iteration order is deliberately
+unspecified and may differ between maps or program runs. Sort explicitly when output must be stable.
+
+The default maximum load is 80%. A constructor can choose another integer percentage from 1 through 99:
+
+```c
+std.collection.HashSet<Int> compact! =
+    std.collection.HashSet<Int>(load_percent: 70);
+```

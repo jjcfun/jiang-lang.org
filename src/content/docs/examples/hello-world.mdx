@@ -3,7 +3,7 @@ title: Hello World
 description: A minimal Jiang program.
 ---
 
-The current compiler samples usually use integer return values because the CLI can compile them into standalone executables without extra setup.
+Every Jiang executable starts at `main`. Its integer return value becomes the process exit status.
 
 ```c
 Int main() {
@@ -21,7 +21,17 @@ jiangc hello.jiang -o hello
 echo $?
 ```
 
-`print` is currently provided as a compiler-supported primitive. The runtime boundary still uses the host C runtime for low-level services such as `printf`, `malloc`, `free`, and `abort`.
+For byte-oriented output with explicit error handling, use `std.io.stdout()`:
+
+```c
+import std;
+
+Int main() {
+    std.fs.File output! = std.io.stdout();
+    Void written = try output.write_all("Hello, Jiang!\n") catch { return 1; };
+    return 0;
+}
+```
 
 ## A Small Function
 
@@ -35,4 +45,4 @@ Int main() {
 }
 ```
 
-This is the smallest useful example for checking parsing, type checking, LLVM emission, and final linking.
+Functions use their final expression as the return value when no explicit `return` is needed.

@@ -1,0 +1,45 @@
+---
+title: Collection
+description: 可增长 Vector、HashMap、HashSet 与 borrowed iteration。
+sidebar:
+  order: 3
+---
+
+使用 `Vector<T>` 保存可增长的连续数据：
+
+```c
+import std;
+
+std.Vector<Int> values! = std.Vector<Int>();
+values.append(10);
+values.append(20);
+
+for value in values {
+    Int current = value$.get();
+}
+```
+
+遍历只借用元素，不会从 collection 中复制或移出元素。`remove(index)` 保持顺序；
+`swap_remove(index)` 是 O(1)，但可能改变顺序。`pop()` 返回 optional，`remove_last()` 要求 Vector 非空。
+
+## Map 与 Set
+
+```c
+std.collection.HashMap<Int, String> names! =
+    std.collection.HashMap<Int, String>();
+names.insert(1, "one");
+names.insert(2, "two");
+
+guard names.get(2) is .some(name) else { return 1; }
+if (!name.starts_with("two")) { return 2; }
+```
+
+遍历 `HashMap` 得到 `(K&, V&)`，遍历 `HashSet` 得到 `K&`。迭代顺序没有稳定承诺，在不同 map
+或不同运行之间都可能变化；输出必须稳定时应显式排序。
+
+默认最大装载率是 80%。构造时可以选择 1 到 99 的整数百分比：
+
+```c
+std.collection.HashSet<Int> compact! =
+    std.collection.HashSet<Int>(load_percent: 70);
+```

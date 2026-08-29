@@ -1,0 +1,39 @@
+---
+title: 同步
+description: Atomic、Mutex，以及 std 与语言级 Task 的边界。
+sidebar:
+  order: 6
+---
+
+`Atomic<T>` 为受支持的标量 `AtomicValue` 类型提供 lock-free 操作。默认使用 sequential order；只有在
+已经证明较弱 order 正确时，才显式选择 `MemoryOrder`：
+
+```c
+Atomic<Int> state = Atomic<Int>(0);
+state.set(1, .release);
+Int observed = state.get(.acquire);
+```
+
+Atomic 是不可移动的 identity。load、store 或 compare-and-set 使用非法 order 组合时会立即失败。
+
+`Mutex<T>` 拥有受保护的值，只在 `with_lock` callback 期间借出唯一引用：
+
+```c
+Mutex<Int>^ count = new Mutex<Int>(0);
+Int next = count.with_lock { value =>
+    value$.set(value$.get() + 1);
+    value$.get()
+};
+```
+
+Mutex 本体地址固定；需要转移 handle 时移动 `Mutex<T>^` owner。callback 正常返回或抛出错误都会释放
+锁，从 `value` 派生的引用不能逃出 callback。
+
+0.5.3 的 `std.fs.File` 特意不满足 `Sendable`，因为并发 file offset 和 close 行为尚未冻结。应在一个
+Domain 中完成 IO，再跨 Domain 转移得到的 owned bytes。
+
+当 `T: Sendable` 时，`coroutine.Continuation<T>` 也满足 `Sendable`；挂起操作可以跨线程完成，但不会
+绕过 result type 自身的转移规则。
+
+`Domain`、`Task` 和 `coroutine` 属于语言 core，`std` 不复制第二套 API。Task 创建、await 和取消见
+[函数与 Task](/zh/language/functions/#异步函数和-task)。

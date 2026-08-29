@@ -1,0 +1,25 @@
+---
+title: Diagnostics
+description: Assertions, debug output, traps, panic, and process termination.
+sidebar:
+  order: 7
+---
+
+`assert(condition)` and `assert(condition, message)` remain active in debug and release builds. Failure output
+includes the source location and optional message, then terminates the process.
+
+Use `std.debug.write` or `write_line` for best-effort diagnostic output. Both return `Bool` so callers can observe
+an output failure. `std.debug.trap()` terminates immediately and does not unwind or guarantee destruction.
+
+```c
+if (!std.debug.write_line("loading configuration")) {
+    return 1;
+}
+```
+
+`panic(message)` writes the message and a newline to standard error, then aborts. Jiang 0.5.3 does not provide
+an unwinding panic: `panic`, `trap`, and `std.process.exit` do not run scope cleanup. Use `T@E` for failures that
+the caller can recover from.
+
+`std.build.mode` is a read-only `BuildMode` value for compile-time debug/release selection. Debugger control,
+profiling, backtraces, and core-dump management are outside the standard-library API.

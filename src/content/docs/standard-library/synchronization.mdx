@@ -1,0 +1,40 @@
+---
+title: Synchronization
+description: Atomic values, mutex-protected state, and the boundary between std and language-level tasks.
+sidebar:
+  order: 6
+---
+
+`Atomic<T>` provides lock-free operations for supported scalar `AtomicValue` types. Operations use sequential
+ordering by default; choose an explicit `MemoryOrder` only when the weaker ordering has been justified:
+
+```c
+Atomic<Int> state = Atomic<Int>(0);
+state.set(1, .release);
+Int observed = state.get(.acquire);
+```
+
+An `Atomic` is an identity and cannot be moved. Invalid load, store, or compare-and-set ordering combinations
+fail immediately.
+
+`Mutex<T>` owns the protected value and lends a unique reference only for the duration of `with_lock`:
+
+```c
+Mutex<Int>^ count = new Mutex<Int>(0);
+Int next = count.with_lock { value =>
+    value$.set(value$.get() + 1);
+    value$.get()
+};
+```
+
+The mutex itself is pinned; move the `Mutex<T>^` owner when a handle must be transferred. Returning or throwing
+from the callback releases the lock. A reference derived from `value` cannot escape the callback.
+
+`std.fs.File` is deliberately not `Sendable` in 0.5.3 because concurrent file-offset and close behavior has not
+been frozen. Perform the I/O in one Domain and transfer the resulting owned bytes instead.
+
+`coroutine.Continuation<T>` is `Sendable` when `T` is `Sendable`; completing a suspended operation can therefore
+cross threads without weakening the result type's transfer rules.
+
+`Domain`, `Task`, and `coroutine` belong to the language core and are not duplicated by `std`. See
+[Functions and Tasks](/language/functions/#async-functions-and-tasks) for task creation, awaiting, and cancellation.

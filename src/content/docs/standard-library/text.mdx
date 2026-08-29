@@ -1,0 +1,36 @@
+---
+title: Text
+description: UTF-8 strings, borrowed byte views, validation, and incremental construction.
+sidebar:
+  order: 2
+---
+
+`String` owns valid UTF-8. A string literal converts directly to `String`:
+
+```c
+String greeting = "hello";
+```
+
+Dynamic bytes must be validated. `from_utf8` copies valid input and reports the exact byte position of invalid
+input. Use `from_utf8_unchecked` only when an earlier boundary has already established the UTF-8 invariant:
+
+```c
+String text = try String.from_utf8(bytes) catch Utf8Error error {
+    return 1;
+};
+```
+
+`bytes()` returns a borrowed view, `byte_length()` is O(1), and `char_count()` counts Unicode scalar values in
+O(n). Byte search methods such as `byte_index_of` return byte offsets, not character or grapheme indices.
+
+Use `StringBuilder` for repeated appends. `into_string()` consumes the builder and transfers its storage in O(1):
+
+```c
+StringBuilder builder! = StringBuilder();
+builder.append("items: ");
+builder.append(3);
+String message = builder.into_string();
+```
+
+`append_utf8` is recoverable and leaves the builder unchanged when validation fails. The unchecked append has the
+same safety requirement as `String.from_utf8_unchecked`.
