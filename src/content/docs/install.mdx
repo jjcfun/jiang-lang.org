@@ -28,7 +28,8 @@ By default this installs:
 
 ```text
 ~/.jiang/versions/<version>
-~/.jiang/bin/jiangc
+~/.jiang/bin/jiang
+~/.jiang/bin/jiangc  # compatibility link
 ```
 
 Add Jiang to your shell path if needed:
@@ -42,7 +43,7 @@ export PATH="$HOME/.jiang/bin:$PATH"
 Check the compiler and LLVM runtime:
 
 ```bash
-jiangc --version
+jiang --version
 ```
 
 The first line should be:

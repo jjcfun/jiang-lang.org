@@ -3,7 +3,7 @@ title: 快速开始
 description: 编译并运行第一个 Jiang 程序。
 ---
 
-本指南假设 `jiangc` 已经安装好，并且可以从 `PATH` 中直接运行。如果还没有，请先阅读[安装](/zh/install/)。
+本指南假设 `jiang` 已经安装好，并且可以从 `PATH` 中直接运行。如果还没有，请先阅读[安装](/zh/install/)。
 
 ## 编写程序
 
@@ -24,7 +24,7 @@ Jiang 函数一定有返回类型。程序入口是 `main`；这里返回 `42`�
 ## 编译为可执行文件
 
 ```bash
-jiangc hello.jiang -o hello
+jiang hello.jiang -o hello
 ```
 
 运行程序：
@@ -41,13 +41,13 @@ echo $?
 语言开发阶段，经常需要查看生成的 LLVM IR：
 
 ```bash
-jiangc --emit-llvm hello.jiang
+jiang --emit-llvm hello.jiang
 ```
 
 使用 `-o` 可以写入文件：
 
 ```bash
-jiangc --emit-llvm hello.jiang -o hello.ll
+jiang --emit-llvm hello.jiang -o hello.ll
 ```
 
 ## Jiang 代码的基本形态

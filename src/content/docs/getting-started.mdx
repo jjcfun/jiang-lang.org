@@ -3,7 +3,7 @@ title: Getting Started
 description: Compile and run a first Jiang program.
 ---
 
-This guide assumes `jiangc` is installed and available on your `PATH`. If not, start with [Installation](/install/).
+This guide assumes `jiang` is installed and available on your `PATH`. If not, start with [Installation](/install/).
 
 ## Write a Program
 
@@ -24,7 +24,7 @@ A Jiang function always has a return type. The process entry point is `main`; re
 ## Compile to an Executable
 
 ```bash
-jiangc hello.jiang -o hello
+jiang hello.jiang -o hello
 ```
 
 Run it:
@@ -41,13 +41,13 @@ The result should be `42`.
 During language development it is often useful to inspect the generated LLVM IR:
 
 ```bash
-jiangc --emit-llvm hello.jiang
+jiang --emit-llvm hello.jiang
 ```
 
 Use `-o` to write the IR to a file:
 
 ```bash
-jiangc --emit-llvm hello.jiang -o hello.ll
+jiang --emit-llvm hello.jiang -o hello.ll
 ```
 
 ## Language Shape

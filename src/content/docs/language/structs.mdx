@@ -135,6 +135,28 @@ not supplied at the call site. Remaining parameters follow normal function argum
 named arguments and defaults. Once a struct declares any custom `init`, the compiler-provided field
 constructor is not used.
 
+A named initializer is declared with `init name(self, ...)` and called through the same value or heap
+construction syntax:
+
+```c
+struct Point {
+    Int x;
+    Int y;
+
+    init origin(self) {
+        self.x = 0;
+        self.y = 0;
+        return ();
+    }
+}
+
+Point value = Point.origin();
+Point^ owned = new Point.origin();
+```
+
+Named and unnamed initializers form separate overload families. A named initializer is a constructor
+entry, not a normal function value.
+
 ## `deinit`
 
 `deinit` is declared without a return type:

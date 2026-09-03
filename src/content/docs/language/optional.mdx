@@ -17,6 +17,17 @@ Bar? bar = Bar(x: 1, y: 2)
 _ field = bar?.x;
 ```
 
+## Equality
+
+Optional equality is symmetric. If `T` is equatable, both `T? == T` and `T == T?` are valid, as are
+the corresponding `!=` forms. `.none` never equals a payload; `.some(value)` compares its payload.
+
+```c
+Int? maybe = 42;
+Bool left = maybe == 42;
+Bool right = 42 == maybe;
+```
+
 ## Optional Chaining
 
 Use `?.` to access a field only when the receiver is not `null`:

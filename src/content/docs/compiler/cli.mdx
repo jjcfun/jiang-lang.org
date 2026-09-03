@@ -3,13 +3,14 @@ title: Compiler CLI
 description: Jiang compiler command-line interface.
 ---
 
-`jiangc` compiles Jiang source files. The current compiler can emit LLVM IR, object files, or link an executable through the host C compiler.
+`jiang` compiles Jiang source files. The current compiler can emit LLVM IR, object files, or link an executable through the host C compiler.
+Release packages retain `jiangc` as a compatibility link for existing scripts; new commands should use `jiang`.
 
 ## Version and Help
 
 ```bash
-jiangc --version
-jiangc --help
+jiang --version
+jiang --help
 ```
 
 `--version` prints the Jiang compiler version, host target, and LLVM version.
@@ -17,7 +18,7 @@ jiangc --help
 ## Check Only
 
 ```bash
-jiangc --check tests/samples/minimal.jiang
+jiang --check tests/samples/minimal.jiang
 ```
 
 This parses, resolves, and type checks the program without emitting LLVM IR, an object file, or an executable.
@@ -25,29 +26,29 @@ This parses, resolves, and type checks the program without emitting LLVM IR, an 
 ## Emit LLVM IR
 
 ```bash
-jiangc --emit-llvm tests/samples/minimal.jiang
+jiang --emit-llvm tests/samples/minimal.jiang
 ```
 
 By default, LLVM IR is written to standard output. Use `-o` to write it to a file:
 
 ```bash
-jiangc --emit-llvm tests/samples/minimal.jiang -o minimal.ll
+jiang --emit-llvm tests/samples/minimal.jiang -o minimal.ll
 ```
 
 ## Emit an Object File
 
 ```bash
-jiangc --emit-obj tests/samples/minimal.jiang -o minimal.o
+jiang --emit-obj tests/samples/minimal.jiang -o minimal.o
 ```
 
 This stops after object generation and does not link an executable.
 
 ## Link an Executable
 
-Without an explicit `--emit-*` mode, `jiangc` creates a temporary object file and asks the host `cc` to link an executable:
+Without an explicit `--emit-*` mode, `jiang` creates a temporary object file and asks the host `cc` to link an executable:
 
 ```bash
-jiangc tests/samples/minimal.jiang -o minimal
+jiang tests/samples/minimal.jiang -o minimal
 ```
 
 Then run:
@@ -59,22 +60,22 @@ echo $?
 
 ## Debug and Release Modes
 
-`jiangc` defaults to debug mode:
+`jiang` defaults to debug mode:
 
 ```bash
-jiangc --mode debug main.jiang -o main
+jiang --mode debug main.jiang -o main
 ```
 
 Release mode enables LLVM optimization:
 
 ```bash
-jiangc --mode release . -o app
+jiang --mode release . -o app
 ```
 
 Use `--jobs` when you need to cap compilation concurrency:
 
 ```bash
-jiangc --jobs 1 . -o app
+jiang --jobs 1 . -o app
 ```
 
 ## Targets
@@ -82,7 +83,7 @@ jiangc --jobs 1 . -o app
 Use `--target` for LLVM IR or object output:
 
 ```bash
-jiangc --target x86_64-unknown-linux-gnu --emit-obj main.jiang -o main.o
+jiang --target x86_64-unknown-linux-gnu --emit-obj main.jiang -o main.o
 ```
 
 Hosted executable linking is native-toolchain only. Release packages support macOS arm64 and Linux
@@ -95,17 +96,17 @@ boundaries, and Linux no-libc executable support is not yet available.
 Use `--linker` to select the program used for final linking:
 
 ```bash
-jiangc --linker /usr/bin/cc main.jiang -o main
+jiang --linker /usr/bin/cc main.jiang -o main
 ```
 
 Pass extra linker arguments with repeated `--link-arg` options:
 
 ```bash
-jiangc main.jiang -o main --link-arg -lm
+jiang main.jiang -o main --link-arg -lm
 ```
 
 ## Runtime Boundary
 
 Hosted builds use the target host's C runtime and native linker toolchain. Release compilers include
-the LLVM libraries used by `jiangc`, so running a packaged compiler does not require a separate
+the LLVM libraries used by `jiang`, so running a packaged compiler does not require a separate
 `libLLVM` or `liblld` installation.

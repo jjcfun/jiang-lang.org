@@ -184,7 +184,7 @@ Void fence() {
 }
 ```
 
-`#asm` 是短名，后续用户仍可以用自己的语言包覆盖这个名字。需要明确使用编译器内建版本时，
+`#asm` 是短名，用户可以用自己的语言包覆盖这个名字。需要明确使用编译器内建版本时，
 可以写完整路径：
 
 ```c
@@ -216,6 +216,35 @@ Int linux_syscall1_builtin(Int number, Int arg0) {
 
 汇编语法本身依赖目标平台。`rax`、`rdi`、`syscall` 这类名字只适用于特定处理器和操作系统。
 普通业务代码不建议使用 `#asm`；它主要服务于运行时、系统接口和极少数性能或平台边界代码。
+
+## 文档语法块
+
+`#doc` 把 Markdown 源文档附着到紧随其后的声明。本行带正文时是单行文档：
+
+```c
+#doc 返回两个整数之和。
+public Int add(Int left, Int right) {
+    return left + right;
+}
+```
+
+header 本行没有正文时，由独占一行的 `#end` 结束。`#doc(module)` 必须位于第一个非 import 声明
+之前，用于记录当前 module 的文档：
+
+```c
+#doc(module) Collection 工具。
+
+#doc
+    ## Vector
+
+    使用连续内存保存元素。
+#end
+public struct Vector<T> {
+}
+```
+
+lang dependency 可以覆盖短名 `#doc`；需要明确选择内建 provider 时使用 `#jiang.doc`。Jiang 会把
+规范化后的 Markdown 保存到独立、可选的 `.ji` section；当前版本不定义文档 renderer 或 browser。
 
 ## 整文件接入
 
@@ -280,26 +309,28 @@ type = lang
 
 ## 语法提供者
 
-语法提供者有两个入口：
+语法提供者实现 `std.jiang.syntax.Provider`。采用 Jiang 默认词法规则时，只需实现 `parse`：
 
 ```c
-public std.jiang.syntax.ScanResult scan(
-    std.jiang.syntax.Input input,
-    std.jiang.syntax.Builder.Any& builder
-);
-
-public std.jiang.syntax.NodeId parse(
-    std.jiang.syntax.Input input,
-    std.jiang.syntax.Root.Kind entry_kind,
-    std.jiang.syntax.Builder.Any& builder
-);
+public struct Lang: std.jiang.syntax.Provider {
+    public std.jiang.syntax.Ast parse(
+        Self&! self,
+        std.jiang.syntax.Input input,
+        std.jiang.syntax.SyntaxContext&! syntax
+    ) {
+        _ parser! = std.jiang.syntax.default_parser(syntax, input);
+        std.jiang.syntax.Expr value = parser.int_literal(input.name_span, "0");
+        return parser.ast(value);
+    }
+}
 ```
 
-`scan` 负责识别块边界。`parse` 负责把块内文本转换为 `std.jiang.syntax.Tree` 中的节点。
-返回的节点必须符合编译器传入的入口种类。
+默认 `scan` 能识别嵌套 delimiter、字符串、注释和文件结尾。需要自定义 token 时，provider 可以覆盖
+`scan`，在自己的实例中保存 `Token<CustomKind>`，再在 `parse` 中构造 `Parser<CustomKind>`。
 
-当前普通源码里已经在表达式和语句位置接入自定义语法。公开语法树也保留了文件、声明、类型和模式等
-入口种类，供后续版本扩展到更多语法位置。
+Parser 方法生成带类型角色的 expression、statement、declaration、type、pattern 和 annotation handle。
+`parser.ast(handle)` 返回 opaque 根节点；provider 不能访问或手工组装 compiler AST storage。compiler
+会验证返回节点能否出现在 invocation 所在位置。
 
 ## 编译边界
 

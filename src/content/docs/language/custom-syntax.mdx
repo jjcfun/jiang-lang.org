@@ -198,7 +198,7 @@ Void fence() {
 }
 ```
 
-`#asm` is the short name. A user lang package may override that short name later. To explicitly use
+`#asm` is the short name. A user lang package can override that short name. To explicitly use
 the compiler builtin, write the full builtin path:
 
 ```c
@@ -231,6 +231,37 @@ The current `#asm` block supports:
 Assembly syntax is target-specific. Names such as `rax`, `rdi`, and `syscall` are only meaningful on
 specific processors and operating systems. Most application code should not use `#asm`; it is mainly
 for runtime code, system boundaries, and narrow platform-specific operations.
+
+## Documentation Blocks
+
+`#doc` attaches Markdown source to the declaration that follows it. Text on the header line creates a
+single-line document:
+
+```c
+#doc Returns the sum of two integers.
+public Int add(Int left, Int right) {
+    return left + right;
+}
+```
+
+If the header line has no text, an otherwise standalone `#end` ends the document. Use `#doc(module)`
+before the first non-import declaration to document the current module:
+
+```c
+#doc(module) Collection utilities.
+
+#doc
+    ## Vector
+
+    Stores elements in contiguous memory.
+#end
+public struct Vector<T> {
+}
+```
+
+A lang dependency may override the short name `#doc`; use `#jiang.doc` to select the builtin provider
+explicitly. Jiang preserves normalized Markdown in a separate optional `.ji` section. The current
+release does not define a documentation renderer or browser.
 
 ## Whole-File Integration
 
@@ -301,26 +332,30 @@ during syntax parsing.
 
 ## Provider Entry Points
 
-A provider has two entry points:
+A provider implements `std.jiang.syntax.Provider`. Providers using Jiang's default lexical rules only
+need to implement `parse`:
 
 ```c
-public std.jiang.syntax.ScanResult scan(
-    std.jiang.syntax.Input input,
-    std.jiang.syntax.Builder.Any& builder
-);
-
-public std.jiang.syntax.NodeId parse(
-    std.jiang.syntax.Input input,
-    std.jiang.syntax.Root.Kind entry_kind,
-    std.jiang.syntax.Builder.Any& builder
-);
+public struct Lang: std.jiang.syntax.Provider {
+    public std.jiang.syntax.Ast parse(
+        Self&! self,
+        std.jiang.syntax.Input input,
+        std.jiang.syntax.SyntaxContext&! syntax
+    ) {
+        _ parser! = std.jiang.syntax.default_parser(syntax, input);
+        std.jiang.syntax.Expr value = parser.int_literal(input.name_span, "0");
+        return parser.ast(value);
+    }
+}
 ```
 
-`scan` identifies the block boundary. `parse` converts the block contents into nodes in
-`std.jiang.syntax.Tree`. The returned node must match the entry kind passed by the compiler.
+The default `scan` recognizes nested delimiters, strings, comments, and end of file. A provider with
+custom tokens can override `scan`, store `Token<CustomKind>` values in its own instance, and construct
+`Parser<CustomKind>` in `parse`.
 
-In ordinary source, custom syntax currently plugs into expression and statement positions. The public
-syntax tree also reserves file, declaration, type, and pattern entry kinds for future expansion.
+Parser methods create typed expression, statement, declaration, type, pattern, and annotation handles.
+`parser.ast(handle)` returns the opaque root; providers cannot access or assemble compiler AST storage.
+The compiler verifies that the returned root is valid at the invocation position.
 
 ## Compilation Boundary
 

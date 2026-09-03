@@ -27,7 +27,8 @@ LLVM 动态库。Linux 发布包要求 glibc 2.34 或更新版本。
 
 ```text
 ~/.jiang/versions/<version>
-~/.jiang/bin/jiangc
+~/.jiang/bin/jiang
+~/.jiang/bin/jiangc  # 兼容链接
 ```
 
 如果需要，把 Jiang 加入 shell 的 PATH：
@@ -41,7 +42,7 @@ export PATH="$HOME/.jiang/bin:$PATH"
 检查编译器和 LLVM 运行时：
 
 ```bash
-jiangc --version
+jiang --version
 ```
 
 第一行应该是：

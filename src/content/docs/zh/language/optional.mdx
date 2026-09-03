@@ -17,6 +17,17 @@ Bar? b1 = Bar(x: 1, y: 2)
 _ b2 = b1?.x;        // b2 为 Int? 类型
 ```
 
+## 相等比较
+
+optional equality 是对称的。只要 `T` 可以比较，`T? == T`、`T == T?` 及对应的 `!=` 都合法。
+`.none` 与 payload 恒不相等，`.some(value)` 比较其中的 payload：
+
+```c
+Int? maybe = 42;
+Bool left = maybe == 42;
+Bool right = 42 == maybe;
+```
+
 ## 可选链
 
 通过 `?.` 安全访问嵌套字段：
