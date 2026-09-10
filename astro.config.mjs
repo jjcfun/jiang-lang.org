@@ -1,11 +1,13 @@
 import { defineConfig } from 'astro/config';
 import starlight from '@astrojs/starlight';
+import starlightThemeNova from 'starlight-theme-nova';
 
 export default defineConfig({
   site: 'https://jiang-lang.org',
   integrations: [
     starlight({
       title: 'Jiang',
+      plugins: [starlightThemeNova()],
       description: 'Documentation for the Jiang programming language.',
       logo: {
         light: './public/logo.svg',
@@ -13,9 +15,6 @@ export default defineConfig({
         alt: 'Jiang logo',
       },
       customCss: ['/src/styles/custom.css'],
-      components: {
-        Hero: './src/components/JiangHero.astro',
-      },
       locales: {
         root: {
           label: 'English',
