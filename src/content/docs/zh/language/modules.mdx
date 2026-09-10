@@ -25,7 +25,7 @@ Int value = math.add(1, 2);
 如果文件名不是你想使用的模块名，可以显式指定别名：
 
 ```c
-import m = "utils/math.jiang";
+alias m = import "utils/math.jiang";
 
 Int value = m.add(1, 2);
 ```
@@ -37,7 +37,7 @@ Int value = m.add(1, 2);
 带引号的 `import` 是文件路径导入：
 
 ```c
-import math = "utils/math.jiang";
+alias math = import "utils/math.jiang";
 ```
 
 文件路径相对当前源文件所在目录解析。路径要写完整；导入不会自动补 `.jiang`，也不会自动查找
@@ -72,24 +72,24 @@ public const Int default_limit = 1024;
 字段：
 
 ```c
-import cfg = "config.jiang";
+alias cfg = import "config.jiang";
 
 Int value = cfg.default_limit;
 ```
 
 ## 重新导出
 
-`public import` 会把模块导入当前文件使用，同时把这个模块命名空间作为当前模块公开接口的一部分
+`public alias name = import ...;` 导入模块，同时把这个模块命名空间作为当前模块公开接口的一部分
 重新导出：
 
 ```c
-public import leaf = "leaf.jiang";
+public alias leaf = import "leaf.jiang";
 ```
 
 这不会把 `leaf` 中的声明摊平成当前模块的顶层声明：
 
 ```c
-import middle = "middle.jiang";
+alias middle = import "middle.jiang";
 
 Int value = middle.leaf.answer();
 ```

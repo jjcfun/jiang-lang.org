@@ -90,3 +90,16 @@ Package dependency cycles are rejected. Module import cycles are currently allow
 
 Only the root package root module contributes the executable entry. A dependency package may define a
 function named `main`, but it is treated as an ordinary function.
+
+
+## Explicit Entries and Generators
+
+`@entry(main)` can select a root function with any name; otherwise `main` remains the default.
+The entry must be non-generic, synchronous, parameterless and return an integer or `Void`.
+Lang and generate use `@entry(lang)` and `@entry(generate)` in the selected root file and may be private.
+Each role has at most one explicit entry per root.
+
+Register provider dependencies in `[dependencies]`. `[lang.<name>]` and `[generate.<name>]` select
+aliases, rather than declaring another dependency source. An internal generator uses `module` instead
+of `package`. See [generation](/language/generation/) for configuration examples.
+The manifest remains `package.ini` in 0.5.4.

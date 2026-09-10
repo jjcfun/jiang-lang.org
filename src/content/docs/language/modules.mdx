@@ -26,7 +26,7 @@ Int value = math.add(1, 2);
 Use an alias when the file name is not the module name you want:
 
 ```c
-import m = "utils/math.jiang";
+alias m = import "utils/math.jiang";
 
 Int value = m.add(1, 2);
 ```
@@ -39,7 +39,7 @@ current module.
 A quoted import is a file path import:
 
 ```c
-import math = "utils/math.jiang";
+alias math = import "utils/math.jiang";
 ```
 
 File paths are interpreted relative to the importing source file. Write the full path; imports do
@@ -75,24 +75,24 @@ extension. Extensions meant for other modules should be written as `public exten
 const structs through the module namespace:
 
 ```c
-import cfg = "config.jiang";
+alias cfg = import "config.jiang";
 
 Int value = cfg.default_limit;
 ```
 
 ## Re-exports
 
-`public import` imports a module for local use and re-exports that module namespace as part of the
+`public alias name = import ...;` imports a module for local use and re-exports that namespace as part of the
 current module API:
 
 ```c
-public import leaf = "leaf.jiang";
+public alias leaf = import "leaf.jiang";
 ```
 
 This does not flatten imported declarations:
 
 ```c
-import middle = "middle.jiang";
+alias middle = import "middle.jiang";
 
 Int value = middle.leaf.answer();
 ```

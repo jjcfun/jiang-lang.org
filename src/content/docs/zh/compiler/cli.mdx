@@ -108,3 +108,14 @@ jiang main.jiang -o main --link-arg -lm
 
 hosted 构建使用目标 host 的 C runtime 与本机 linker toolchain。发布版编译器已经包含 `jiang`
 使用的 LLVM 库，因此运行发布包不需要另外安装 `libLLVM` 或 `liblld`。
+
+## 生成文件
+
+执行本包 root 的生成器，或选择已配置的别名：
+
+```bash
+jiang generate .
+jiang generate . --name models -o build/models
+```
+
+入口契约、配置、输出替换与缓存见[反射与生成](/zh/language/generation/)。

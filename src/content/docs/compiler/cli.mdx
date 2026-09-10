@@ -110,3 +110,14 @@ jiang main.jiang -o main --link-arg -lm
 Hosted builds use the target host's C runtime and native linker toolchain. Release compilers include
 the LLVM libraries used by `jiang`, so running a packaged compiler does not require a separate
 `libLLVM` or `liblld` installation.
+
+## Generation
+
+Run the package root generator or select a configured alias:
+
+```bash
+jiang generate .
+jiang generate . --name models -o build/models
+```
+
+See [reflection and generation](/language/generation/) for entry contracts, configuration, output replacement and caching.

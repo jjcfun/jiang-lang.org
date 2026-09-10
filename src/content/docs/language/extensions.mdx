@@ -152,7 +152,7 @@ public extend <T> Holder<T> {
 
 ```c
 // main.jiang
-import ext = "holder_ext.jiang";
+alias ext = import "holder_ext.jiang";
 
 alias ImportedHolder = ext.Holder;
 
@@ -171,12 +171,12 @@ the call is ambiguous rather than being selected by declaration order.
 
 ```c
 // mid.jiang
-public import leaf = "holder_ext.jiang";
+public alias leaf = import "holder_ext.jiang";
 ```
 
 ```c
 // app.jiang
-import mid = "mid.jiang";
+alias mid = import "mid.jiang";
 
 alias Holder = mid.leaf.Holder;
 

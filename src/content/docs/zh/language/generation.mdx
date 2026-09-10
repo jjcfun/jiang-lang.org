@@ -1,0 +1,102 @@
+---
+title: 反射与生成
+description: 定义级反射、类型化 metadata、生成入口与输出缓存。
+sidebar:
+  order: 17
+---
+
+Jiang 0.5.4 通过 `reflect` 提供定义级编译期内省。生成器使用普通 Jiang 代码查询定义并输出文件，
+不要求创建 Lang package。反射不开放函数体或编译器内部 IR。
+
+## 生成入口
+
+在 package root 中声明入口：
+
+```c
+import std;
+
+@entry(generate)
+Void emit(reflect.Module root) {
+    std.StringBuilder output! = std.StringBuilder();
+    for module in reflect.modules(root) {
+        output.append(module.name());
+        output.append("\n");
+    }
+    generate.write("modules.txt", output.slice());
+}
+```
+
+```bash
+jiang generate .
+```
+
+入口是非泛型、同步的 `Void (reflect.Module)` 函数，名称任意，可以私有。语义检查完成后调用一次，
+传入输入包的 root module。普通 build/check 不运行生成器，也不自动并发或递归执行依赖包的生成器。
+
+## 生成器配置
+
+```ini
+[dependencies]
+tools = ../schema-tools
+
+[generate.models]
+package = tools
+
+[generate.docs]
+module = src/generate/docs.jiang
+```
+
+```bash
+jiang generate . --name models
+jiang generate . --name docs -o build/docs
+```
+
+每个命名配置只能选择依赖 `package` 或本包内部 `module` 中的一种，选中的 root file 必须声明
+`@entry(generate)`。输入始终是使用方 package root。不传 `--name` 时，使用本包 root 的入口，
+不会自动选择命名配置。也可通过已配置的 Lang 别名选择其包内生成器，显式同名 generate 配置优先。
+
+默认输出到输入包的 `build/generated`，`-o` 相对当前工作目录。输出目录必须由本任务专用：
+成功时整体替换目录内容，未再次生成的旧文件会被删除；执行失败不发布暂存结果。
+
+## 遍历与查询
+
+`reflect.modules(root)` 包含 root 及同包导入可达模块，平铺去重，不扫描所有文件，
+也不包含仅由生成器额外加载的模块。`module.imports()` 提供直接导入边及跨包目标，
+可用于目录导航和依赖图；跨包查询遵守公开可见性。
+
+`module.declarations()` 按源码顺序返回声明。对 `reflect.Decl` 模式匹配后，
+可读取 `Function.signature()` 等结构化信息，或通过 `decl.members()` 遍历直接成员。
+签名包含参数、返回类型、receiver 和执行属性；文档、metadata、位置及 lifetime 契约分别查询。
+
+视图支持遍历、`len()` 和 `get(index)`。句柄仅在编译期执行期间有效，不能保存为运行期值。
+普通编译期求值也可通过 `reflect.type_of<T>()` 查询已知类型。
+
+## 类型化 Metadata
+
+```c
+struct Route { Int code; }
+
+@meta(module: Route(code: 1))
+
+@meta(Route(code: 2))
+struct User {}
+```
+
+表达式在编译期求值，结果必须可以物化。`decl.meta<Route>()`、`module.meta<Route>()` 查询单个目标，
+`reflect.with_meta<Route>(root)` 查询输入范围。匹配使用精确类型身份，重复附着按顺序保留。
+`@where` 等内建 attribute 继续使用各自的专用语义。
+
+`#doc` 向反射提供 Markdown 数据，本版不提供文档网页生成器。
+
+## 资源与缓存
+
+`generate.read(path)` 相对生成器入口文件读取资源快照，`bytes()` 取得内容，
+`fingerprint()` 可将资源纳入输出缓存 key。`generate.write(path, bytes)` 相对输出目录暂存文件。
+
+使用 `generate.cache_read(purpose, fingerprint)` 和 `generate.cache_write(purpose, fingerprint, bytes)`
+复用局部结果。命中返回缓存字节，仍需显式调用 `generate.write` 才成为输出；热缓存也会调用生成入口。
+编译器自动纳入生成器实现和编译配置依赖，生成器负责组合输出所需的输入指纹。
+模块指纹包含模块自身的定义内容，不递归包含导入模块的内容。
+
+每轮可读取最多 64 MiB 的不同资源快照，暂存最多 4096 个文件、合计 64 MiB 输出。
+普通 const 求值不具备文件输出能力。

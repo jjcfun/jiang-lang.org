@@ -48,7 +48,7 @@ A source file is a sequence of top-level items:
 - `comptime` blocks
 
 ```c
-import math = "utils/math.jiang";
+alias math = import "utils/math.jiang";
 
 alias Byte = UInt8;
 alias answer = math.answer;
@@ -67,8 +67,8 @@ public Int add(Int left, Int right) {
 
 `public` marks a declaration as visible outside the module.
 
-`public const` exports a compile-time value through the module interface. `comptime { ... }` is a
-top-level compile-time block for source selection; see [Const and Comptime](/language/const-and-comptime/).
+`public const` exports a compile-time value through the module interface. `comptime { ... }` evaluates a block before runtime;
+conditional imports use namespace-valued aliases; see [Const and Comptime](/language/const-and-comptime/).
 
 ## Keyword Options
 

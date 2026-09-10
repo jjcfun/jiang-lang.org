@@ -147,7 +147,7 @@ public extend <T> Holder<T> {
 
 ```c
 // main.jiang
-import ext = "holder_ext.jiang";
+alias ext = import "holder_ext.jiang";
 
 alias ImportedHolder = ext.Holder;
 
@@ -164,12 +164,12 @@ Jiang 不对扩展设置全局 orphan 禁令，模块可以扩展公开的外部
 
 ```c
 // mid.jiang
-public import leaf = "holder_ext.jiang";
+public alias leaf = import "holder_ext.jiang";
 ```
 
 ```c
 // app.jiang
-import mid = "mid.jiang";
+alias mid = import "mid.jiang";
 
 alias Holder = mid.leaf.Holder;
 

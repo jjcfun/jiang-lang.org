@@ -88,3 +88,15 @@ import util;
 
 只有根包的根模块会贡献可执行程序入口。依赖包即使定义了 `main`，
 也只是普通函数。
+
+
+## 显式入口与生成器
+
+`@entry(main)` 可以选择 root 中任意名称的函数，否则仍默认选择 `main`。
+入口须非泛型、同步、无参数，返回整数或 `Void`。
+Lang 和 generate 分别用 `@entry(lang)`、`@entry(generate)` 标记选中 root 内的入口，可以私有，
+每个 root 的每种角色最多一个显式入口。
+
+Provider 依赖统一登记在 `[dependencies]`，`[lang.<name>]`、`[generate.<name>]` 通过别名引用，
+不另行声明依赖来源。本包内部生成器用 `module` 替代 `package`。
+配置示例见[反射与生成](/zh/language/generation/)。0.5.4 的清单文件仍是 `package.ini`。

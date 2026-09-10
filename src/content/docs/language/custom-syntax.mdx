@@ -245,7 +245,7 @@ public Int add(Int left, Int right) {
 ```
 
 If the header line has no text, an otherwise standalone `#end` ends the document. Use `#doc(module)`
-before the first non-import declaration to document the current module:
+before the first declaration other than an import declaration (including before an alias) to document the current module:
 
 ```c
 #doc(module) Collection utilities.
@@ -265,20 +265,19 @@ release does not define a documentation renderer or browser.
 
 ## Whole-File Integration
 
-In a future design, custom syntax can also grow to whole source files. A package could import a
-non-`.jiang` file, let the matching lang package parse that file type, and add the result to the
-build as a Jiang module:
+Custom syntax also supports whole source files. Import a non-`.jiang` file through a configured
+extension mapping; the matching Lang provider parses it into a Jiang module:
 
 ```c
-import schema = "user.proto";
-import layout = "dashboard.ui";
-import kernel = "blur.shader";
+alias schema = import "user.proto";
+alias layout = import "dashboard.ui";
+alias kernel = import "blur.shader";
 
 User user = schema.User(id: 1, name: "Jiang");
 View page = layout.render(user);
 ```
 
-In that model, external language files are not a separate code-generation step; they are part of the
+External language files are not a separate code-generation step; they are part of the
 package dependency graph. Fields, functions, resources, and generated types can still participate in
 Jiang name resolution, type checking, and backend optimization.
 
@@ -326,9 +325,9 @@ root = lang.jiang
 type = lang
 ```
 
-The lang package root module must publicly export `Lang`, and `Lang` must satisfy
-`std.jiang.syntax.Provider`. The compiler builds that package into a host dynamic library and calls it
-during syntax parsing.
+Mark a concrete, zero-argument-constructible provider type in the package root with `@entry(lang)`.
+It must implement `std.jiang.syntax.Provider`; its name is arbitrary and it may be private. The compiler
+builds the package into a host dynamic library and calls it during syntax parsing.
 
 ## Provider Entry Points
 
@@ -336,7 +335,10 @@ A provider implements `std.jiang.syntax.Provider`. Providers using Jiang's defau
 need to implement `parse`:
 
 ```c
-public struct Lang: std.jiang.syntax.Provider {
+import std;
+
+@entry(lang)
+struct Provider: std.jiang.syntax.Provider {
     public std.jiang.syntax.Ast parse(
         Self&! self,
         std.jiang.syntax.Input input,
@@ -353,7 +355,7 @@ The default `scan` recognizes nested delimiters, strings, comments, and end of f
 custom tokens can override `scan`, store `Token<CustomKind>` values in its own instance, and construct
 `Parser<CustomKind>` in `parse`.
 
-Parser methods create typed expression, statement, declaration, type, pattern, and annotation handles.
+Parser methods create typed expression, statement, declaration, type, pattern, and attribute handles.
 `parser.ast(handle)` returns the opaque root; providers cannot access or assemble compiler AST storage.
 The compiler verifies that the returned root is valid at the invocation position.
 
@@ -368,3 +370,26 @@ Custom syntax changes parsing, but it does not bypass the Jiang compiler pipelin
 
 This allows a domain-specific surface syntax while keeping type rules, visibility, monomorphization,
 and backend behavior under Jiang compiler control.
+
+
+## Language Aliases and File Extensions
+
+Register the dependency once, then map a language alias to it:
+
+```ini
+[dependencies]
+tools = ../schema-tools
+
+[lang.schema]
+package = tools
+extensions = schema, model
+```
+
+Use `#schema { ... }` or import `models.schema`. The provider package may declare default extensions
+in `[lang] extensions`; the using package replaces that list with its own mapping. Without an explicit
+extension list, the language alias is the default extension. `.jiang` retains native Jiang syntax.
+Whole-file providers receive the `.none` delimiter and return declarations. The file can also be the
+package root. Its contents and provider dependencies participate in compiler caching.
+
+A package can provide both Lang and [generation](/language/generation/) entries. An explicit same-named
+generate configuration takes precedence when selecting a generator by language alias.

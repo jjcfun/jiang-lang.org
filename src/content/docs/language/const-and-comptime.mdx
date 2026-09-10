@@ -6,9 +6,8 @@ sidebar:
 ---
 
 Use `const` for values that should be known before the program runs: fixed sizes, feature flags,
-target facts, and reusable configuration. Use `comptime { ... }` at the top level when a module needs
-to choose imports or declarations based on compile-time information, such as the target operating
-system.
+target facts, and reusable configuration. Use `comptime { ... }` to evaluate a block before runtime. To select a module by target,
+bind an import expression through an alias.
 
 ## Const Declarations
 
@@ -50,7 +49,7 @@ public const TargetInfo target = TargetInfo(os: .macos, link_libc: true);
 Importers access the value through the module namespace:
 
 ```c
-import cfg = "config.jiang";
+alias cfg = import "config.jiang";
 
 Bool uses_libc() {
     cfg.target.link_libc
@@ -75,28 +74,23 @@ ordinary expressions, or `comptime` conditions when code needs to adapt to the s
 
 ## Comptime Blocks
 
-`comptime { ... }` currently works at the top level of a source file. A common use is selecting the
-right implementation module for the current target:
+A comptime block returns its result and has its own lexical scope. Its local bindings do not
+become module declarations. Conditional imports bind the selected namespace through an alias;
+the alias initializer is evaluated at compile time:
 
 ```c
 import build;
 
-comptime {
-    if (build.target.os == .macos) {
-        import provider = "os/macos.jiang";
-    } else if (build.target.os == .linux && build.target.link_libc) {
-        import provider = "os/linux_libc.jiang";
-    } else {
-        import provider = "os/unsupported.jiang";
-    }
-}
+alias provider = if (build.target.os == .macos) {
+    import "os/macos.jiang"
+} else {
+    import "os/other.jiang"
+};
 ```
 
-Only the selected branch is used by the program. The full block still has to be valid Jiang syntax,
-so syntax errors inside an unselected branch are still reported.
-
-The condition must evaluate to a compile-time `Bool`. The selected code uses normal Jiang syntax;
-there is no separate `#if` language.
+The condition must be a compile-time `Bool`; only the selected import joins the dependency closure.
+Unselected branches still need valid syntax. Compile-time calls use ordinary functions when their
+operations are supported by compile-time evaluation; there is no separate comptime function marker.
 
 ## Const Generic Parameters
 

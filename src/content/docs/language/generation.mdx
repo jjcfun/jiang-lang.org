@@ -1,0 +1,113 @@
+---
+title: Reflection and Generation
+description: Definition-level reflection, typed metadata, generator entries and cached output.
+sidebar:
+  order: 17
+---
+
+Jiang 0.5.4 provides definition-level compile-time introspection through `reflect`. A generator uses
+ordinary Jiang code to inspect definitions and write files; it does not require a Lang package.
+Function bodies and compiler IR are outside the reflection API.
+
+## Generate Entry
+
+Place an entry in the package root:
+
+```c
+import std;
+
+@entry(generate)
+Void emit(reflect.Module root) {
+    std.StringBuilder output! = std.StringBuilder();
+    for module in reflect.modules(root) {
+        output.append(module.name());
+        output.append("\n");
+    }
+    generate.write("modules.txt", output.slice());
+}
+```
+
+```bash
+jiang generate .
+```
+
+The entry is a non-generic synchronous `Void (reflect.Module)` function. It may be private and have
+any name. After semantic checking, the compiler calls it once with the input package root. Ordinary
+build/check does not run generators. There is no implicit parallel execution or recursive execution
+of dependency generators.
+
+## Generator Configuration
+
+```ini
+[dependencies]
+tools = ../schema-tools
+
+[generate.models]
+package = tools
+
+[generate.docs]
+module = src/generate/docs.jiang
+```
+
+```bash
+jiang generate . --name models
+jiang generate . --name docs -o build/docs
+```
+
+Each named configuration selects exactly one dependency `package` or internal `module`. The selected
+root file must declare `@entry(generate)`. The input remains the using package's root. Without
+`--name`, the compiler selects the input package root's entry, not a named configuration.
+A configured Lang alias may also select its package's generator; an explicit generate alias wins.
+
+Output defaults to `build/generated` inside the input package. `-o` is relative to the working
+directory. Use a dedicated output directory: successful generation replaces its contents, removing
+old files that were not generated again. Failed execution does not publish staged output.
+
+## Traversal
+
+`reflect.modules(root)` includes the root and same-package import-reachable modules, flattened and
+deduplicated. It does not scan every file or include extra modules loaded only by the generator.
+`module.imports()` exposes direct import edges, including cross-package targets, for navigation and
+dependency graphs. Cross-package access follows public visibility.
+
+`module.declarations()` returns declarations in source order. Match `reflect.Decl` to inspect its
+kind, then read structured information such as `Function.signature()` or direct `decl.members()`.
+Signatures expose parameters, result type, receiver and execution attributes. Documentation,
+metadata, locations and lifetime contracts have separate queries.
+
+Views support iteration, `len()` and `get(index)`. Handles are valid only during compile-time
+execution; they cannot be saved as runtime values. `reflect.type_of<T>()` also supports known-type
+queries during ordinary compile-time evaluation.
+
+## Typed Metadata
+
+```c
+struct Route { Int code; }
+
+@meta(module: Route(code: 1))
+
+@meta(Route(code: 2))
+struct User {}
+```
+
+Metadata expressions are evaluated at compile time and must produce materializable values.
+`decl.meta<Route>()` and `module.meta<Route>()` query attachments on one target;
+`reflect.with_meta<Route>(root)` searches the input scope. Matching uses exact type identity and
+preserves repeated attachments. Builtin attributes such as `@where` retain their dedicated semantics.
+
+`#doc` supplies Markdown to reflection; the compiler does not provide a documentation website renderer.
+
+## Resources and Cache
+
+`generate.read(path)` reads a snapshot relative to the generator entry file. Use `bytes()` for its
+contents and `fingerprint()` to include it in an output cache key. `generate.write(path, bytes)`
+stages output relative to the task's output directory.
+
+Use `generate.cache_read(purpose, fingerprint)` and `generate.cache_write(purpose, fingerprint, bytes)`
+to reuse partial results. A hit returns cached bytes; call `generate.write` explicitly to publish them.
+The entry still runs on a warm cache. The compiler includes generator implementation and compilation
+configuration dependencies; the generator combines the input fingerprints its output needs.
+A module fingerprint covers that module's definition content, not the contents of imported modules.
+
+Each invocation can read up to 64 MiB of distinct resource snapshots and stage up to 4096 output files
+with a combined size of 64 MiB. Ordinary const evaluation does not gain file-output capabilities.

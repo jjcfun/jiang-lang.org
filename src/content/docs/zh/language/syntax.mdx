@@ -45,10 +45,10 @@ UInt8[]& read_source(UInt8[]& file_path) {
 - 函数声明或定义。
 - `struct`、`enum`、`trait`。
 - `extend`：给已有类型补方法或补 `trait` 实现。
-- `comptime` block：在编译期选择顶层源码。
+- `comptime` block：执行编译期计算。
 
 ```c
-import math = "utils/math.jiang";
+alias math = import "utils/math.jiang";
 
 alias Byte = UInt8;
 alias answer = math.answer;
@@ -67,7 +67,7 @@ public Int add(Int left, Int right) {
 
 `public` 标记声明对其他模块可见。没有 `public` 的声明默认只在当前模块内可见。
 
-`public const` 会把编译期值导出到模块接口。`comptime { ... }` 是顶层编译期 block，用于源码选择；
+`public const` 会把编译期值导出到模块接口。`comptime { ... }` 执行编译期计算；条件导入使用接收 namespace 的 alias；
 详见 [Const 和 Comptime](/zh/language/const-and-comptime/)。
 
 ## 关键字选项

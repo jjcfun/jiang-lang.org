@@ -228,7 +228,7 @@ public Int add(Int left, Int right) {
 }
 ```
 
-header 本行没有正文时，由独占一行的 `#end` 结束。`#doc(module)` 必须位于第一个非 import 声明
+header 本行没有正文时，由独占一行的 `#end` 结束。`#doc(module)` 必须位于第一个非 import 声明（包括 alias）
 之前，用于记录当前 module 的文档：
 
 ```c
@@ -246,15 +246,15 @@ public struct Vector<T> {
 lang dependency 可以覆盖短名 `#doc`；需要明确选择内建 provider 时使用 `#jiang.doc`。Jiang 会把
 规范化后的 Markdown 保存到独立、可选的 `.ji` section；当前版本不定义文档 renderer 或 browser。
 
-## 整文件接入
+## 整文件集成
 
-后续设计中，自定义语法还可以扩展到整份源码文件。一个包可以导入非 `.jiang` 后缀的文件，
-由对应语言包按文件类型解析，再把结果作为 Jiang 模块加入编译：
+自定义语言支持独立源文件。配置扩展名映射后，普通 import 会调用对应的 Lang provider，
+将文件解析为 Jiang 模块：
 
 ```c
-import schema = "user.proto";
-import layout = "dashboard.ui";
-import kernel = "blur.shader";
+alias schema = import "user.proto";
+alias layout = import "dashboard.ui";
+alias kernel = import "blur.shader";
 
 User user = schema.User(id: 1, name: "Jiang");
 View page = layout.render(user);
@@ -304,7 +304,8 @@ root = lang.jiang
 type = lang
 ```
 
-语言包的根模块必须公开导出固定入口 `Lang`，并满足 `std.jiang.syntax.Provider`。
+语言包根模块用 `@entry(lang)` 标记可无参数构造、实现 `std.jiang.syntax.Provider` 的具体类型。
+类型名称任意，可以保持私有。
 编译器会在宿主机器上把这个包编译成动态库，之后在语法阶段调用它。
 
 ## 语法提供者
@@ -312,7 +313,10 @@ type = lang
 语法提供者实现 `std.jiang.syntax.Provider`。采用 Jiang 默认词法规则时，只需实现 `parse`：
 
 ```c
-public struct Lang: std.jiang.syntax.Provider {
+import std;
+
+@entry(lang)
+struct Provider: std.jiang.syntax.Provider {
     public std.jiang.syntax.Ast parse(
         Self&! self,
         std.jiang.syntax.Input input,
@@ -328,7 +332,7 @@ public struct Lang: std.jiang.syntax.Provider {
 默认 `scan` 能识别嵌套 delimiter、字符串、注释和文件结尾。需要自定义 token 时，provider 可以覆盖
 `scan`，在自己的实例中保存 `Token<CustomKind>`，再在 `parse` 中构造 `Parser<CustomKind>`。
 
-Parser 方法生成带类型角色的 expression、statement、declaration、type、pattern 和 annotation handle。
+Parser 方法生成带类型角色的 expression、statement、declaration、type、pattern 和 attribute handle。
 `parser.ast(handle)` 返回 opaque 根节点；provider 不能访问或手工组装 compiler AST storage。compiler
 会验证返回节点能否出现在 invocation 所在位置。
 
@@ -343,3 +347,25 @@ Parser 方法生成带类型角色的 expression、statement、declaration、typ
 
 这让自定义语法可以使用更贴近领域的表面写法，同时保持类型规则、可见性、泛型实例化和后端行为仍由
 Jiang 编译器统一控制。
+
+
+## 语言别名与文件扩展名
+
+先统一注册依赖，再配置语言别名：
+
+```ini
+[dependencies]
+tools = ../schema-tools
+
+[lang.schema]
+package = tools
+extensions = schema, model
+```
+
+使用 `#schema { ... }` 或导入 `models.schema`。Provider 包可用 `[lang] extensions` 声明默认扩展名；
+使用方的配置整组覆盖该列表。没有显式列表时，默认扩展名与语言别名相同，`.jiang` 保留原生语法。
+整文件 Provider 收到 `.none` 分隔符并返回声明，文件也可以作为 package root。
+源码内容、扩展名映射和 Provider 依赖共用编译器缓存。
+
+一个包可以同时提供 Lang 与[生成入口](/zh/language/generation/)。使用语言别名选择生成器时，
+显式的同名 generate 配置优先。
