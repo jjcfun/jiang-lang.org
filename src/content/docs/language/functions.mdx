@@ -34,25 +34,25 @@ Int scale(Int factor = 2, Int value) {
 }
 
 Int result = scale(2, 21);
-Int defaulted = scale(value: 21);
+Int defaulted = scale(value = 21);
 ```
 
-Call arguments may be positional or written with `name: expr`. A positional argument always binds the
+Call arguments may be positional or written with `name = expr`. A positional argument always binds the
 earliest unbound parameter; it never skips a default by looking at the argument type. Named arguments
 can be reordered and can skip parameters that have defaults:
 
 ```c
 Int value = scale(2, 21);
-Int named = scale(factor: 2, value: 21);
-Int reordered = scale(value: 21, factor: 2);
-Int defaulted = scale(value: 21);
+Int named = scale(factor = 2, value = 21);
+Int reordered = scale(value = 21, factor = 2);
+Int defaulted = scale(value = 21);
 Int missing = scale(21); // error: 21 binds factor, leaving value missing.
 ```
 
 Positional arguments cannot appear after named arguments:
 
 ```c
-Int bad = scale(value: 21, 2); // error: positional argument after a named argument.
+Int bad = scale(value = 21, 2); // error: positional argument after a named argument.
 ```
 
 Named arguments are matched by parameter name, so they may appear in a different order from the
@@ -160,7 +160,10 @@ T add<T>(T left, T right) {
 }
 ```
 
-`@where(...)` is a leading annotation before the generic declaration.
+`@where(...)` is a leading attribute before the generic declaration.
+
+Named keyword options use the same `=` spelling: `struct [align = 8]` and `async [domain = ui_domain]`.
+Colons in type constraints and lifetime attributes keep their existing meaning.
 
 ## Methods
 
@@ -172,7 +175,7 @@ struct User {
     Int id;
 
     User zero() {
-        return User(id: 0)
+        return User(id = 0)
     }
 
     Int value(self) {
@@ -180,7 +183,7 @@ struct User {
     }
 }
 
-User user = User(id: 42)
+User user = User(id = 42)
 Int a = user.value();
 User z = User.zero();
 ```
@@ -343,7 +346,7 @@ model. A closure may capture an environment; its captures still follow the norma
 lifetime, and cross-Domain `Sendable` rules.
 
 Use `Task { ... }` to start work eagerly in the current Domain, or
-`Task(domain: worker) { ... }` to choose a Domain explicitly. The result is an address-stable
+`Task(domain = worker) { ... }` to choose a Domain explicitly. The result is an address-stable
 `Task<T>`. This direct form is structured and `!Movable`: it stays in its enclosing scope. It may
 also be initialized directly in a statically addressable struct, tuple, or fixed-array field; an
 aggregate containing it cannot be moved, passed or returned by value, or captured. Starting multiple
@@ -357,7 +360,7 @@ async Int load_both() {
 }
 ```
 
-Use `new Task { ... }` or `new Task(domain: worker) { ... }` when the Task owner must independently
+Use `new Task { ... }` or `new Task(domain = worker) { ... }` when the Task owner must independently
 move, be returned, be passed to another function, or be stored in a movable field or container. The
 result is a movable, non-copyable `Task<T>^`; moving it transfers only the owner pointer and never
 relocates the running Task:
@@ -365,7 +368,7 @@ relocates the running Task:
 ```c
 @life()
 Task<Int>^ start_load() {
-    new Task(domain: global_domain) { load_page() }
+    new Task(domain = global_domain) { load_page() }
 }
 
 @region(a)
@@ -405,7 +408,7 @@ async [global_domain] Int load_on_worker() {
 
 Int main() {
     coroutine.sync(main_domain) {
-        Task<Int> worker = Task(domain: global_domain) {
+        Task<Int> worker = Task(domain = global_domain) {
             load_on_worker()
         };
         worker.await()
@@ -414,7 +417,7 @@ Int main() {
 ```
 
 `main_domain` is serial and bound to the program's startup thread. `global_domain` uses the shared
-concurrent executor. `Task(domain: global_domain) { ... }` starts a Task there; `Task { ... }`
+concurrent executor. `Task(domain = global_domain) { ... }` starts a Task there; `Task { ... }`
 inherits the current Domain. The removed `async { ... }` and `sync [domain] { ... }` block forms are
 not accepted. `coroutine.sync(domain) { ... }` always requires an explicit Domain. In an async
 function it suspends the current coroutine, runs the closure on the target Domain without blocking a
@@ -456,9 +459,9 @@ identity that can be released when that owner is no longer used. Pass a shared r
 selecting it:
 
 ```c
-SceneDomain scene_domain = SceneDomain(config: config);
+SceneDomain scene_domain = SceneDomain(config = config);
 
-Task<Int> task = Task(domain: scene_domain$.ref()) {
+Task<Int> task = Task(domain = scene_domain$.ref()) {
     load_scene()
 };
 

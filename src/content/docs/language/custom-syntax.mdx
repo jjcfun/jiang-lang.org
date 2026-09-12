@@ -57,9 +57,9 @@ checks component parameters, state bindings, and event signatures:
 
 ```c
 View settings = #ui {
-    VStack(spacing: 12) {
+    VStack(spacing = 12) {
         Text("Settings").font(.title)
-        Toggle("Enable cache", is_on: bind(settings.cache_enabled))
+        Toggle("Enable cache", is_on = bind(settings.cache_enabled))
         Button("Save") {
             save(settings)
         }
@@ -146,8 +146,8 @@ stage's output matches the next stage's input:
 Pipeline image_pipeline = #pipeline {
     load(path)
         |> decode_png
-        |> resize(width: 256, height: 256)
-        |> encode_webp(quality: 90)
+        |> resize(width = 256, height = 256)
+        |> encode_webp(quality = 90)
 };
 ```
 
@@ -166,7 +166,7 @@ RegisterBlock uart = #mmio {
 
 ## Builtin Assembly Blocks
 
-`#asm` is a builtin syntax block available on the current development branch. It is meant for small
+`#asm` is a builtin syntax block. It is meant for small
 pieces of target-specific assembly inside Jiang functions, such as system calls, startup code,
 special instructions, or rare backend boundary cases.
 
@@ -260,8 +260,7 @@ public struct Vector<T> {
 ```
 
 A lang dependency may override the short name `#doc`; use `#jiang.doc` to select the builtin provider
-explicitly. Jiang preserves normalized Markdown in a separate optional `.ji` section. The current
-release does not define a documentation renderer or browser.
+explicitly. Documentation is available to reflection and documentation generators.
 
 ## Whole-File Integration
 
@@ -273,7 +272,7 @@ alias schema = import "user.proto";
 alias layout = import "dashboard.ui";
 alias kernel = import "blur.shader";
 
-User user = schema.User(id: 1, name: "Jiang");
+User user = schema.User(id = 1, name = "Jiang");
 View page = layout.render(user);
 ```
 
@@ -307,27 +306,28 @@ keeping performance-critical paths in Jiang's ownership and lifetime model.
 
 The using package declares a dependency:
 
-```ini
-[package]
-name = app
-root = src/main.jiang
-
-[dependencies]
-sql = ../sql_lang
+```c
+#package {
+    name = "app";
+    root = "src/main.jiang";
+    dependencies {
+        sql = "../sql_lang";
+    }
+}
 ```
 
 The dependency must be a lang package:
 
-```ini
-[package]
-name = sql_lang
-root = lang.jiang
-type = lang
+```c
+#package {
+    name = "sql_lang";
+    root = "lang.jiang";
+    type = .lang;
+}
 ```
 
 Mark a concrete, zero-argument-constructible provider type in the package root with `@entry(lang)`.
-It must implement `std.jiang.syntax.Provider`; its name is arbitrary and it may be private. The compiler
-builds the package into a host dynamic library and calls it during syntax parsing.
+It must implement `std.jiang.syntax.Provider`; its name is arbitrary and it may be private.
 
 ## Provider Entry Points
 
@@ -342,9 +342,9 @@ struct Provider: std.jiang.syntax.Provider {
     public std.jiang.syntax.Ast parse(
         Self&! self,
         std.jiang.syntax.Input input,
-        std.jiang.syntax.SyntaxContext&! syntax
+        std.jiang.syntax.SyntaxContext<std.jiang.syntax.EmptyLangContext>& syntax
     ) {
-        _ parser! = std.jiang.syntax.default_parser(syntax, input);
+        _ parser! = std.jiang.syntax.default_parser(syntax.syntax, input);
         std.jiang.syntax.Expr value = parser.int_literal(input.name_span, "0");
         return parser.ast(value);
     }
@@ -356,40 +356,123 @@ custom tokens can override `scan`, store `Token<CustomKind>` values in its own i
 `Parser<CustomKind>` in `parse`.
 
 Parser methods create typed expression, statement, declaration, type, pattern, and attribute handles.
-`parser.ast(handle)` returns the opaque root; providers cannot access or assemble compiler AST storage.
-The compiler verifies that the returned root is valid at the invocation position.
-
-## Compilation Boundary
-
-Custom syntax changes parsing, but it does not bypass the Jiang compiler pipeline:
-
-- Generated nodes still go through normal name resolution, type checking, intermediate representation, and backend code generation.
-- A provider cannot directly generate intermediate representation or backend code.
-- Provider dynamic libraries are host-local cache artifacts and are not reusable across compiler versions.
-- Lang packages are still distributed as source packages; cache damage or interface mismatches should produce diagnostics.
-
-This allows a domain-specific surface syntax while keeping type rules, visibility, monomorphization,
-and backend behavior under Jiang compiler control.
-
+`parser.ast(handle)` returns the result. Choose a role that fits the position: expressions in expressions,
+declarations at the top level, and members inside a type.
 
 ## Language Aliases and File Extensions
 
 Register the dependency once, then map a language alias to it:
 
-```ini
-[dependencies]
-tools = ../schema-tools
-
-[lang.schema]
-package = tools
-extensions = schema, model
+```c
+#package {
+    dependencies {
+        tools = "../schema-tools";
+    }
+    lang schema {
+        package = tools;
+        extensions = ["schema", "model"];
+    }
+}
 ```
 
 Use `#schema { ... }` or import `models.schema`. The provider package may declare default extensions
-in `[lang] extensions`; the using package replaces that list with its own mapping. Without an explicit
+in `lang { extensions = ["schema", "model"]; }`; the using package replaces that list with its own mapping. Without an explicit
 extension list, the language alias is the default extension. `.jiang` retains native Jiang syntax.
 Whole-file providers receive the `.none` delimiter and return declarations. The file can also be the
 package root. Its contents and provider dependencies participate in compiler caching.
 
 A package can provide both Lang and [generation](/language/generation/) entries. An explicit same-named
 generate configuration takes precedence when selecting a generator by language alias.
+
+## Shared Keywords and Context
+
+A stateless Provider can use the default `EmptyLangContext` and implement only `parse`. To share
+keywords or other data, declare `LangContext`, initialize it with `create_context(Session&)`, and read
+it through `context.lang`. One language shares its context within a compilation; separate compilations
+are isolated. Each block still has its own Provider instance. Keep block tokens and temporary parsing
+state out of shared context.
+
+This language accepts both `#value { value 42 }` and `#value { 42 }`:
+
+```c
+import std;
+
+public struct Keywords: Copyable {
+    std.jiang.syntax.SymbolId value;
+}
+
+@entry(lang)
+struct ValueProvider: std.jiang.syntax.Provider {
+    public associated LangContext = Keywords;
+
+    @life()
+    public Keywords create_context(std.jiang.syntax.Session& session) {
+        return Keywords(value = session.intern("value"));
+    }
+
+    public std.jiang.syntax.Ast parse(
+        Self&! self, std.jiang.syntax.Input input,
+        std.jiang.syntax.SyntaxContext<Keywords>& context
+    ) {
+        _ parser! = std.jiang.syntax.default_parser(context.syntax, input);
+        parser.match_keyword(context.lang.value);
+        _ value = parser.parse_expression();
+        return parser.ast(value);
+    }
+}
+```
+
+`session.intern()` returns IDs compatible with default tokens, so keywords need not be registered for every block.
+
+## Nested Languages and Attributes
+
+At a RawBlock, call `parser.parse_raw_block()` to obtain `Ast?`. Inspect `role()` or use
+`as_attribute()`, `as_decl()`, `as_member()` and the other typed accessors. Your language can therefore
+accept `#doc` without recognizing its name or implementing Markdown parsing.
+
+The receiving language chooses the target and attaches attributes to a Decl or Member with
+`with_attributes`. Keep pending attributes in `parser.list<Attribute>()` until the next target arrives.
+Report dangling attributes at the end of a block; do not attach an inner block's documentation to
+an outer declaration. Package configuration fields may instead ignore attributes.
+
+`parser.ast(member)` returns one member. Use `parser.members(span, values)` for member sequences
+and `parser.declarations(span, values)` for declaration sequences. Empty and single-element sequences
+remain sequences; read them with `parser.len(sequence)` and `parser.at(sequence, index)`.
+
+If the current token is not a RawBlock, expansion reports a diagnostic and returns null without
+consuming it. A failed RawBlock expansion consumes that token and keeps its diagnostics.
+`peek` and `advance` only read tokens; they do not expand language blocks.
+
+A custom tokenizer can call `scan_raw_block()` after `begin_token()`, then retain the returned block
+ID and original span. Expand that saved default token with `parser.parse_raw_block(raw)`; this overload
+does not advance the custom parser's cursor. Consume your own custom token explicitly, and do not
+fabricate identities or reuse them across source files.
+
+## Lists and Backtracking
+
+Create syntax-handle lists with `parser.list<T>()`, then use `append`, `len` and `at`. AST construction
+accepts managed lists alongside existing slice arguments. These lists hold supported syntax handles,
+not arbitrary application values.
+
+Inside `parse`, with `parser` and `input` already available:
+
+```c
+_ statements = parser.list<std.jiang.syntax.Stmt>();
+_ span = input.name_span;
+_ value = parser.int_literal(span, "42");
+statements.append(parser.return_statement(span, value));
+_ body = parser.block(span, statements);
+```
+
+Save `parser.checkpoint()` before a speculative parse. Use `parser.rewind(saved)` to try another
+interpretation. Rewind restores tokens, diagnostics, AST changes and managed lists, including attributes
+attached to existing nodes. Handles created after the checkpoint become invalid; earlier lists regain
+their previous contents. On success, continue without a separate commit operation.
+
+Provider fields, ordinary vectors and external side effects are not rolled back. Put pending attributes
+in managed lists when they must rewind. Default scanned tokens support repeated parsing; custom tokens
+must likewise remain readable if your parser retries them.
+
+Default tokens use `single_quoted`/`double_quoted` to distinguish quote forms. SymbolId contains decoded
+text; use the span to read original quotes and escapes. Constructing a Jiang character AST requires
+exactly one Unicode scalar.

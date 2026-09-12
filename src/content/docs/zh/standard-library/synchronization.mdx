@@ -29,7 +29,7 @@ Int next = count.with_lock { value =>
 Mutex 本体地址固定；需要转移 handle 时移动 `Mutex<T>^` owner。callback 正常返回或抛出错误都会释放
 锁，从 `value` 派生的引用不能逃出 callback。
 
-0.5.3 的 `std.fs.File` 特意不满足 `Sendable`，因为并发 file offset 和 close 行为尚未冻结。应在一个
+`std.fs.File` 特意不满足 `Sendable`，因为并发 file offset 和 close 行为尚未冻结。应在一个
 Domain 中完成 IO，再跨 Domain 转移得到的 owned bytes。
 
 当 `T: Sendable` 时，`coroutine.Continuation<T>` 也满足 `Sendable`；挂起操作可以跨线程完成，但不会

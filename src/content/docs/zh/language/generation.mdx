@@ -5,7 +5,7 @@ sidebar:
   order: 17
 ---
 
-Jiang 0.5.4 通过 `reflect` 提供定义级编译期内省。生成器使用普通 Jiang 代码查询定义并输出文件，
+Jiang 通过 `reflect` 提供定义级编译期内省。生成器使用普通 Jiang 代码查询定义并输出文件，
 不要求创建 Lang package。反射不开放函数体或编译器内部 IR。
 
 ## 生成入口
@@ -35,15 +35,18 @@ jiang generate .
 
 ## 生成器配置
 
-```ini
-[dependencies]
-tools = ../schema-tools
-
-[generate.models]
-package = tools
-
-[generate.docs]
-module = src/generate/docs.jiang
+```c
+#package {
+    dependencies {
+        tools = "../schema-tools";
+    }
+    generate models {
+        package = tools;
+    }
+    generate docs {
+        module = "src/generate/docs.jiang";
+    }
+}
 ```
 
 ```bash
@@ -76,9 +79,9 @@ jiang generate . --name docs -o build/docs
 ```c
 struct Route { Int code; }
 
-@meta(module: Route(code: 1))
+@meta(module: Route(code = 1))
 
-@meta(Route(code: 2))
+@meta(Route(code = 2))
 struct User {}
 ```
 

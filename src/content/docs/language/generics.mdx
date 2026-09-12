@@ -32,7 +32,7 @@ struct Pair<A, B> {
     B second;
 }
 
-Pair<Int, UInt8[]&> pair = Pair<Int, UInt8[]&>(first: 1, second: "one");
+Pair<Int, UInt8[]&> pair = Pair<Int, UInt8[]&>(first = 1, second = "one");
 ```
 
 `a: A` and `b: B` state that these public regions have the same lifetime shape as their respective
@@ -94,7 +94,7 @@ struct CanonicalCount<N> {
 
 ## `@where`
 
-`@where(...)` is a leading annotation:
+`@where(...)` is a leading attribute:
 
 ```c
 @where(T: Numeric)
@@ -131,11 +131,11 @@ Bool compare_with(Cmp cmp, Item left, Item right) {
 }
 ```
 
-Leading annotations are applied in source order. Generic parameters for the current declaration are
-available before annotations are applied. Later annotations can use aliases introduced by earlier
-`@alias` annotations, but earlier annotations cannot use aliases introduced later. One `@alias(...)`
+Leading attributes are applied in source order. Generic parameters for the current declaration are
+available before attributes are applied. Later attributes can use aliases introduced by earlier
+`@alias` attributes, but earlier attributes cannot use aliases introduced later. One `@alias(...)`
 can contain multiple comma-separated bindings. This is equivalent to splitting them into multiple
-ordered `@alias` annotations:
+ordered `@alias` attributes:
 
 ```c
 @alias(Items = T[]&, Cmp = Fn<Bool, T, T>)

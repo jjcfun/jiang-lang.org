@@ -186,7 +186,7 @@ struct User {
     Int age!;
 }
 
-User user! = User(id: 1, age: 18)
+User user! = User(id = 1, age = 18)
 user.age = 19;
 // user.id = 2; // error
 
@@ -247,7 +247,7 @@ struct Box {
     Int value;
 }
 
-Box^ box = new Box(value: 42);
+Box^ box = new Box(value = 42);
 Int n = box.value;
 ```
 

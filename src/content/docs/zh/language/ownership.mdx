@@ -53,7 +53,7 @@ struct Point: Copyable {
     Int y;
 }
 
-Point a = Point(x: 1, y: 2);
+Point a = Point(x = 1, y = 2);
 Point b = a; // copy
 ```
 
@@ -64,7 +64,7 @@ struct Box {
     Int^ value;
 }
 
-Box a = Box(value: new Int(1));
+Box a = Box(value = new Int(1));
 Box b = a; // move；a 随后失效
 ```
 
@@ -237,7 +237,7 @@ struct ByteView {
 pair(Cell& left, Cell& right)
 ```
 
-它们是同一个 case 声明的三种可选写法，不是需要同时写下的三条 annotation。
+它们是同一个 case 声明的三种可选写法，不是需要同时写下的三条 attribute。
 
 需要精确绑定一个 pointee 带多个 region 的引用时，pointee shape 必须保持分组。假设 `PairRef` 有
 `left`、`right` 两个 region，应写 `@life(a, (left, right))`，不能扁平化成
@@ -290,7 +290,7 @@ struct Pair {
 
 `Self self` 按值 receiver 不享受优先级，和普通参数一样处理。没有参数携带借用时，必须用
 `@life()` 确认返回值不借用参数；有多个参数携带借用，或者来源与返回值的 lifetime 位置不一致
-时，必须显式写 `@life`。显式 annotation 会定义全部允许的 lifetime 关系，不再补充默认关系。
+时，必须显式写 `@life`。显式 attribute 会定义全部允许的 lifetime 关系，不再补充默认关系。
 同一个左侧名字只能出现一次；返回值可能借用多个兼容来源时，使用 `&`：
 
 ```c
@@ -325,7 +325,7 @@ struct PairRef {
 
 @life(return: (left, right))
 PairRef make_pair(Int& left, Int& right) {
-    PairRef(left: left, right: right)
+    PairRef(left = left, right = right)
 }
 ```
 

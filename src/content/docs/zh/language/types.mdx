@@ -187,7 +187,7 @@ struct User {
     Int age!;
 }
 
-User user! = User(id: 1, age: 18)
+User user! = User(id = 1, age = 18)
 user.age = 19; // 允许
 // user.id = 2; // 编译错误
 
@@ -256,7 +256,7 @@ struct Box {
     Int value;
 }
 
-Box^ box = new Box(value: 42);
+Box^ box = new Box(value = 42);
 Int n = box.value;
 ```
 

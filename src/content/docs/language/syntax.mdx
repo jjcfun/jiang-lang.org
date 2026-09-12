@@ -18,7 +18,7 @@ The project uses these conventions:
 ```c
 enum TokenKind {
     kw,
-    string_lit,
+    double_quoted,
     left_paren,
 }
 
@@ -130,7 +130,7 @@ Int value = if flag {
 Field literals are written with their type path:
 
 ```c
-Point origin = Point(x: 0, y: 0)
+Point origin = Point(x = 0, y = 0)
 ```
 
 ## Implicit Operation Layer
@@ -176,3 +176,14 @@ if maybe is .some(Int value!) {
 ```
 
 `switch` uses the same style of patterns for optional, variant, and literal matches.
+
+## Characters and Strings
+
+Use single quotes for characters and double quotes for strings. There is no implicit conversion between them.
+After escape decoding, a character must contain exactly one Unicode scalar: `'a'`, `'中'`, `'😀'` and
+`'\0'` are valid; `''`, `'abc'` and `'e\u{301}'` are not. The last example may look like one character,
+but contains two scalars.
+
+For custom languages using default tokens, `single_quoted` and `double_quoted` describe the quote form.
+A language can interpret the complete single-quoted text itself. Creating a Jiang character literal
+requires the single-scalar rule above.

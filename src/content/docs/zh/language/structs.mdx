@@ -27,15 +27,15 @@ struct Offset {
 结构体布局选项写在 `struct` 后：
 
 ```c
-struct [packed, align: 8] Packet {
+struct [packed, align = 8] Packet {
     UInt8 tag;
     UInt32 value;
 }
 ```
 
-`packed` 表示字段之间不按字段自然对齐插入填充。`align: N` 表示结构体整体对齐至少为 `N`，
-并且 `N` 必须是 2 的幂。选项顺序无关，`struct [align: 8, packed]` 与
-`struct [packed, align: 8]` 等价；同一个选项重复出现会报错。
+`packed` 表示字段之间不按字段自然对齐插入填充。`align = N` 表示结构体整体对齐至少为 `N`，
+并且 `N` 必须是 2 的幂。选项顺序无关，`struct [align = 8, packed]` 与
+`struct [packed, align = 8]` 等价；同一个选项重复出现会报错。
 
 ## 默认构造
 
@@ -43,8 +43,8 @@ struct [packed, align: 8] Packet {
 必填参数标签：
 
 ```c
-Point point = Point(x: 0, y: 0);
-Point^ heap_point = new Point(x: 100, y: 200);
+Point point = Point(x = 0, y = 0);
+Point^ heap_point = new Point(x = 100, y = 200);
 ```
 
 默认构造不接受位置参数：
@@ -62,14 +62,14 @@ struct Window {
     Bool visible = true;
 }
 
-Window window = Window(width: 800);
+Window window = Window(width = 800);
 ```
 
 如果上下文已经提供期望类型，可以用 `.(...)` 省略类型名：
 
 ```c
 Window make_window() {
-    return .(width: 1024, visible: false);
+    return .(width = 1024, visible = false);
 }
 ```
 
@@ -91,7 +91,7 @@ struct User {
     UInt8[]&? nick_name;
 }
 
-User user! = User(id: 123, age: 18)
+User user! = User(id = 123, age = 18)
 user.age = user.age + 1;
 // user.id = 200; // 编译错误：字段自身不可变
 
@@ -195,7 +195,7 @@ struct User {
 }
 
 Int a = User.zero();
-User u = User(id: 42)
+User u = User(id = 42)
 Int b = u.value();
 ```
 

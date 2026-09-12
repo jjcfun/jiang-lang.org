@@ -34,24 +34,24 @@ Int scale(Int factor = 2, Int value) {
 }
 
 Int result = scale(2, 21);
-Int defaulted = scale(value: 21);
+Int defaulted = scale(value = 21);
 ```
 
-调用实参可以直接按位置提供，也可以写成 `name: expr`。位置参数总是绑定最早尚未绑定的参数，
+调用实参可以直接按位置提供，也可以写成 `name = expr`。位置参数总是绑定最早尚未绑定的参数，
 不会根据实参类型跳过默认参数。命名参数可以重排，也可以跳过带默认值的参数：
 
 ```c
 Int value = scale(2, 21);
-Int named = scale(factor: 2, value: 21);
-Int reordered = scale(value: 21, factor: 2);
-Int defaulted = scale(value: 21);
+Int named = scale(factor = 2, value = 21);
+Int reordered = scale(value = 21, factor = 2);
+Int defaulted = scale(value = 21);
 Int missing = scale(21); // 错误：21 绑定 factor，value 仍然缺失。
 ```
 
 命名参数之后不能再出现位置参数：
 
 ```c
-Int bad = scale(value: 21, 2); // 错误：命名参数后不能再写位置参数。
+Int bad = scale(value = 21, 2); // 错误：命名参数后不能再写位置参数。
 ```
 
 命名参数按参数名匹配，因此可以和函数声明里的参数顺序不同。省略的默认参数会在调用前补上。
@@ -157,7 +157,10 @@ T add<T>(T left, T right) {
 }
 ```
 
-`@where(...)` 是约束注解，写在泛型声明之前。
+`@where(...)` 是约束 attribute，写在泛型声明之前。
+
+命名 keyword options 同样使用等号，例如 `struct [align = 8]` 和 `async [domain = ui_domain]`。
+类型约束和 lifetime attribute 中的冒号保留原有含义。
 
 ## 方法
 
@@ -168,7 +171,7 @@ struct User {
     Int id;
 
     User zero() {
-        return User(id: 0)
+        return User(id = 0)
     }
 
     Int value(self) {
@@ -176,7 +179,7 @@ struct User {
     }
 }
 
-User user = User(id: 42)
+User user = User(id = 42)
 Int a = user.value();
 User z = User.zero();
 ```
@@ -333,7 +336,7 @@ async 函数、async `RawFn` 值和 async `Fn` 闭包使用同一套调用与挂
 capture 仍遵守普通的所有权、生命周期与跨 Domain `Sendable` 规则。
 
 使用 `Task { ... }` 可以在当前 Domain 立即启动任务；需要显式选择 Domain 时写
-`Task(domain: worker) { ... }`。结果是地址稳定的 `Task<T>`。这种直接形式属于结构化任务且为
+`Task(domain = worker) { ... }`。结果是地址稳定的 `Task<T>`。这种直接形式属于结构化任务且为
 `!Movable`，因此留在当前作用域内。它也可以直接存入 struct、tuple 或固定数组中的静态字段；
 包含它的聚合值同样不能移动、按值传参、返回或捕获。先启动多个 Task，再按源码顺序等待，
 仍然可以保持并发推进：
@@ -347,13 +350,13 @@ async Int load_both() {
 ```
 
 需要让 Task 独立移动、返回、传参或存入可移动字段/容器时，使用 `new Task { ... }` 或
-`new Task(domain: worker) { ... }`。
+`new Task(domain = worker) { ... }`。
 结果类型是可移动但不可复制的 `Task<T>^`；移动只转移 owner pointer，不会搬动正在运行的 Task：
 
 ```c
 @life()
 Task<Int>^ start_load() {
-    new Task(domain: global_domain) { load_page() }
+    new Task(domain = global_domain) { load_page() }
 }
 
 @region(a)
@@ -390,7 +393,7 @@ async [global_domain] Int load_on_worker() {
 
 Int main() {
     coroutine.sync(main_domain) {
-        Task<Int> worker = Task(domain: global_domain) {
+        Task<Int> worker = Task(domain = global_domain) {
             load_on_worker()
         };
         worker.await()
@@ -399,7 +402,7 @@ Int main() {
 ```
 
 `main_domain` 是绑定程序启动线程的串行 Domain，`global_domain` 使用进程共享的并发执行器。
-`Task(domain: global_domain) { ... }` 在该 Domain 上启动 Task；`Task { ... }` 继承 current Domain。
+`Task(domain = global_domain) { ... }` 在该 Domain 上启动 Task；`Task { ... }` 继承 current Domain。
 已删除的 `async { ... }` 和 `sync [domain] { ... }` block 形式不再接受。
 `coroutine.sync(domain) { ... }` 的 Domain 参数始终必填。在 async 函数中，它挂起当前
 coroutine，在目标 Domain 执行 closure，不阻塞 worker thread，完成后回到进入前的 Domain。
@@ -436,9 +439,9 @@ Executor 实例。长期共享的 Domain 应优先使用这种形式；它的调
 页面、场景或会话需要可单独释放的执行身份时，创建普通 Domain value，并在选择它时传入共享引用：
 
 ```c
-SceneDomain scene_domain = SceneDomain(config: config);
+SceneDomain scene_domain = SceneDomain(config = config);
 
-Task<Int> task = Task(domain: scene_domain$.ref()) {
+Task<Int> task = Task(domain = scene_domain$.ref()) {
     load_scene()
 };
 

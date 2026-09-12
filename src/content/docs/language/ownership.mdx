@@ -54,7 +54,7 @@ struct Point: Copyable {
     Int y;
 }
 
-Point a = Point(x: 1, y: 2);
+Point a = Point(x = 1, y = 2);
 Point b = a; // copy
 ```
 
@@ -65,7 +65,7 @@ struct Box {
     Int^ value;
 }
 
-Box a = Box(value: new Int(1));
+Box a = Box(value = new Int(1));
 Box b = a; // move; a is now invalid
 ```
 
@@ -209,7 +209,7 @@ owner. `T&!` cannot cross directly; a call that needs `T&` may establish the fro
 described above. Raw pointers carry neither ownership nor lifetime proof and are not automatically
 `Sendable`.
 
-## Lifetime Annotations
+## Lifetime Attributes
 
 Borrowing `struct` and payload enum types declare their public lifetime regions with `@region`. Every
 declared region must be used by a field or enum payload. A reference has an outer borrow plus the
@@ -248,7 +248,7 @@ equivalent:
 pair(Cell& left, Cell& right)
 ```
 
-They are alternative spellings for one case declaration, not three annotations to write together.
+They are alternative spellings for one case declaration, not three attributes to write together.
 
 For an exact binding of a reference whose pointee has several regions, keep its pointee shape grouped.
 If `PairRef` has regions `left` and `right`, use `@life(a, (left, right))`; do not flatten it to
@@ -304,7 +304,7 @@ struct Pair {
 A by-value `Self self` receiver has no priority and is treated like an ordinary parameter. If no
 parameter carries borrowed data, write `@life()` to confirm that the result does not borrow from a
 parameter. If several parameters carry borrowed data, or the source and result have different
-lifetime positions, write `@life` explicitly. An explicit annotation defines all allowed lifetime
+lifetime positions, write `@life` explicitly. An explicit attribute defines all allowed lifetime
 relationships; no default relationship is added. Each left-hand name may appear only once. Use `&`
 when the result may borrow from either of several compatible sources:
 
@@ -340,7 +340,7 @@ struct PairRef {
 
 @life(return: (left, right))
 PairRef make_pair(Int& left, Int& right) {
-    PairRef(left: left, right: right)
+    PairRef(left = left, right = right)
 }
 ```
 

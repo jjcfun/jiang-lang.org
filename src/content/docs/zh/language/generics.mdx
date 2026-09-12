@@ -33,7 +33,7 @@ struct Pair<A, B> {
     B second;
 }
 
-Pair<Int, UInt8[]&> pair = Pair<Int, UInt8[]&>(first: 1, second: "one");
+Pair<Int, UInt8[]&> pair = Pair<Int, UInt8[]&>(first = 1, second = "one");
 ```
 
 `a: A` 与 `b: B` 表示这两个公开 region 分别具有对应类型实参的完整 lifetime shape。泛型字段
@@ -130,8 +130,8 @@ Bool compare_with(Cmp cmp, Item left, Item right) {
 }
 ```
 
-同一个声明上的注解按源码顺序生效。当前声明的泛型参数先进入命名空间，后面的注解可以
-使用前面 `@alias` 引入的名字，前面的注解不能使用后面的名字。一个 `@alias(...)`
+同一个声明上的attribute按源码顺序生效。当前声明的泛型参数先进入命名空间，后面的attribute可以
+使用前面 `@alias` 引入的名字，前面的attribute不能使用后面的名字。一个 `@alias(...)`
 可以包含多个逗号分隔的绑定，等价于按顺序拆成多个 `@alias`：
 
 ```c

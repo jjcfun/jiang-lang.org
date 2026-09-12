@@ -39,7 +39,7 @@ public struct TargetInfo {
     public Bool link_libc;
 }
 
-public const TargetInfo target = TargetInfo(os: .macos, link_libc: true);
+public const TargetInfo target = TargetInfo(os = .macos, link_libc = true);
 ```
 
 导入方通过模块命名空间访问：

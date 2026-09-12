@@ -43,7 +43,7 @@ public struct TargetInfo {
     public Bool link_libc;
 }
 
-public const TargetInfo target = TargetInfo(os: .macos, link_libc: true);
+public const TargetInfo target = TargetInfo(os = .macos, link_libc = true);
 ```
 
 Importers access the value through the module namespace:

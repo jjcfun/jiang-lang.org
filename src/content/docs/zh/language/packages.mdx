@@ -5,19 +5,20 @@ sidebar:
   order: 16
 ---
 
-包是 Jiang 的项目边界。目录中放置 `package.ini` 后，编译器可以从包根模块
-开始编译整个可达源码闭包。
+包是 Jiang 的项目边界。目录中放置 `package.jiang` 后，编译器可以从包根模块
+开始构建项目。把公开接口放在根文件中，其他实现文件按需导入。
 
 ## 包描述文件
 
-使用固定文件名 `package.ini`：
+使用固定文件名 `package.jiang`：
 
-```ini
-[package]
-name = app
-version = 1.0.0
-root = src/main.jiang
-type = bin
+```c
+#package {
+    name = "app";
+    version = "1.0.0";
+    root = "src/main.jiang";
+    type = .bin;
+}
 ```
 
 字段含义：
@@ -25,22 +26,23 @@ type = bin
 - `name`：包名称，未写时默认取目录名。
 - `version`：包版本，可选。编译器接受 ASCII 字母、数字、`.`、`_`、`+` 和 `-`。
 - `root`：入口源文件，未写时默认取 `<name>.jiang`。
-- `type`：包类型，可选；未写时是普通包，写成 `lang` 时表示这个包提供[自定义语法](/zh/language/custom-syntax/)。
+- `type`：包类型，可选；未写时为 `.lib`；可执行程序使用 `.bin`，`.lang` 表示这个包提供[自定义语法](/zh/language/custom-syntax/)。
 
-当编译器输入路径是目录时，它读取该目录下的 `package.ini`，再编译 `root` 指向的源文件。
+当编译器输入路径是目录时，它读取该目录下的 `package.jiang`，再编译 `root` 指向的源文件。
 
 ## 依赖
 
-本地源码依赖写在 `[dependencies]` 中：
+本地源码依赖写在 `dependencies { ... }` 中：
 
-```ini
-[package]
-name = app
-version = 1.0.0
-root = src/main.jiang
-
-[dependencies]
-util = ../util
+```c
+#package {
+    name = "app";
+    version = "1.0.0";
+    root = "src/main.jiang";
+    dependencies {
+        util = "../util";
+    }
+}
 ```
 
 在这个包内，通过依赖别名导入：
@@ -53,8 +55,7 @@ Int main() {
 }
 ```
 
-不带引号的 `import util;` 会优先匹配当前包的 `[dependencies]`。命中后，编译器读取
-依赖包的描述文件，并把依赖包的根模块加入同一轮编译闭包。
+`import util;` 使用依赖别名，访问依赖包根模块的公开接口。
 
 ## 公开接口
 
@@ -76,7 +77,7 @@ Int main() {
 import "../util/src/util.jiang"; // 错误：跨包文件导入
 ```
 
-应该在 `package.ini` 中声明依赖，然后写：
+应该在 `package.jiang` 中声明依赖，然后写：
 
 ```c
 import util;
@@ -97,6 +98,32 @@ import util;
 Lang 和 generate 分别用 `@entry(lang)`、`@entry(generate)` 标记选中 root 内的入口，可以私有，
 每个 root 的每种角色最多一个显式入口。
 
-Provider 依赖统一登记在 `[dependencies]`，`[lang.<name>]`、`[generate.<name>]` 通过别名引用，
+Provider 依赖统一登记在 `dependencies { ... }`，`lang <name> { ... }`、`generate <name> { ... }` 通过别名引用，
 不另行声明依赖来源。本包内部生成器用 `module` 替代 `package`。
-配置示例见[反射与生成](/zh/language/generation/)。0.5.4 的清单文件仍是 `package.ini`。
+配置示例见[反射与生成](/zh/language/generation/)。包入口固定为 `package.jiang`，字段使用等号、分号和具名子块。
+
+## 读取包信息
+
+`#package` 提供公开常量 `info`。在 `src/main.jiang` 中导入包入口，就可以直接使用项目版本：
+
+```c
+import std;
+import "../package.jiang";
+
+Int main() {
+    std.fs.File output! = std.io.stdout();
+    Void written = try output.write_all(package.info.version) catch { return 1; };
+    return 0;
+}
+```
+
+也可以把 `package.info` 整体传给接受 `std.jiang.PackageInfo` 的函数。修改配置里的 `version`
+后重新构建，程序使用的版本就会更新，无需维护第二份字符串。不要再声明同名 `info`。
+
+配置可以使用普通 Jiang 表达式和独立 helper，但不能依赖它正在声明的 root、依赖包、语言提供者
+或生成结果。依赖路径相对于包目录；跨包应使用依赖别名，而不是相对文件路径。
+
+## 包配置中的文档
+
+字段与子块之间可以放置 `#doc`。这些文档不会附着到单独的字段，也不会改变配置值。
+要给整个包声明附加文档，请把 `#doc` 放在 `#package` 前面。

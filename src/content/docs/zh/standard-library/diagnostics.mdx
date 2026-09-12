@@ -17,7 +17,7 @@ if (!std.debug.write_line("loading configuration")) {
 }
 ```
 
-`panic(message)` 向标准错误写入 message 和换行，然后 abort。Jiang 0.5.3 不支持 unwind panic：
+`panic(message)` 向标准错误写入 message 和换行，然后 abort。Jiang 不支持 unwind panic：
 `panic`、`trap` 和 `std.process.exit` 都不会执行作用域清理。可以恢复的失败应使用 `T@E`。
 
 `std.build.mode` 是只读 `BuildMode`，用于 comptime 选择 debug/release 路径。debugger 控制、profiling、

@@ -5,7 +5,7 @@ sidebar:
   order: 17
 ---
 
-Jiang 0.5.4 provides definition-level compile-time introspection through `reflect`. A generator uses
+Jiang provides definition-level compile-time introspection through `reflect`. A generator uses
 ordinary Jiang code to inspect definitions and write files; it does not require a Lang package.
 Function bodies and compiler IR are outside the reflection API.
 
@@ -38,15 +38,18 @@ of dependency generators.
 
 ## Generator Configuration
 
-```ini
-[dependencies]
-tools = ../schema-tools
-
-[generate.models]
-package = tools
-
-[generate.docs]
-module = src/generate/docs.jiang
+```c
+#package {
+    dependencies {
+        tools = "../schema-tools";
+    }
+    generate models {
+        package = tools;
+    }
+    generate docs {
+        module = "src/generate/docs.jiang";
+    }
+}
 ```
 
 ```bash
@@ -84,9 +87,9 @@ queries during ordinary compile-time evaluation.
 ```c
 struct Route { Int code; }
 
-@meta(module: Route(code: 1))
+@meta(module: Route(code = 1))
 
-@meta(Route(code: 2))
+@meta(Route(code = 2))
 struct User {}
 ```
 

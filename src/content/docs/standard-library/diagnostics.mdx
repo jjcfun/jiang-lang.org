@@ -17,7 +17,7 @@ if (!std.debug.write_line("loading configuration")) {
 }
 ```
 
-`panic(message)` writes the message and a newline to standard error, then aborts. Jiang 0.5.3 does not provide
+`panic(message)` writes the message and a newline to standard error, then aborts. Jiang does not provide
 an unwinding panic: `panic`, `trap`, and `std.process.exit` do not run scope cleanup. Use `T@E` for failures that
 the caller can recover from.
 

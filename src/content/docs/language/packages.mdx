@@ -5,19 +5,20 @@ sidebar:
   order: 16
 ---
 
-A package is Jiang's project boundary. A directory with `package.ini` can be compiled from its
-package root, and the compiler follows the reachable source dependency closure.
+A package is Jiang's project boundary. A directory with `package.jiang` can be compiled from its
+package root. Put shared public APIs in the root file and import implementation modules as needed.
 
 ## Package Manifest
 
-Use a fixed `package.ini` file:
+Use a fixed `package.jiang` file:
 
-```ini
-[package]
-name = app
-version = 1.0.0
-root = src/main.jiang
-type = bin
+```c
+#package {
+    name = "app";
+    version = "1.0.0";
+    root = "src/main.jiang";
+    type = .bin;
+}
 ```
 
 Fields:
@@ -25,23 +26,24 @@ Fields:
 - `name`: package name; defaults to the directory name.
 - `version`: package version; optional. The compiler accepts ASCII letters, digits, `.`, `_`, `+`, and `-`.
 - `root`: entry source file; defaults to `<name>.jiang`.
-- `type`: package kind; defaults to an ordinary package. `lang` marks a [custom-syntax provider package](/language/custom-syntax/).
+- `type`: package kind; defaults to `.lib`; use `.bin` for an executable. `.lang` marks a [custom-syntax provider package](/language/custom-syntax/).
 
-When the compiler input is a directory, it reads `package.ini` and compiles the source file named by
+When the compiler input is a directory, it reads `package.jiang` and compiles the source file named by
 `root`.
 
 ## Dependencies
 
-Declare local source dependencies in `[dependencies]`:
+Declare local source dependencies in `dependencies { ... }`:
 
-```ini
-[package]
-name = app
-version = 1.0.0
-root = src/main.jiang
-
-[dependencies]
-util = ../util
+```c
+#package {
+    name = "app";
+    version = "1.0.0";
+    root = "src/main.jiang";
+    dependencies {
+        util = "../util";
+    }
+}
 ```
 
 Inside the package, import a dependency by alias:
@@ -54,9 +56,7 @@ Int main() {
 }
 ```
 
-An unquoted `import util;` first checks the current package's `[dependencies]` table. If it matches,
-the compiler reads the dependency package manifest and adds its root module to the same compile
-closure.
+`import util;` uses the dependency alias and gives access to the dependency root's public API.
 
 ## Public Surface
 
@@ -78,7 +78,7 @@ Do not use a quoted path to import dependency source across package boundaries:
 import "../util/src/util.jiang"; // error: cross-package file import
 ```
 
-Declare the dependency in `package.ini`, then write:
+Declare the dependency in `package.jiang`, then write:
 
 ```c
 import util;
@@ -99,7 +99,36 @@ The entry must be non-generic, synchronous, parameterless and return an integer 
 Lang and generate use `@entry(lang)` and `@entry(generate)` in the selected root file and may be private.
 Each role has at most one explicit entry per root.
 
-Register provider dependencies in `[dependencies]`. `[lang.<name>]` and `[generate.<name>]` select
+Register provider dependencies in `dependencies { ... }`. `lang <name> { ... }` and `generate <name> { ... }` select
 aliases, rather than declaring another dependency source. An internal generator uses `module` instead
 of `package`. See [generation](/language/generation/) for configuration examples.
-The manifest remains `package.ini` in 0.5.4.
+The package entry is `package.jiang`; fields use `=`, semicolons and named child blocks.
+
+## Reading Package Information
+
+`#package` provides a public constant named `info`. Import the package entry from `src/main.jiang`
+to use the project's version directly:
+
+```c
+import std;
+import "../package.jiang";
+
+Int main() {
+    std.fs.File output! = std.io.stdout();
+    Void written = try output.write_all(package.info.version) catch { return 1; };
+    return 0;
+}
+```
+
+You can also pass `package.info` to a function accepting `std.jiang.PackageInfo`. Change `version`
+and rebuild to update the value used by your program. There is no second version string to maintain.
+Do not declare another `info` in the package entry.
+
+Configuration can use ordinary Jiang expressions and independent helpers. It cannot depend on the
+root, dependencies, language providers or generated output it is preparing. Dependency paths are
+relative to the package directory; cross-package imports use dependency aliases.
+
+## Documentation in Configuration
+
+`#doc` may appear between fields and child blocks. These documents do not attach to individual
+fields and do not change configuration values. Put `#doc` before `#package` to document the package declaration.

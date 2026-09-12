@@ -18,7 +18,7 @@ Jiang 的语法围绕“声明先行、类型显式、低层能力可见”来�
 ```c
 enum TokenKind {
     kw,
-    string_lit,
+    double_quoted,
     left_paren,
 }
 
@@ -162,7 +162,7 @@ struct Point {
     Int y;
 }
 
-Point origin = Point(x: 0, y: 0)
+Point origin = Point(x = 0, y = 0)
 ```
 
 ## 隐式操作层 `$`
@@ -207,3 +207,12 @@ if maybe is .some(Int value!) {
 ```
 
 `switch` 也使用模式。匹配 `enum` 和可选值时，应覆盖所有可能情况，或者使用 `else` 兜底。
+
+## 字符与字符串
+
+字符使用单引号，字符串使用双引号，两者不会互相隐式转换。
+字符内容在转义后必须恰好是一个 Unicode 标量：`'a'`、`'中'`、`'😀'`、`'\0'` 合法；
+`''`、`'abc'`、`'e\u{301}'` 不合法。最后一个例子虽然可能显示为一个字符，实际包含两个标量。
+
+自定义语言使用默认 token 时，`single_quoted` 和 `double_quoted` 只区分引号形式，
+因此可以自行解释单引号中的完整文本；选择构造 Jiang 字符字面量时才必须满足上述规则。

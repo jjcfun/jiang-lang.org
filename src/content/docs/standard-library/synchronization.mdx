@@ -30,7 +30,7 @@ Int next = count.with_lock { value =>
 The mutex itself is pinned; move the `Mutex<T>^` owner when a handle must be transferred. Returning or throwing
 from the callback releases the lock. A reference derived from `value` cannot escape the callback.
 
-`std.fs.File` is deliberately not `Sendable` in 0.5.3 because concurrent file-offset and close behavior has not
+`std.fs.File` is deliberately not `Sendable` because concurrent file-offset and close behavior has not
 been frozen. Perform the I/O in one Domain and transfer the resulting owned bytes instead.
 
 `coroutine.Continuation<T>` is `Sendable` when `T` is `Sendable`; completing a suspended operation can therefore

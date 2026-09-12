@@ -51,9 +51,9 @@ View profile = #html {
 
 ```c
 View settings = #ui {
-    VStack(spacing: 12) {
+    VStack(spacing = 12) {
         Text("Settings").font(.title)
-        Toggle("Enable cache", is_on: bind(settings.cache_enabled))
+        Toggle("Enable cache", is_on = bind(settings.cache_enabled))
         Button("Save") {
             save(settings)
         }
@@ -133,8 +133,8 @@ Router api = #route {
 Pipeline image_pipeline = #pipeline {
     load(path)
         |> decode_png
-        |> resize(width: 256, height: 256)
-        |> encode_webp(quality: 90)
+        |> resize(width = 256, height = 256)
+        |> encode_webp(quality = 90)
 };
 ```
 
@@ -153,7 +153,7 @@ RegisterBlock uart = #mmio {
 
 ## 内建汇编块
 
-`#asm` 是当前开发分支已经接入的内建语法块，用来在 Jiang 函数中写少量目标平台汇编。
+`#asm` 是内建语法块，用来在 Jiang 函数中写少量目标平台汇编。
 它适合实现系统调用、启动代码、特殊指令或极少数后端暂时不能直接表达的操作。
 
 ```c
@@ -244,7 +244,7 @@ public struct Vector<T> {
 ```
 
 lang dependency 可以覆盖短名 `#doc`；需要明确选择内建 provider 时使用 `#jiang.doc`。Jiang 会把
-规范化后的 Markdown 保存到独立、可选的 `.ji` section；当前版本不定义文档 renderer 或 browser。
+文档可以通过反射读取，并交给文档生成器使用。
 
 ## 整文件集成
 
@@ -256,7 +256,7 @@ alias schema = import "user.proto";
 alias layout = import "dashboard.ui";
 alias kernel = import "blur.shader";
 
-User user = schema.User(id: 1, name: "Jiang");
+User user = schema.User(id = 1, name = "Jiang");
 View page = layout.render(user);
 ```
 
@@ -284,29 +284,31 @@ Script startup = #script {
 
 ## 使用语言包
 
-使用方在 `package.ini` 中声明一个依赖：
+使用方在 `package.jiang` 中声明一个依赖：
 
-```ini
-[package]
-name = app
-root = src/main.jiang
-
-[dependencies]
-sql = ../sql_lang
+```c
+#package {
+    name = "app";
+    root = "src/main.jiang";
+    dependencies {
+        sql = "../sql_lang";
+    }
+}
 ```
 
 被调用的依赖包需要声明为语言包：
 
-```ini
-[package]
-name = sql_lang
-root = lang.jiang
-type = lang
+```c
+#package {
+    name = "sql_lang";
+    root = "lang.jiang";
+    type = .lang;
+}
 ```
 
 语言包根模块用 `@entry(lang)` 标记可无参数构造、实现 `std.jiang.syntax.Provider` 的具体类型。
 类型名称任意，可以保持私有。
-编译器会在宿主机器上把这个包编译成动态库，之后在语法阶段调用它。
+使用方通过配置的语言别名调用它。
 
 ## 语法提供者
 
@@ -320,9 +322,9 @@ struct Provider: std.jiang.syntax.Provider {
     public std.jiang.syntax.Ast parse(
         Self&! self,
         std.jiang.syntax.Input input,
-        std.jiang.syntax.SyntaxContext&! syntax
+        std.jiang.syntax.SyntaxContext<std.jiang.syntax.EmptyLangContext>& syntax
     ) {
-        _ parser! = std.jiang.syntax.default_parser(syntax, input);
+        _ parser! = std.jiang.syntax.default_parser(syntax.syntax, input);
         std.jiang.syntax.Expr value = parser.int_literal(input.name_span, "0");
         return parser.ast(value);
     }
@@ -333,39 +335,115 @@ struct Provider: std.jiang.syntax.Provider {
 `scan`，在自己的实例中保存 `Token<CustomKind>`，再在 `parse` 中构造 `Parser<CustomKind>`。
 
 Parser 方法生成带类型角色的 expression、statement、declaration、type、pattern 和 attribute handle。
-`parser.ast(handle)` 返回 opaque 根节点；provider 不能访问或手工组装 compiler AST storage。compiler
-会验证返回节点能否出现在 invocation 所在位置。
-
-## 编译边界
-
-自定义语法只改变源码解析入口，不绕过 Jiang 的后续编译流程：
-
-- 生成的节点继续进入普通名字解析、类型检查、中间表示和后端。
-- 语法提供者不能直接生成中间表示或后端代码。
-- 语言包动态库是本机缓存产物，不承诺跨编译器版本复用。
-- 语言包源码仍按普通包发布，缓存损坏或接口不匹配时应报告诊断。
-
-这让自定义语法可以使用更贴近领域的表面写法，同时保持类型规则、可见性、泛型实例化和后端行为仍由
-Jiang 编译器统一控制。
-
+`parser.ast(handle)` 返回解析结果。返回的角色必须符合使用位置：表达式位置返回表达式，
+顶层返回声明，类型内部返回成员。
 
 ## 语言别名与文件扩展名
 
 先统一注册依赖，再配置语言别名：
 
-```ini
-[dependencies]
-tools = ../schema-tools
-
-[lang.schema]
-package = tools
-extensions = schema, model
+```c
+#package {
+    dependencies {
+        tools = "../schema-tools";
+    }
+    lang schema {
+        package = tools;
+        extensions = ["schema", "model"];
+    }
+}
 ```
 
-使用 `#schema { ... }` 或导入 `models.schema`。Provider 包可用 `[lang] extensions` 声明默认扩展名；
+使用 `#schema { ... }` 或导入 `models.schema`。Provider 包可用 `lang { extensions = ["schema", "model"]; }` 声明默认扩展名；
 使用方的配置整组覆盖该列表。没有显式列表时，默认扩展名与语言别名相同，`.jiang` 保留原生语法。
 整文件 Provider 收到 `.none` 分隔符并返回声明，文件也可以作为 package root。
 源码内容、扩展名映射和 Provider 依赖共用编译器缓存。
 
 一个包可以同时提供 Lang 与[生成入口](/zh/language/generation/)。使用语言别名选择生成器时，
 显式的同名 generate 配置优先。
+
+## 共享关键词与上下文
+
+无状态 Provider 可以使用默认的 `EmptyLangContext`，只实现 `parse`。需要共享关键词等数据时，
+声明关联类型 `LangContext`，用 `create_context(Session&)` 初始化，通过 `context.lang` 只读访问。
+同一语言在一次编译中共享上下文，不同编译互相隔离；每个块仍有独立的 Provider 实例。
+不要把某个块的 token 或临时解析状态放进共享上下文。
+
+下面的语言接受 `#value { value 42 }`，也接受省略关键词的 `#value { 42 }`：
+
+```c
+import std;
+
+public struct Keywords: Copyable {
+    std.jiang.syntax.SymbolId value;
+}
+
+@entry(lang)
+struct ValueProvider: std.jiang.syntax.Provider {
+    public associated LangContext = Keywords;
+
+    @life()
+    public Keywords create_context(std.jiang.syntax.Session& session) {
+        return Keywords(value = session.intern("value"));
+    }
+
+    public std.jiang.syntax.Ast parse(
+        Self&! self, std.jiang.syntax.Input input,
+        std.jiang.syntax.SyntaxContext<Keywords>& context
+    ) {
+        _ parser! = std.jiang.syntax.default_parser(context.syntax, input);
+        parser.match_keyword(context.lang.value);
+        _ value = parser.parse_expression();
+        return parser.ast(value);
+    }
+}
+```
+
+`session.intern()` 的结果可直接与默认 token 比较，不需要每个块重新注册关键词。
+
+## 嵌套语言与 Attribute
+
+默认 parser 遇到 RawBlock 时，调用 `parser.parse_raw_block()`，得到 `Ast?`。
+使用 `role()` 或 `as_attribute()`、`as_decl()`、`as_member()` 等方法检查结果。
+因此你的语言可以接收 `#doc`，不必识别名称或实现 Markdown 解析。
+
+返回 Attribute 后，由外层语言决定附着目标，并通过 `with_attributes` 附着到 Decl 或 Member。
+尚未遇到目标时，可以先保存在 `parser.list<Attribute>()` 中。块末尾仍有待附着内容时应报错，
+不要把内部块的文档自动附着到外部声明。包配置字段之间的 Attribute 则允许忽略。
+
+`parser.ast(member)` 返回单个成员，`parser.members(span, values)` 返回成员序列；
+声明序列使用 `parser.declarations(span, values)`。空序列和单元素序列仍是序列，
+可以通过 `parser.len(sequence)`、`parser.at(sequence, index)` 读取。
+
+当前位置不是 RawBlock 时，展开返回 null 并报诊断，不消费 token；如果 RawBlock 展开失败，
+该 token 已消费，诊断保留。`peek`／`advance` 只读取 token，不自动展开语言块。
+
+自定义 tokenizer 可在 `begin_token()` 后使用 `scan_raw_block()`，保存返回的块 ID 和原 span；
+随后用 `parser.parse_raw_block(raw)` 展开保存的默认 token。该重载不推进自定义 parser 的 cursor，
+消费自定义 token 仍由调用方负责。块 ID 和 span 不能拼造或跨源码复用。
+
+## 构造列表与回溯
+
+使用 `parser.list<T>()` 创建语法句柄列表，随后调用 `append`、`len`、`at`。
+构造方法支持列表与原有切片参数混用；只接受支持的语法句柄，不是通用容器。
+
+下面是 `parse` 方法中已有 `parser` 和 `input` 后的构造片段：
+
+```c
+_ statements = parser.list<std.jiang.syntax.Stmt>();
+_ span = input.name_span;
+_ value = parser.int_literal(span, "42");
+statements.append(parser.return_statement(span, value));
+_ body = parser.block(span, statements);
+```
+
+试探解析前保存 `parser.checkpoint()`，需要换一种解析方式时调用 `parser.rewind(saved)`。
+它恢复 token 位置、诊断、AST 和受管理列表，也撤销对已有节点附着的 Attribute。
+保存点之后创建的节点与列表句柄在回退后失效；保存点之前的列表恢复到原内容。
+成功解析后直接继续，不需要 commit。
+
+Provider 自己的字段、普通 Vector 和外部副作用不随回溯撤销。需要自动恢复的待附着 Attribute
+应放在 parser 管理列表中。默认扫描 token 可以重复解析；自定义扫描结果也应保证重试时可再次读取。
+
+默认 token 用 `single_quoted`／`double_quoted` 区分引号。SymbolId 是解码后的文本，
+原始引号和转义可从 span 对应源码读取。构造 Jiang 字符 AST 时必须是单个 Unicode 标量。
