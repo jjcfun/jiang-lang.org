@@ -26,10 +26,16 @@ Void log_done() {
 ## Parameters
 
 Parameters are written as `Type name`. Defaulted parameters may appear anywhere in the parameter
-list. Default values currently use literals and are checked against the parameter's expected type:
+list. A default can be an ordinary expression in the declaration scope and is checked against the
+parameter's expected type. The expression is evaluated at each call site that omits the argument;
+passing the argument explicitly does not evaluate it:
 
 ```c
-Int scale(Int factor = 2, Int value) {
+Int default_factor() {
+    1 + 1
+}
+
+Int scale(Int factor = default_factor(), Int value) {
     return value * factor;
 }
 

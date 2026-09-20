@@ -25,11 +25,16 @@ Void log_done() {
 
 ## 参数
 
-参数列表中每个参数写成 `类型 名字`。默认参数可以出现在参数列表任意位置。当前默认值只支持
-字面量，并按参数的期望类型检查：
+参数列表中每个参数写成 `类型 名字`。默认参数可以出现在参数列表任意位置。默认值可以是声明
+作用域中的普通表达式，并按参数的期望类型检查。省略实参时，表达式会在调用点求值；显式传入
+实参时不会求值：
 
 ```c
-Int scale(Int factor = 2, Int value) {
+Int default_factor() {
+    1 + 1
+}
+
+Int scale(Int factor = default_factor(), Int value) {
     return value * factor;
 }
 
