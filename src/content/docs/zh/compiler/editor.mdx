@@ -1,0 +1,46 @@
+---
+title: VS Code
+description: 配置 Jiang 语言服务器，使用补全、诊断与代码跳转。
+---
+
+## 安装
+
+1. 安装 [Jiang 命令行工具](/zh/install/)，在终端验证 `jiang --version`。
+2. 在 VS Code 扩展页面安装 [**Jiang Language** 扩展](https://marketplace.visualstudio.com/items?itemName=jiang-language.vscode-jiang)。
+3. 打开项目文件夹，再打开 `.jiang` 文件。
+
+插件通过 `jiang lsp` 启动常驻语言服务器。
+
+## 编译器路径
+
+如果 VS Code 的 `PATH` 中已经有 `jiang`，无需配置路径。
+否则打开设置，搜索 **Jiang Server Path**，填写已安装的 CLI 可执行文件路径或其 `bin` 目录。
+也可以在 `settings.json` 中设置：
+
+```json
+{
+  "jiang.serverPath": "/Users/you/.jiang/bin/jiang"
+}
+```
+
+填写 `/Users/you/.jiang/bin` 也可以。只需要 CLI 的位置，不需要编译器源码目录或语言 root。
+
+## 编辑功能
+
+- 已打开源码文件的诊断。
+- 悬停查看类型、函数签名和声明文档。
+- 右键菜单中的转到定义（Go to Definition）。
+- 标识符、成员、extension 成员和 namespace 声明的补全。
+- 局部变量声明显式指定枚举类型时，输入 `.` 可以补全枚举 case。
+
+编辑时优先检查当前文件；保存后执行完整检查，包括所有权诊断。
+
+声明文档使用 `///` 或多行 `#doc`，详见[文档注释](/zh/language/custom-syntax/#文档注释)。
+
+这些语言功能由编译器提供。升级 Jiang 后，在 VS Code 中执行 **Developer: Reload Window**，
+让语言服务器使用新的 CLI。升级编译器即可获得对应 LSP 功能，无需同步更新插件。
+
+## 排查连接问题
+
+如果客户端无法连接，检查 **Jiang Server Path** 是否指向支持 `lsp` 的可执行文件。
+在输出（Output）面板中选择 **Jiang Language Server**，查看服务器日志。

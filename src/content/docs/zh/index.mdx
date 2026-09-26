@@ -23,10 +23,21 @@ Jiang 是一门正在开发中的系统编程语言。自定义语法是 Jiang �
 用户可以基于自己的理想语法扩展语言，同时继续享受 Jiang 自带的类型检查和系统级运行效率。
 Jiang 为 macOS arm64 和 Linux x86_64 提供发布版编译器包。
 
-这份文档优先作为教程和使用指南来写。语言指南对应 Jiang 0.5.6，请使用匹配版本运行示例；
-安装页面提供已发布版本的下载入口。
+这份文档作为教程和使用指南来写。从[安装](/zh/install/)开始，也可以配置
+[VS Code](/zh/compiler/editor/)，使用诊断、补全与代码跳转。
 
-Linux hosted 程序使用系统 libc 与本机工具链。Linux no-libc 和 LSP 尚不可用。
+Linux hosted 程序使用系统 libc 与本机工具链。
+
+## 一键安装
+
+在 macOS Apple Silicon 或 Linux x86_64 的终端粘贴以下命令：
+
+```bash
+curl -fsSL https://github.com/jjcfun/jiang/releases/latest/download/install.sh | bash && . "$HOME/.jiang/env"
+```
+
+安装脚本会自动下载 Jiang、校验 SHA-256，并配置 Bash 或 Zsh 的 PATH。
+环境要求和手动安装方式见[安装指南](/zh/install/)。
 
 ## 从这里开始
 
@@ -34,7 +45,7 @@ Linux hosted 程序使用系统 libc 与本机工具链。Linux no-libc 和 LSP 
   <a class="jiang-start-card" href="/zh/install/">
     <span class="jiang-start-icon"><Icon name="download" /></span>
     <span class="jiang-start-title">安装</span>
-    <span class="jiang-start-description">安装发布版编译器，并准备 LLVM 工具链。</span>
+    <span class="jiang-start-description">安装 Jiang，并准备系统 C 工具链。</span>
   </a>
   <a class="jiang-start-card" href="/zh/getting-started/">
     <span class="jiang-start-icon"><Icon name="rocket" /></span>

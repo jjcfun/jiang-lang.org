@@ -217,22 +217,25 @@ Int linux_syscall1_builtin(Int number, Int arg0) {
 汇编语法本身依赖目标平台。`rax`、`rdi`、`syscall` 这类名字只适用于特定处理器和操作系统。
 普通业务代码不建议使用 `#asm`；它主要服务于运行时、系统接口和极少数性能或平台边界代码。
 
-## 文档语法块
+## 文档注释
 
-`#doc` 把 Markdown 源文档附着到紧随其后的声明。本行带正文时是单行文档：
+使用 `///` 为声明添加文档。连续多行会组成一份 Markdown 文档：
 
 ```c
-#doc 返回两个整数之和。
+/// 返回两个整数之和。
+/// 两个参数直接相加，不进行转换。
 public Int add(Int left, Int right) {
     return left + right;
 }
 ```
 
-header 本行没有正文时，由独占一行的 `#end` 结束。`#doc(module)` 必须位于第一个非 import 声明（包括 alias）
-之前，用于记录当前 module 的文档：
+`#doc` 用于多行文档块，header 独占一行，以独占一行的 `#end` 结束。
+`#doc(module)` 必须放在第一个非 import 声明之前，用于描述当前模块：
 
 ```c
-#doc(module) Collection 工具。
+#doc(module)
+Collection 工具。
+#end
 
 #doc
     ## Vector
@@ -243,8 +246,9 @@ public struct Vector<T> {
 }
 ```
 
-lang dependency 可以覆盖短名 `#doc`；需要明确选择内建 provider 时使用 `#jiang.doc`。Jiang 会把
-文档可以通过反射读取，并交给文档生成器使用。
+文档可以通过反射读取，供文档生成器和 LSP 悬停提示使用。
+lang dependency 可以覆盖 `#doc`；需要明确选择内建 provider 时使用 `#jiang.doc`。
+`///` 始终使用内建文档 provider。
 
 ## 整文件集成
 

@@ -7,19 +7,21 @@ Every Jiang executable starts at `main`. Its integer return value becomes the pr
 
 ```c
 Int main() {
-    print(42);
-    print(false);
-    return 42;
+    print("Hello, Jiang!");
+    return 0;
 }
 ```
 
 Compile and run:
 
 ```bash
-jiang hello.jiang -o hello
+jiang -o hello hello.jiang
 ./hello
 echo $?
 ```
+
+The program prints `Hello, Jiang!` followed by a newline and exits with status `0`.
+`print` is available without an import. See [Output](/standard-library/output/) for supported types.
 
 For byte-oriented output with explicit error handling, use `std.io.stdout()`:
 

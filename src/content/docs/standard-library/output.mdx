@@ -1,0 +1,83 @@
+---
+title: Output
+description: Print values and handle output errors.
+sidebar:
+  order: 3
+---
+
+`print(value)` writes one value to standard output, adds a newline, and returns `Void`.
+It is available without an import. With `import std;`, you can also use `std.print` or `std.io.print`.
+
+```c
+Int main() {
+    print("Hello, Jiang!");
+    print(42);
+    print(true);
+    Int left = 10;
+    Int right = 20;
+    print("\(left)_\(right)");
+    return 0;
+}
+```
+
+Each call takes exactly one argument. Combine values using [string interpolation](/standard-library/text/#string-interpolation).
+There are no separator or terminator parameters.
+
+## Supported Types
+
+- UTF-8 byte slices (`UInt8[]&`), including string literals.
+- Owned `String`, which is consumed, or borrowed `String&`, which is preserved.
+- `Bool`, signed and unsigned integers of all widths, and `Float16`, `Float32`, and `Float64`.
+- Borrowed custom values implementing `Formattable`.
+
+Floating-point output uses `StringBuilder`'s default six decimal places.
+Borrow an existing string to keep using it:
+
+```c
+String text = "hello";
+print(text$.ref());
+print(text$.ref());
+```
+
+## Custom Formatting
+
+Implement `Formattable` and append text to the writable builder:
+
+```c
+struct User: Formattable {
+    Int id;
+
+    public Void format(self, StringBuilder&! out) {
+        out.append("User(id: ");
+        out.append(self.id);
+        out.append(")");
+    }
+}
+
+Int main() {
+    User user = User(id = 42);
+    print(user$.ref());
+    return 0;
+}
+```
+
+The borrowed value is preserved. `Formattable` is used by `print`; string interpolation uses
+`StringBuilder.append` overloads and does not automatically call `Formattable.format`.
+
+## UTF-8 and Output Errors
+
+`String` always contains valid UTF-8. When printing a byte slice, invalid sequences are replaced with
+U+FFFD (`�`). Use `String.from_utf8(bytes)` when invalid input should produce a recoverable `Utf8Error`.
+
+`print` panics if writing to standard output fails. For recoverable errors, raw bytes, or output without
+a trailing newline, use `std.io.stdout()`:
+
+```c
+import std;
+
+Int main() {
+    std.fs.File output! = std.io.stdout();
+    Void written = try output.write_all("hello") catch { return 1; };
+    return 0;
+}
+```

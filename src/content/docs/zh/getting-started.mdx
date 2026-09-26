@@ -15,16 +15,17 @@ Int add(Int a, Int b) {
 }
 
 Int main() {
-    return add(40, 2);
+    print(add(40, 2));
+    return 0;
 }
 ```
 
-Jiang 函数一定有返回类型。程序入口是 `main`；这里返回 `42`，也就是宿主进程的退出码。
+Jiang 函数一定有返回类型。程序入口是 `main`；`print` 输出 `42` 并换行，`return 0` 表示成功退出。
 
 ## 编译为可执行文件
 
 ```bash
-jiang hello.jiang -o hello
+jiang -o hello hello.jiang
 ```
 
 运行程序：
@@ -34,7 +35,9 @@ jiang hello.jiang -o hello
 echo $?
 ```
 
-结果应该是 `42`。
+程序输出 `42`，随后 `echo $?` 显示退出码 `0`。
+
+安装 [VS Code 扩展](/zh/compiler/editor/)后，可以使用补全、悬停文档和定义跳转。
 
 ## 查看 LLVM IR
 
@@ -47,7 +50,7 @@ jiang --emit-llvm hello.jiang
 使用 `-o` 可以写入文件：
 
 ```bash
-jiang --emit-llvm hello.jiang -o hello.ll
+jiang --emit-llvm -o hello.ll hello.jiang
 ```
 
 ## Jiang 代码的基本形态

@@ -14,7 +14,18 @@ The release compiler statically links the LLVM libraries used by Jiang. You do n
 LLVM shared-library installation to run the packaged compiler. The Linux package requires glibc 2.34
 or newer.
 
-## Install a Release
+## Quick Install
+
+The installer selects the package for your platform, verifies its checksum, and sets up the shell path:
+
+```bash
+curl -fsSL https://github.com/jjcfun/jiang/releases/latest/download/install.sh | bash && . "$HOME/.jiang/env"
+```
+
+On macOS, install the C toolchain with `xcode-select --install` if needed. On Ubuntu or Debian, use
+`sudo apt install build-essential`.
+
+## Install an Archive
 
 Download the archive for your host from the [latest GitHub release](https://github.com/jjcfun/jiang/releases/latest), then unpack it.
 
@@ -51,13 +62,6 @@ The first line should be:
 ```text
 jiang <version>
 ```
-
-## Build From Source
-
-Source builds are contributor work. Their toolchain and bootstrap requirements change with the
-compiler, so follow the repository's [compiler development guide](https://github.com/jjcfun/jiang/blob/release/0.5.6/doc/develop.md).
-
-For an ordinary language installation, no source build is required.
 
 ## Next Step
 

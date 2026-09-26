@@ -7,19 +7,21 @@ description: 一个最小 Jiang 程序。
 
 ```c
 Int main() {
-    print(42);
-    print(false);
-    return 42;
+    print("Hello, Jiang!");
+    return 0;
 }
 ```
 
 编译并运行：
 
 ```bash
-jiang hello.jiang -o hello
+jiang -o hello hello.jiang
 ./hello
 echo $?
 ```
+
+程序输出 `Hello, Jiang!` 和换行，退出状态为 `0`。
+`print` 无需 import 即可使用；支持的类型见[标准输出](/zh/standard-library/output/)。
 
 需要明确处理错误的 byte 输出时，使用 `std.io.stdout()`：
 

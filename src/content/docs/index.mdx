@@ -24,11 +24,21 @@ Jiang's All-in-one direction: users can extend Jiang with their ideal domain syn
 Jiang's built-in type checking and systems-level runtime efficiency. Release compiler packages are
 available for macOS arm64 and Linux x86_64.
 
-These docs are written as a practical guide first. The language guide covers Jiang 0.5.6. Use a matching compiler for these examples; the installation
-page links to published downloads.
+These docs are a practical language guide. Start with [Installation](/install/) and use
+[VS Code integration](/compiler/editor/) for diagnostics, completion, and navigation.
 
-Linux hosted programs use the system libc and native toolchain. Linux no-libc support and an LSP are
-not yet available.
+Linux hosted programs use the system libc and native toolchain.
+
+## Quick Install
+
+Paste this command into a terminal on macOS Apple Silicon or Linux x86_64:
+
+```bash
+curl -fsSL https://github.com/jjcfun/jiang/releases/latest/download/install.sh | bash && . "$HOME/.jiang/env"
+```
+
+The installer downloads Jiang, verifies SHA-256, and configures Bash or Zsh.
+See [Installation](/install/) for system requirements and manual installation.
 
 ## Start Here
 
@@ -36,7 +46,7 @@ not yet available.
   <a class="jiang-start-card" href="/install/">
     <span class="jiang-start-icon"><Icon name="download" /></span>
     <span class="jiang-start-title">Install</span>
-    <span class="jiang-start-description">Install the release compiler and prepare the LLVM toolchain.</span>
+    <span class="jiang-start-description">Install Jiang and prepare the system C toolchain.</span>
   </a>
   <a class="jiang-start-card" href="/getting-started/">
     <span class="jiang-start-icon"><Icon name="rocket" /></span>

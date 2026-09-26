@@ -13,7 +13,18 @@ Jiang 为 macOS arm64 和 Linux x86_64 提供预构建编译器包。
 发布包中的编译器已经静态链接 Jiang 使用的 LLVM 库；运行发布包不需要单独安装
 LLVM 动态库。Linux 发布包要求 glibc 2.34 或更新版本。
 
-## 安装发布包
+## 一键安装
+
+安装脚本会自动选择当前平台的发布包、校验 checksum，并配置 shell 的 PATH：
+
+```bash
+curl -fsSL https://github.com/jjcfun/jiang/releases/latest/download/install.sh | bash && . "$HOME/.jiang/env"
+```
+
+macOS 缺少 C 工具链时运行 `xcode-select --install`；Ubuntu 或 Debian 使用
+`sudo apt install build-essential`。
+
+## 手动安装发布包
 
 从[最新 GitHub 发布页](https://github.com/jjcfun/jiang/releases/latest)下载当前 host 对应的归档，然后解压。
 
@@ -50,13 +61,6 @@ jiang --version
 ```text
 jiang <version>
 ```
-
-## 从源码构建
-
-源码构建面向编译器贡献者。其工具链和 bootstrap 要求会随编译器演进；需要从源码构建时，请阅读
-[编译器开发流程](https://github.com/jjcfun/jiang/blob/release/0.5.6/doc/develop.md)。
-
-普通语言使用者不需要从源码构建编译器。
 
 ## 下一步
 

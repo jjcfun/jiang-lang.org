@@ -76,7 +76,7 @@ Window make_window() {
 expected type 是 pointee 类型时，owning pointer 可以自动解引用；字段访问也会自动穿过 `T^`：
 
 ```c
-print("x=%d y=%d", heap_point.x, heap_point.y);
+print("x=\(heap_point.x) y=\(heap_point.y)");
 ```
 
 ## 字段可变性

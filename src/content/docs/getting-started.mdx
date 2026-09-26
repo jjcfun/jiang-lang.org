@@ -15,16 +15,17 @@ Int add(Int a, Int b) {
 }
 
 Int main() {
-    return add(40, 2);
+    print(add(40, 2));
+    return 0;
 }
 ```
 
-A Jiang function always has a return type. The process entry point is `main`; returning `42` gives the host process exit code `42`.
+A Jiang function always has a return type. The process entry point is `main`; `print` writes `42` and a newline, while `return 0` indicates success.
 
 ## Compile to an Executable
 
 ```bash
-jiang hello.jiang -o hello
+jiang -o hello hello.jiang
 ```
 
 Run it:
@@ -34,7 +35,9 @@ Run it:
 echo $?
 ```
 
-The result should be `42`.
+The program prints `42`, then `echo $?` shows the exit status `0`.
+
+Install the [VS Code extension](/compiler/editor/) for completion, hover documentation, and navigation.
 
 ## Inspect LLVM IR
 
@@ -47,7 +50,7 @@ jiang --emit-llvm hello.jiang
 Use `-o` to write the IR to a file:
 
 ```bash
-jiang --emit-llvm hello.jiang -o hello.ll
+jiang --emit-llvm -o hello.ll hello.jiang
 ```
 
 ## Language Shape

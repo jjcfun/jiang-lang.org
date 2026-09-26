@@ -34,3 +34,22 @@ String message = builder.into_string();
 
 `append_utf8` is recoverable and leaves the builder unchanged when validation fails. The unchecked append has the
 same safety requirement as `String.from_utf8_unchecked`.
+
+`append_utf8_lossy(bytes)` replaces invalid sequences with U+FFFD (`�`). Ordinary `append(bytes)`
+requires valid UTF-8 and panics on invalid input.
+
+## String Interpolation
+
+Use `\(expression)` inside a string to append a value. The underscore below is ordinary text:
+
+```c
+Int foo = 10;
+Int bar = 20;
+print("\(foo)_\(bar)");
+print("hex: \(foo, radix = 16)");
+Double pi = 3.14159;
+print("pi: \(pi, precision = 2)");
+```
+
+Interpolation produces an owned `String` using `StringBuilder.append` overloads.
+See [Output](/standard-library/output/) for printing and custom `Formattable` values.

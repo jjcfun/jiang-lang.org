@@ -232,23 +232,25 @@ Assembly syntax is target-specific. Names such as `rax`, `rdi`, and `syscall` ar
 specific processors and operating systems. Most application code should not use `#asm`; it is mainly
 for runtime code, system boundaries, and narrow platform-specific operations.
 
-## Documentation Blocks
+## Documentation Comments
 
-`#doc` attaches Markdown source to the declaration that follows it. Text on the header line creates a
-single-line document:
+Use `///` for declaration documentation. Consecutive lines form one Markdown document:
 
 ```c
-#doc Returns the sum of two integers.
+/// Returns the sum of two integers.
+/// Both arguments are added without conversion.
 public Int add(Int left, Int right) {
     return left + right;
 }
 ```
 
-If the header line has no text, an otherwise standalone `#end` ends the document. Use `#doc(module)`
-before the first declaration other than an import declaration (including before an alias) to document the current module:
+Use `#doc` for a multiline block, with a standalone header and `#end` terminator.
+Place `#doc(module)` before the first non-import declaration to document the module:
 
 ```c
-#doc(module) Collection utilities.
+#doc(module)
+Collection utilities.
+#end
 
 #doc
     ## Vector
@@ -259,8 +261,9 @@ public struct Vector<T> {
 }
 ```
 
-A lang dependency may override the short name `#doc`; use `#jiang.doc` to select the builtin provider
-explicitly. Documentation is available to reflection and documentation generators.
+Documentation is available to reflection, documentation generators, and LSP hover.
+A lang dependency may override `#doc`; use `#jiang.doc` to select the builtin provider.
+`///` always uses the builtin documentation provider.
 
 ## Whole-File Integration
 

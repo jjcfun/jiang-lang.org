@@ -32,13 +32,13 @@ jiang --emit-llvm tests/samples/minimal.jiang
 By default, LLVM IR is written to standard output. Use `-o` to write it to a file:
 
 ```bash
-jiang --emit-llvm tests/samples/minimal.jiang -o minimal.ll
+jiang --emit-llvm -o minimal.ll tests/samples/minimal.jiang
 ```
 
 ## Emit an Object File
 
 ```bash
-jiang --emit-obj tests/samples/minimal.jiang -o minimal.o
+jiang --emit-obj -o minimal.o tests/samples/minimal.jiang
 ```
 
 This stops after object generation and does not link an executable.
@@ -48,7 +48,7 @@ This stops after object generation and does not link an executable.
 Without an explicit `--emit-*` mode, `jiang` creates a temporary object file and asks the host `cc` to link an executable:
 
 ```bash
-jiang tests/samples/minimal.jiang -o minimal
+jiang -o minimal tests/samples/minimal.jiang
 ```
 
 Then run:
@@ -63,19 +63,13 @@ echo $?
 `jiang` defaults to debug mode:
 
 ```bash
-jiang --mode debug main.jiang -o main
+jiang --mode debug -o main main.jiang
 ```
 
 Release mode enables LLVM optimization:
 
 ```bash
-jiang --mode release . -o app
-```
-
-Use `--jobs` when you need to cap compilation concurrency:
-
-```bash
-jiang --jobs 1 . -o app
+jiang --mode release -o app .
 ```
 
 ## Targets
@@ -83,7 +77,7 @@ jiang --jobs 1 . -o app
 Use `--target` for LLVM IR or object output:
 
 ```bash
-jiang --target x86_64-unknown-linux-gnu --emit-obj main.jiang -o main.o
+jiang --target x86_64-unknown-linux-gnu --emit-obj -o main.o main.jiang
 ```
 
 Hosted executable linking is native-toolchain only. Release packages support macOS arm64 and Linux
@@ -96,13 +90,13 @@ boundaries, and Linux no-libc executable support is not yet available.
 Use `--linker` to select the program used for final linking:
 
 ```bash
-jiang --linker /usr/bin/cc main.jiang -o main
+jiang --linker /usr/bin/cc -o main main.jiang
 ```
 
 Pass extra linker arguments with repeated `--link-arg` options:
 
 ```bash
-jiang main.jiang -o main --link-arg -lm
+jiang -o main --link-arg -lm main.jiang
 ```
 
 ## Runtime Boundary

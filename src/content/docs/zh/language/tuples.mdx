@@ -17,12 +17,12 @@ sidebar:
 
 // 接收元组返回值
 _ result = foo(10, 200);
-print("result0 = %d", result[0]);  // 输出：100
-print("result1 = %d", result[1]);  // 输出：400
+print("result0 = \(result[0])");  // 输出：100
+print("result1 = \(result[1])");  // 输出：400
 
 // 解构元组
 (_ a, _ b) = foo(10, 200);
-print("x = %d, y = %d", a, b);  // 输出：a = 100, b = 200
+print("x = \(a), y = \(b)");  // 输出：x = 100, y = 400
 ```
 
 解构时可以指定可变性：
@@ -30,7 +30,7 @@ print("x = %d, y = %d", a, b);  // 输出：a = 100, b = 200
 ```c
 (_ x, _ y!) = foo(10, 200);
 y += 100;
-print("x = %d, y = %d", x, y);  // 输出：x = 100, y = 500
+print("x = \(x), y = \(y)");  // 输出：x = 100, y = 500
 ```
 
 括号是独立解构的语法入口，即使只有一个 binding 也要保留。by-value binding 必须保留
@@ -88,6 +88,6 @@ Void hello() {
 
 for pair in pairs {
     (_ a, _ b) = pair;
-    print("a=%d, b=%d", a, b);
+    print("a=\(a), b=\(b)");
 }
 ```

@@ -1,0 +1,49 @@
+---
+title: VS Code
+description: Configure the Jiang language server in VS Code.
+---
+
+## Install
+
+1. Install the [Jiang CLI](/install/) and verify `jiang --version` in a terminal.
+2. Install the [**Jiang Language** extension](https://marketplace.visualstudio.com/items?itemName=jiang-language.vscode-jiang) from the VS Code Extensions view.
+3. Open your project folder and a `.jiang` file.
+
+The extension starts the persistent language server using `jiang lsp`.
+
+## Compiler Path
+
+If `jiang` is on VS Code's `PATH`, no path configuration is needed.
+Otherwise, open Settings, search for **Jiang Server Path**, and select the installed CLI executable
+or its `bin` directory. You can also edit `settings.json`:
+
+```json
+{
+  "jiang.serverPath": "/Users/you/.jiang/bin/jiang"
+}
+```
+
+A value such as `/Users/you/.jiang/bin` is also accepted. Use the CLI location; no compiler source
+checkout or language root directory is required.
+
+## Features
+
+- Diagnostics for opened source files.
+- Hover with types, function signatures, and declaration documentation.
+- Go to Definition from the context menu.
+- Completion for identifiers, members, extension members, and namespace declarations.
+- Enum case completion after `.` in local variable declarations with an explicit enum type.
+
+Editing prioritizes checks for the current file. Saving runs complete checking, including ownership diagnostics.
+
+Use `///` or a multiline `#doc` block to document declarations; see
+[Documentation Comments](/language/custom-syntax/#documentation-comments).
+
+The compiler provides these language features. After upgrading Jiang, run **Developer: Reload Window**
+in VS Code to restart the language server. Compiler upgrades provide the corresponding LSP features
+without requiring an extension update.
+
+## Troubleshooting
+
+If the client cannot connect, check that **Jiang Server Path** points to an executable with `lsp`
+support. Inspect the **Jiang Language Server** channel in the Output panel for server messages.

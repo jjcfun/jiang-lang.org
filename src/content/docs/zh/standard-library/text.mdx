@@ -34,3 +34,22 @@ String message = builder.into_string();
 
 `append_utf8` 可以恢复错误，校验失败时不会修改 builder。unchecked append 与
 `String.from_utf8_unchecked` 具有相同的安全前提。
+
+`append_utf8_lossy(bytes)` 把无效序列替换为 U+FFFD（`�`）。普通的 `append(bytes)`
+要求输入为合法 UTF-8，遇到无效编码会 panic。
+
+## 字符串插值
+
+在字符串中使用 `\(表达式)` 追加值。下面的下划线是普通文本，不需要转义：
+
+```c
+Int foo = 10;
+Int bar = 20;
+print("\(foo)_\(bar)");
+print("hex: \(foo, radix = 16)");
+Double pi = 3.14159;
+print("pi: \(pi, precision = 2)");
+```
+
+插值通过 `StringBuilder.append` 的重载生成 owned `String`。
+打印与自定义 `Formattable` 类型见[标准输出](/zh/standard-library/output/)。
